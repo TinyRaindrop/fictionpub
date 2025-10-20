@@ -165,7 +165,7 @@ class EpubBuilder:
             )
         
         prop = 'svg' if use_svg else ''
-        return FileInfo(fileid, local_title, html, prop)
+        return FileInfo(fileid, local_title, html, prop, order=0)
 
 
     def create_title_page(self) -> FileInfo:
@@ -179,7 +179,7 @@ class EpubBuilder:
             etree.SubElement(body, "p", attrib={'class': 'book-author'}).text = book_author
         etree.SubElement(body, "h1", attrib={'class': 'book-title'}).text = book_title
 
-        return FileInfo(fileid, book_title, html)
+        return FileInfo(fileid, book_title, html, order=1)
 
 
     def create_copyright_page(self) -> FileInfo | None:
@@ -222,7 +222,7 @@ class EpubBuilder:
                     else:
                         dd.text = str(value)
 
-        return FileInfo(fileid, local_title, html)
+        return FileInfo(fileid, local_title, html, order=-2)    # -2 = second last
 
 
     def create_annotation_page(self) -> FileInfo | None:
@@ -240,7 +240,7 @@ class EpubBuilder:
         #for child in converted_annotation:
         #   body.append(child)
 
-        return FileInfo(fileid, local_title, html)
+        return FileInfo(fileid, local_title, html, order=3)
 
 
     def _create_front_docs(self):
@@ -294,25 +294,27 @@ class EpubBuilder:
         log.info(f"Split main content into {len(self.main_docs)} files at {split_tags_str}")
 
 
-    def add_main_content_docs(self, converted_docs: list[ConvertedBody]):
+    def add_main_docs(self, converted_docs: list[ConvertedBody]):
         """
         Accepts split documents with pre-generated filenames and adds them to the list.
         """
         for doc in converted_docs:
             html, body = self._create_html(doc.file_id, doc.title)
-            body.extend(list(doc.body))     # "Move" all children
-            self.doc_list.append(FileInfo(doc.file_id, doc.title, html))
+            body.extend(list(doc.body))
+            # Move all children from converted body to new html
+            file_info = FileInfo(doc.file_id, doc.title, html)
+            self.doc_list.append(file_info)
 
 
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
         """Accepts converted note bodies and adds them to the list."""
-        counter = 0
         for doc in converted_docs:
             title = self.local_terms.get_heading(doc.file_id)
             html, body = self._create_html(doc.file_id, title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
-            self.doc_list.append(FileInfo(doc.file_id, title, html))
+            file_info = FileInfo(doc.file_id, title, html, is_note=True)
+            self.doc_list.append(file_info)
 
 
     def _build_toc(self):
@@ -370,7 +372,7 @@ class EpubBuilder:
         log.info(f"Generated TOC with {len(self.toc_items)} entries from XHTML files.")
 
 
-    def _generate_nav(self) -> FileInfo | None:
+    def _create_nav(self) -> FileInfo | None:
         """Creates the EPUB3 nav.xhtml file with proper nesting."""
         fileid = "nav"
         if fileid not in EPUB_TYPES_MAP: 
@@ -429,7 +431,8 @@ class EpubBuilder:
                                     attrib={f"{{{NS.EPUB}}}type": epub_type})
                 a.text = self.local_terms.get_heading(doc.id)
 
-        return FileInfo(fileid, local_title, html, prop='nav')
+        file_info = FileInfo(fileid, local_title, html, prop='nav', order=-1)    # -1 = last
+        return file_info
 
 
     def _create_ncx(self):
@@ -674,24 +677,22 @@ class EpubBuilder:
 
 
     def build(self):
-        """Generates metadata files and zips the workspace into an .epub file."""
-
+        """
+        Generates metadata files and zips the workspace into an .epub file.
+        add_main_docs() and add_note_docs() must be called before building.
+        """
+        
         self._create_front_docs()
         self._build_id_map()
         self._resolve_internal_links()
-        # self._collect_documents()
         
         # Build nested list of headings to be used in NAV/NCX generation
         self._build_toc()
+        self._create_nav()
 
-        nav: FileInfo | None = self._generate_nav()
-        if nav is not None:
-            nav_position: int = 1 if self.doc_list[0].id == 'cover' else 0
-            self.doc_list.insert(nav_position, nav)
-            # self.doc_list.append(nav)     # last doc
+        # TODO: sort documents
 
         # Generate additional files, assemble EPUB
-        self._generate_nav()
         self._create_ncx()
         self._create_opf()
         self._create_container_xml()
@@ -748,6 +749,7 @@ class EpubBuilder:
                     log.warning(f"Broken internal link found for id: {target_id}")
                     a.tag = 'span'
                     del a.attrib['href']
+    
     
     def _insert_note_backlinks(self, xhtml_body: etree._Element):
         """Adds a return link to the end of each footnote."""

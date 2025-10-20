@@ -75,7 +75,7 @@ class ConversionPipeline:
         """
         
         # 4. ASSEMBLE: Pass the fragments to the builder to create final documents.
-        builder.add_main_content_docs(main_doc_fragments)
+        builder.add_main_docs(main_doc_fragments)
         builder.add_note_docs(note_doc_fragments)
 
         # 7. Build the final EPUB file (adds CSS, creates toc list, NAV, NCX, OPF, writes all docs to disk, zips the package)

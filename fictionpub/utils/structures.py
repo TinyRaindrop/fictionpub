@@ -83,7 +83,9 @@ class FileInfo():
     title: str
     html: etree._Element
     prop: str = ''
+    is_note: bool = False
     order: int | None = None
+    """0, 1, 2, ... None, ... -2, -1"""
 
     def __post_init__(self):
         self.filename = self.id + ".xhtml"
