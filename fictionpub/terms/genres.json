@@ -1,0 +1,1147 @@
+{
+    "sf_history": {
+        "uk": "Альтернативна історія",
+        "ru": "Альтернативная история",
+        "en": "Alternative history"
+    },
+    "sf_action": {
+        "uk": "Бойова фантастика",
+        "ru": "Боевая фантастика",
+        "en": "Action SF"
+    },
+    "sf_epic": {
+        "uk": "Епічна фантастика",
+        "ru": "Эпическая фантастика",
+        "en": "Epic SF"
+    },
+    "sf_heroic": {
+        "uk": "Героїчна фантастика",
+        "ru": "Героическая фантастика",
+        "en": "Heroic SF"
+    },
+    "sf_detective": {
+        "uk": "Детективна фантастика",
+        "ru": "Детективная фантастика",
+        "en": "Detective SF"
+    },
+    "sf_cyberpunk": {
+        "uk": "Кіберпанк",
+        "ru": "Киберпанк",
+        "en": "Cyberpunk"
+    },
+    "sf_space": {
+        "uk": "Космічна фантастика",
+        "ru": "Космическая фантастика",
+        "en": "Space SF"
+    },
+    "sf_social": {
+        "uk": "Соціально-психологічна фантастика",
+        "ru": "Социально-психологическая фантастика",
+        "en": "Social SF"
+    },
+    "sf_horror": {
+        "uk": "Жахи",
+        "ru": "Ужасы",
+        "en": "Horror"
+    },
+    "sf_humor": {
+        "uk": "Гумористична фантастика",
+        "ru": "Юмористическая фантастика",
+        "en": "Humor SF"
+    },
+    "sf_fantasy": {
+        "uk": "Фентезі",
+        "ru": "Фэнтези",
+        "en": "Fantasy"
+    },
+    "sf": {
+        "uk": "Наукова фантастика",
+        "ru": "Научная фантастика",
+        "en": "Science Fiction"
+    },
+    "child_sf": {
+        "uk": "Дитяча фантастика",
+        "ru": "Детская фантастика",
+        "en": "Science Fiction for Kids"
+    },
+    "sf_fantasy_city": {
+        "uk": "Міське фентезі",
+        "ru": "Городское фэнтези",
+        "en": "Fantasy city"
+    },
+    "sf_postapocalyptic": {
+        "uk": "Постапокаліпсис",
+        "ru": "Постапокалипсис",
+        "en": "Postapocalyptic"
+    },
+    "love_sf": {
+        "uk": "Любовно-фантастичні романи",
+        "ru": "Любовно-фантастические романы",
+        "en": "Love SF"
+    },
+    "gothic_novel": {
+        "uk": "Готичний роман",
+        "ru": "Готический роман",
+        "en": "Gothic novel"
+    },
+    "nsf": {
+        "uk": "Ненаукова фантастика",
+        "ru": "Ненаучная фантастика",
+        "en": "Non Science Fiction"
+    },
+    "fairy_fantasy": {
+        "uk": "Казкова фантастика",
+        "ru": "Сказочная фантастика",
+        "en": "Fairy SF"
+    },
+    "sf_etc": {
+        "uk": "Фантастика: інше",
+        "ru": "Фантастика: прочее",
+        "en": "Other SF"
+    },
+    "sf_irony": {
+        "uk": "Іронічна фантастика",
+        "ru": "Ироническая фантастика",
+        "en": "Ironical SF"
+    },
+    "sf_fantasy_irony": {
+        "uk": "Іронічне фентезі",
+        "ru": "Ироническое фэнтези",
+        "en": "Ironyc female fantasy"
+    },
+    "sf_mystic": {
+        "uk": "Містика",
+        "ru": "Мистика",
+        "en": "Mystic"
+    },
+    "sf_space_opera": {
+        "uk": "Космічна опера",
+        "ru": "Космическая опера",
+        "en": "Space Opera"
+    },
+    "sf_steampunk": {
+        "uk": "Стімпанк",
+        "ru": "Стимпанк",
+        "en": "Steampunk"
+    },
+    "sf_technofantasy": {
+        "uk": "Технофентезі",
+        "ru": "Технофэнтези",
+        "en": "Technofantasy"
+    },
+    "det_classic": {
+        "uk": "Класичний детектив",
+        "ru": "Классический детектив",
+        "en": "Classical Detective"
+    },
+    "det_police": {
+        "uk": "Поліцейський детектив",
+        "ru": "Полицейский детектив",
+        "en": "Police Stories"
+    },
+    "det_action": {
+        "uk": "Бойовик",
+        "ru": "Боевик",
+        "en": "Action"
+    },
+    "det_irony": {
+        "uk": "Іронічний детектив",
+        "ru": "Иронический детектив",
+        "en": "Ironical Detective"
+    },
+    "det_history": {
+        "uk": "Історичний детектив",
+        "ru": "Исторический детектив",
+        "en": "Historical Detective"
+    },
+    "det_espionage": {
+        "uk": "Шпигунський детектив",
+        "ru": "Шпионский детектив",
+        "en": "Espionage Detective"
+    },
+    "det_crime": {
+        "uk": "Кримінальний детектив",
+        "ru": "Криминальный детектив",
+        "en": "Crime Detective"
+    },
+    "det_political": {
+        "uk": "Політичний детектив",
+        "ru": "Политический детектив",
+        "en": "Political Detective"
+    },
+    "det_maniac": {
+        "uk": "Маніяки",
+        "ru": "Маньяки",
+        "en": "Maniacs"
+    },
+    "det_hard": {
+        "uk": "Крутий детектив",
+        "ru": "Крутой детектив",
+        "en": "Hard-boiled Detective"
+    },
+    "thriller": {
+        "uk": "Трилер",
+        "ru": "Триллер",
+        "en": "Thrillers"
+    },
+    "detective": {
+        "uk": "Детективи: інше",
+        "ru": "Детективы: прочее",
+        "en": "Detective"
+    },
+    "love_detective": {
+        "uk": "Гостросюжетні любовні романи",
+        "ru": "Остросюжетные любовные романы",
+        "en": "Detective Romance"
+    },
+    "child_det": {
+        "uk": "Дитячі гостросюжетні",
+        "ru": "Детские остросюжетные",
+        "en": "Detective for Kids"
+    },
+    "thriller_legal": {
+        "uk": "Юридичний трилер",
+        "ru": "Юридический триллер",
+        "en": "Legal thriller"
+    },
+    "thriller_medical": {
+        "uk": "Медичний трилер",
+        "ru": "Медицинский триллер",
+        "en": "Medical thriller"
+    },
+    "thriller_techno": {
+        "uk": "Техно трилер",
+        "ru": "Техно триллер",
+        "en": "Techno Thriller"
+    },
+    "det_cozy": {
+        "uk": "Жіночий детективний роман",
+        "ru": "Дамский детективный роман",
+        "en": "Cozy Mysteries"
+    },
+    "prose": {
+        "uk": "Проза",
+        "ru": "Проза",
+        "en": "Prose"
+    },
+    "prose_classic": {
+        "uk": "Класична проза",
+        "ru": "Классическая проза",
+        "en": "Classical Prose"
+    },
+    "prose_history": {
+        "uk": "Історична проза",
+        "ru": "Историческая проза",
+        "en": "Historical Prose"
+    },
+    "prose_contemporary": {
+        "uk": "Сучасна проза",
+        "ru": "Современная проза",
+        "en": "Contemporary Prose"
+    },
+    "prose_counter": {
+        "uk": "Контркультура",
+        "ru": "Контркультура",
+        "en": "Counterculture"
+    },
+    "prose_rus_classic": {
+        "uk": "Російська класична проза",
+        "ru": "Русская классическая проза",
+        "en": "Russian Classics"
+    },
+    "prose_su_classics": {
+        "uk": "Радянська класична проза",
+        "ru": "Советская классическая проза",
+        "en": "Soviet Classics"
+    },
+    "prose_military": {
+        "uk": "Про війну",
+        "ru": "О войне",
+        "en": "Military"
+    },
+    "aphorisms": {
+        "uk": "Афоризми",
+        "ru": "Афоризмы",
+        "en": "Aphorisms"
+    },
+    "essay": {
+        "uk": "Есе",
+        "ru": "Эссе",
+        "en": "Essay"
+    },
+    "story": {
+        "uk": "Новела",
+        "ru": "Новелла",
+        "en": "Story"
+    },
+    "great_story": {
+        "uk": "Повість",
+        "ru": "Повесть",
+        "en": "Great story"
+    },
+    "short_story": {
+        "uk": "Оповідання",
+        "ru": "Рассказ",
+        "en": "Short story"
+    },
+    "roman": {
+        "uk": "Роман",
+        "ru": "Роман",
+        "en": "Roman"
+    },
+    "extravaganza": {
+        "uk": "Феєрія",
+        "ru": "Феерия",
+        "en": "Extravaganza"
+    },
+    "epistolary_fiction": {
+        "uk": "Епістолярна проза",
+        "ru": "Эпистолярная проза",
+        "en": "Epistolary"
+    },
+    "prose_epic": {
+        "uk": "Епопея",
+        "ru": "Эпопея",
+        "en": "Epic"
+    },
+    "prose_magic": {
+        "uk": "Магічний реалізм",
+        "ru": "Магический реализм",
+        "en": "Magic realism"
+    },
+    "love_contemporary": {
+        "uk": "Сучасні любовні романи",
+        "ru": "Современные любовные романы",
+        "en": "Contemporary Romance"
+    },
+    "love_history": {
+        "uk": "Історичні любовні романи",
+        "ru": "Исторические любовные романы",
+        "en": "Historical Romance"
+    },
+    "love_short": {
+        "uk": "Короткі любовні романи",
+        "ru": "Короткие любовные романы",
+        "en": "Short Romance"
+    },
+    "love_erotica": {
+        "uk": "Еротика",
+        "ru": "Эротика",
+        "en": "Erotica"
+    },
+    "love": {
+        "uk": "Про кохання",
+        "ru": "О любви",
+        "en": "About love"
+    },
+    "love_hard": {
+        "uk": "Порно",
+        "ru": "Порно",
+        "en": "Porno"
+    },
+    "adv_western": {
+        "uk": "Вестерн",
+        "ru": "Вестерн",
+        "en": "Western"
+    },
+    "adv_history": {
+        "uk": "Історичні пригоди",
+        "ru": "Исторические приключения",
+        "en": "History"
+    },
+    "adv_indian": {
+        "uk": "Пригоди про індіанців",
+        "ru": "Приключения про индейцев",
+        "en": "Indians"
+    },
+    "adv_maritime": {
+        "uk": "Морські пригоди",
+        "ru": "Морские приключения",
+        "en": "Maritime Fiction"
+    },
+    "adv_geo": {
+        "uk": "Подорожі та географія",
+        "ru": "Путешествия и география",
+        "en": "Travel & Geography"
+    },
+    "adv_animal": {
+        "uk": "Природа та тварини",
+        "ru": "Природа и животные",
+        "en": "Nature & Animals"
+    },
+    "adventure": {
+        "uk": "Пригоди: інше",
+        "ru": "Приключения: прочее",
+        "en": "Misk Adventures"
+    },
+    "child_adv": {
+        "uk": "Дитячі пригоди",
+        "ru": "Детские приключения",
+        "en": "Adventures for Kids"
+    },
+    "child_tale": {
+        "uk": "Казка",
+        "ru": "Сказка",
+        "en": "Fairy Tales"
+    },
+    "child_verse": {
+        "uk": "Дитячі вірші",
+        "ru": "Детские стихи",
+        "en": "Verses for Kids"
+    },
+    "child_prose": {
+        "uk": "Дитяча проза",
+        "ru": "Детская проза",
+        "en": "Prose for Kids"
+    },
+    "child_education": {
+        "uk": "Дитяча освітня література",
+        "ru": "Детская образовательная литература",
+        "en": "Education for Kids"
+    },
+    "children": {
+        "uk": "Дитяча література: інше",
+        "ru": "Детская литература: прочее",
+        "en": "For Kids: Misk"
+    },
+    "child_folklore": {
+        "uk": "Дитячий фольклор",
+        "ru": "Детский фольклор",
+        "en": "Child Folklore"
+    },
+    "poetry": {
+        "uk": "Поезія: інше",
+        "ru": "Поэзия: прочее",
+        "en": "Poetry"
+    },
+    "humor_verse": {
+        "uk": "Гумористичні вірші",
+        "ru": "Юмористические стихи",
+        "en": "Humor Verses"
+    },
+    "fable": {
+        "uk": "Байки",
+        "ru": "Басни",
+        "en": "Fable"
+    },
+    "vers_libre": {
+        "uk": "Верлібри",
+        "ru": "Верлибры",
+        "en": "Vers libre"
+    },
+    "visual_poetry": {
+        "uk": "Візуальна поезія",
+        "ru": "Визуальная поэзия",
+        "en": "Visual Poetry"
+    },
+    "lyrics": {
+        "uk": "Лірика",
+        "ru": "Лирика",
+        "en": "Lyrics"
+    },
+    "palindromes": {
+        "uk": "Паліндроми",
+        "ru": "Палиндромы",
+        "en": "Palindromes"
+    },
+    "song_poetry": {
+        "uk": "Пісенна поезія",
+        "ru": "Песенная поэзия",
+        "en": "Song Poetry"
+    },
+    "experimental_poetry": {
+        "uk": "Експериментальна поезія",
+        "ru": "Экспериментальная поэзия",
+        "en": "Experimental Poetry"
+    },
+    "epic_poetry": {
+        "uk": "Епічна поезія",
+        "ru": "Эпическая поэзия",
+        "en": "Epic Poetry"
+    },
+    "in_verse": {
+        "uk": "у віршах",
+        "ru": "в стихах",
+        "en": "In verse"
+    },
+    "antique_ant": {
+        "uk": "Антична література",
+        "ru": "Античная литература",
+        "en": "Ancient Literature"
+    },
+    "antique_european": {
+        "uk": "Європейська старовинна література",
+        "ru": "Европейская старинная литература",
+        "en": "Ancient European Literature"
+    },
+    "antique_russian": {
+        "uk": "Давньоруська література",
+        "ru": "Древнерусская литература",
+        "en": "Ancient Russian Literature"
+    },
+    "antique_east": {
+        "uk": "Давньосхідна література",
+        "ru": "Древневосточная литература",
+        "en": "Ancient East Literature"
+    },
+    "antique_myths": {
+        "uk": "Міфи. Легенди. Епос",
+        "ru": "Мифы. Легенды. Эпос",
+        "en": "Myths. Legends. Epos"
+    },
+    "antique": {
+        "uk": "Старовинна література: інше",
+        "ru": "Старинная литература: прочее",
+        "en": "Other Ancient Literature"
+    },
+    "sci_history": {
+        "uk": "Історія",
+        "ru": "История",
+        "en": "History"
+    },
+    "sci_psychology": {
+        "uk": "Психологія",
+        "ru": "Психология",
+        "en": "Psychology"
+    },
+    "sci_culture": {
+        "uk": "Культурологія",
+        "ru": "Культурология",
+        "en": "Cultural Science"
+    },
+    "sci_religion": {
+        "uk": "Релігієзнавство",
+        "ru": "Религиоведение",
+        "en": "Religious Studies"
+    },
+    "sci_philosophy": {
+        "uk": "Філософія",
+        "ru": "Философия",
+        "en": "Philosophy"
+    },
+    "sci_politics": {
+        "uk": "Політика",
+        "ru": "Политика",
+        "en": "Politics"
+    },
+    "sci_business": {
+        "uk": "Ділова література",
+        "ru": "Деловая литература",
+        "en": "Business"
+    },
+    "sci_juris": {
+        "uk": "Юриспруденція",
+        "ru": "Юриспруденция",
+        "en": "Jurisprudence"
+    },
+    "sci_linguistic": {
+        "uk": "Мовознавство",
+        "ru": "Языкознание",
+        "en": "Linguistics"
+    },
+    "sci_medicine": {
+        "uk": "Медицина",
+        "ru": "Медицина",
+        "en": "Medicine"
+    },
+    "sci_phys": {
+        "uk": "Фізика",
+        "ru": "Физика",
+        "en": "Physics"
+    },
+    "sci_math": {
+        "uk": "Математика",
+        "ru": "Математика",
+        "en": "Mathematics"
+    },
+    "sci_chem": {
+        "uk": "Хімія",
+        "ru": "Химия",
+        "en": "Chemistry"
+    },
+    "sci_biology": {
+        "uk": "Біологія",
+        "ru": "Биология",
+        "en": "Biology"
+    },
+    "sci_tech": {
+        "uk": "Технічні науки",
+        "ru": "Технические науки",
+        "en": "Technical"
+    },
+    "science": {
+        "uk": "Наукова література: інше",
+        "ru": "Научная литература: прочее",
+        "en": "Misk Science, Education"
+    },
+    "sci_biochem": {
+        "uk": "Біохімія",
+        "ru": "Биохимия",
+        "en": "Biochemistry"
+    },
+    "sci_physchem": {
+        "uk": "Фізична хімія",
+        "ru": "Физическая химия",
+        "en": "Physical chemistry"
+    },
+    "sci_anachem": {
+        "uk": "Аналітична хімія",
+        "ru": "Аналитическая химия",
+        "en": "Analitic Chemistry"
+    },
+    "sci_orgchem": {
+        "uk": "Органічна хімія",
+        "ru": "Органическая химия",
+        "en": "Organic Chemistry"
+    },
+    "sci_economy": {
+        "uk": "Економіка",
+        "ru": "Экономика",
+        "en": "Economy"
+    },
+    "sci_state": {
+        "uk": "Держава і право",
+        "ru": "Государство и право",
+        "en": "State science"
+    },
+    "sci_biophys": {
+        "uk": "Біофізика",
+        "ru": "Биофизика",
+        "en": "Biophysics"
+    },
+    "sci_geo": {
+        "uk": "Геологія та географія",
+        "ru": "Геология и география",
+        "en": "Geology"
+    },
+    "sci_cosmos": {
+        "uk": "Астрономія та Космос",
+        "ru": "Астрономия и Космос",
+        "en": "Cosmos"
+    },
+    "sci_medicine_alternative": {
+        "uk": "Альтернативна медицина",
+        "ru": "Альтернативная медицина",
+        "en": "Alternative medicine"
+    },
+    "sci_philology": {
+        "uk": "Літературознавство",
+        "ru": "Литературоведение",
+        "en": "Philology"
+    },
+    "sci_pedagogy": {
+        "uk": "Педагогіка",
+        "ru": "Педагогика",
+        "en": "Pedagogy"
+    },
+    "sci_social_studies": {
+        "uk": "Суспільствознавство",
+        "ru": "Обществознание",
+        "en": "Social studies"
+    },
+    "sci_ecology": {
+        "uk": "Екологія",
+        "ru": "Экология",
+        "en": "Ecology"
+    },
+    "military_history": {
+        "uk": "Військова історія",
+        "ru": "Военная история",
+        "en": "Military History"
+    },
+    "sci_veterinary": {
+        "uk": "Ветеринарія",
+        "ru": "Ветеринария",
+        "en": "Veterinary"
+    },
+    "sci_zoo": {
+        "uk": "Зоологія",
+        "ru": "Зоология",
+        "en": "Zoology"
+    },
+    "sci_botany": {
+        "uk": "Ботаніка",
+        "ru": "Ботаника",
+        "en": "Botany"
+    },
+    "sci_textbook": {
+        "uk": "Підручники",
+        "ru": "Учебники",
+        "en": "Учебники"
+    },
+    "sci_crib": {
+        "uk": "Шпаргалки",
+        "ru": "Шпаргалки",
+        "en": "Шпаргалки"
+    },
+    "comp_www": {
+        "uk": "Інтернет",
+        "ru": "Интернет",
+        "en": "Internet"
+    },
+    "comp_programming": {
+        "uk": "Програмування",
+        "ru": "Программирование",
+        "en": "Programming"
+    },
+    "comp_hard": {
+        "uk": "Комп'ютерне 'залізо' (апаратне забезпечення)",
+        "ru": "Компьютерное 'железо' (аппаратное обеспечение)",
+        "en": "Hardware"
+    },
+    "comp_soft": {
+        "uk": "Програми",
+        "ru": "Программы",
+        "en": "Software"
+    },
+    "comp_db": {
+        "uk": "Бази даних",
+        "ru": "Базы данных",
+        "en": "Databases"
+    },
+    "comp_osnet": {
+        "uk": "ОС та Мережі",
+        "ru": "ОС и Сети",
+        "en": "OS & Networking"
+    },
+    "computers": {
+        "uk": "Навколокомп'ютерна література",
+        "ru": "Околокомпьютерная литература",
+        "en": "Computers: Misk"
+    },
+    "comp_dsp": {
+        "uk": "Цифрова обробка сигналів",
+        "ru": "Цифровая обработка сигналов",
+        "en": "DSP"
+    },
+    "ref_encyc": {
+        "uk": "Енциклопедії",
+        "ru": "Энциклопедии",
+        "en": "Encyclopedias"
+    },
+    "ref_guide": {
+        "uk": "Посібники",
+        "ru": "Руководства",
+        "en": "Guidebooks"
+    },
+    "ref_ref": {
+        "uk": "Довідники",
+        "ru": "Справочники",
+        "en": "Reference"
+    },
+    "ref_dict": {
+        "uk": "Словники",
+        "ru": "Словари",
+        "en": "Dictionaries"
+    },
+    "geo_guides": {
+        "uk": "Путівники",
+        "ru": "Путеводители",
+        "en": "Guides"
+    },
+    "reference": {
+        "uk": "Довідкова література",
+        "ru": "Справочная литература",
+        "en": "Misk References"
+    },
+    "religion_rel": {
+        "uk": "Релігія",
+        "ru": "Религия",
+        "en": "Religion"
+    },
+    "religion_esoterics": {
+        "uk": "Езотерика",
+        "ru": "Эзотерика",
+        "en": "Esoterics"
+    },
+    "religion_self": {
+        "uk": "Самовдосконалення",
+        "ru": "Самосовершенствование",
+        "en": "Self-perfection"
+    },
+    "religion": {
+        "uk": "Релігійна література: інше",
+        "ru": "Религиозная литература: прочее",
+        "en": "Religion: Other"
+    },
+    "religion_budda": {
+        "uk": "Буддизм",
+        "ru": "Буддизм",
+        "en": "Buddha"
+    },
+    "religion_christianity": {
+        "uk": "Християнство",
+        "ru": "Христианство",
+        "en": "Christianity"
+    },
+    "religion_orthodoxy": {
+        "uk": "Православ'я",
+        "ru": "Православие",
+        "en": "Orthodoxy"
+    },
+    "religion_catholicism": {
+        "uk": "Католицизм",
+        "ru": "Католицизм",
+        "en": "Catholicism"
+    },
+    "religion_protestantism": {
+        "uk": "Протестантизм",
+        "ru": "Протестантизм",
+        "en": "Protestantism"
+    },
+    "religion_hinduism": {
+        "uk": "Індуїзм",
+        "ru": "Индуизм",
+        "en": "Hinduism"
+    },
+    "religion_islam": {
+        "uk": "Іслам",
+        "ru": "Ислам",
+        "en": "Islam"
+    },
+    "religion_judaism": {
+        "uk": "Юдаїзм",
+        "ru": "Иудаизм",
+        "en": "Judaism"
+    },
+    "astrology": {
+        "uk": "Астрологія",
+        "ru": "Астрология",
+        "en": "Astrology"
+    },
+    "palmistry": {
+        "uk": "Хіромантія",
+        "ru": "Хиромантия",
+        "en": "Palmistry"
+    },
+    "religion_paganism": {
+        "uk": "Язичництво",
+        "ru": "Язычество",
+        "en": "Paganism"
+    },
+    "humor_anecdote": {
+        "uk": "Анекдоти",
+        "ru": "Анекдоты",
+        "en": "Anecdote"
+    },
+    "humor_prose": {
+        "uk": "Гумористична проза",
+        "ru": "Юмористическая проза",
+        "en": "Humor Prose"
+    },
+    "humor": {
+        "uk": "Гумор: інше",
+        "ru": "Юмор: прочее",
+        "en": "Misk Humor"
+    },
+    "comedy": {
+        "uk": "Комедія",
+        "ru": "Комедия",
+        "en": "Comedy"
+    },
+    "humor_satire": {
+        "uk": "Сатира",
+        "ru": "Сатира",
+        "en": "Satire"
+    },
+    "home_cooking": {
+        "uk": "Кулінарія",
+        "ru": "Кулинария",
+        "en": "Cooking"
+    },
+    "home_pets": {
+        "uk": "Домашні тварини",
+        "ru": "Домашние животные",
+        "en": "Pets"
+    },
+    "home_crafts": {
+        "uk": "Хобі та ремесла",
+        "ru": "Хобби и ремесла",
+        "en": "Hobbies & Crafts"
+    },
+    "home_entertain": {
+        "uk": "Розваги",
+        "ru": "Развлечения",
+        "en": "Entertaining"
+    },
+    "home_health": {
+        "uk": "Здоров'я",
+        "ru": "Здоровье",
+        "en": "Health"
+    },
+    "home_garden": {
+        "uk": "Сад і город",
+        "ru": "Сад и огород",
+        "en": "Garden"
+    },
+    "home_diy": {
+        "uk": "Зроби сам",
+        "ru": "Сделай сам",
+        "en": "Do it yourself"
+    },
+    "home_sport": {
+        "uk": "Спорт",
+        "ru": "Спорт",
+        "en": "Sports"
+    },
+    "home_sex": {
+        "uk": "Еротика, Секс",
+        "ru": "Эротика, Секс",
+        "en": "Erotica, Sex"
+    },
+    "home": {
+        "uk": "Домогосподарство",
+        "ru": "Домоводство",
+        "en": "Home: Other"
+    },
+    "home_collecting": {
+        "uk": "Колекціонування",
+        "ru": "Коллекционирование",
+        "en": "Collecting"
+    },
+    "sci_transport": {
+        "uk": "Транспорт та авіація",
+        "ru": "Транспорт и авиация",
+        "en": "Transport"
+    },
+    "sci_metal": {
+        "uk": "Металургія",
+        "ru": "Металлургия",
+        "en": "Metallurgy"
+    },
+    "sci_radio": {
+        "uk": "Радіоелектроніка",
+        "ru": "Радиоэлектроника",
+        "en": "Radio"
+    },
+    "sci_build": {
+        "uk": "Будівництво та опір матеріалів",
+        "ru": "Строительство и сопромат",
+        "en": "Building"
+    },
+    "notes": {
+        "uk": "Партитури",
+        "ru": "Партитуры",
+        "en": "Notes"
+    },
+    "periodic": {
+        "uk": "Журнали",
+        "ru": "Журналы",
+        "en": "Periodic"
+    },
+    "fanfiction": {
+        "uk": "Фанфік",
+        "ru": "Фанфик",
+        "en": "Fan fiction"
+    },
+    "unfinished": {
+        "uk": "Недописане",
+        "ru": "Недописанное",
+        "en": "Unfinished"
+    },
+    "design": {
+        "uk": "Мистецтво та Дизайн",
+        "ru": "Искусство и Дизайн",
+        "en": "Art, Design"
+    },
+    "music": {
+        "uk": "Музика",
+        "ru": "Музыка",
+        "en": "Music"
+    },
+    "cine": {
+        "uk": "Кіно",
+        "ru": "Кино",
+        "en": "Cine"
+    },
+    "theatre": {
+        "uk": "Театр",
+        "ru": "Театр",
+        "en": "Theatre"
+    },
+    "other": {
+        "uk": "Невідсортоване",
+        "ru": "Неотсортированное",
+        "en": "Other"
+    },
+    "banking": {
+        "uk": "Банківська справа",
+        "ru": "Банковское дело",
+        "en": "Banking"
+    },
+    "accounting": {
+        "uk": "Бухоблік, оподаткування, аудит",
+        "ru": "Бухучет, налогообложение, аудит",
+        "en": "Accounting"
+    },
+    "global_economy": {
+        "uk": "Зовнішньоекономічна діяльність",
+        "ru": "Внешнеэкономическая деятельность",
+        "en": "Global Economy"
+    },
+    "paper_work": {
+        "uk": "Діловодство",
+        "ru": "Делопроизводство",
+        "en": "Paper Work"
+    },
+    "org_behavior": {
+        "uk": "Корпоративна культура",
+        "ru": "Корпоративная культура",
+        "en": "Corporate Culture"
+    },
+    "personal_finance": {
+        "uk": "Особисті фінанси",
+        "ru": "Личные финансы",
+        "en": "Personal Finance"
+    },
+    "small_business": {
+        "uk": "Малий бізнес",
+        "ru": "Малый бизнес",
+        "en": "Small Business"
+    },
+    "marketing": {
+        "uk": "Маркетинг, PR, реклама",
+        "ru": "Маркетинг, PR, реклама",
+        "en": "Marketing, PR, Adv"
+    },
+    "real_estate": {
+        "uk": "Нерухомість",
+        "ru": "Недвижимость",
+        "en": "Real Estate"
+    },
+    "popular_business": {
+        "uk": "Про бізнес популярно",
+        "ru": "О бизнесе популярно",
+        "en": "Popular Business"
+    },
+    "industries": {
+        "uk": "Галузеві видання",
+        "ru": "Отраслевые издания",
+        "en": "Industries"
+    },
+    "job_hunting": {
+        "uk": "Пошук роботи, кар'єра",
+        "ru": "Поиск работы, карьера",
+        "en": "Job Hunting"
+    },
+    "economics_ref": {
+        "uk": "Довідники",
+        "ru": "Справочники",
+        "en": "Economics Reference Book"
+    },
+    "management": {
+        "uk": "Управління, підбір персоналу",
+        "ru": "Управление, подбор персонала",
+        "en": "Management"
+    },
+    "stock": {
+        "uk": "Цінні папери, інвестиції",
+        "ru": "Ценные бумаги, инвестиции",
+        "en": "Stock"
+    },
+    "economics": {
+        "uk": "Економіка",
+        "ru": "Экономика",
+        "en": "Economics"
+    },
+    "sci_popular": {
+        "uk": "Науково-популярна",
+        "ru": "Научно-популярная",
+        "en": "Science popular"
+    },
+    "nonf_military": {
+        "uk": "Військова документалістика та аналітика",
+        "ru": "Военная документалистика и аналитика",
+        "en": "Military docs"
+    },
+    "nonf_biography": {
+        "uk": "Біографії та Мемуари",
+        "ru": "Биографии и Мемуары",
+        "en": "Biography & Memoirs"
+    },
+    "nonf_publicism": {
+        "uk": "Публіцистика",
+        "ru": "Публицистика",
+        "en": "Publicism"
+    },
+    "nonf_criticism": {
+        "uk": "Критика",
+        "ru": "Критика",
+        "en": "Criticism"
+    },
+    "nonfiction": {
+        "uk": "Документальна література",
+        "ru": "Документальная литература",
+        "en": "Misk Nonfiction"
+    },
+    "dramaturgy": {
+        "uk": "Драматургія: інше",
+        "ru": "Драматургия: прочее",
+        "en": "Dramaturgy"
+    },
+    "drama": {
+        "uk": "Драма",
+        "ru": "Драма",
+        "en": "Drama"
+    },
+    "screenplays": {
+        "uk": "Кіносценарії",
+        "ru": "Киносценарии",
+        "en": "Screenplays"
+    },
+    "mystery": {
+        "uk": "Містерія",
+        "ru": "Мистерия",
+        "en": "Mystery"
+    },
+    "scenarios": {
+        "uk": "Сценарії",
+        "ru": "Сценарии",
+        "en": "Scenarios"
+    },
+    "tragedy": {
+        "uk": "Трагедія",
+        "ru": "Трагедия",
+        "en": "Tragedy"
+    },
+    "vaudeville": {
+        "uk": "Водевіль",
+        "ru": "Водевиль",
+        "en": "Vaudeville"
+    },
+    "epic": {
+        "uk": "Билини",
+        "ru": "Былины",
+        "en": "Epic"
+    },
+    "riddles": {
+        "uk": "Загадки",
+        "ru": "Загадки",
+        "en": "Riddles"
+    },
+    "folk_songs": {
+        "uk": "Народні пісні",
+        "ru": "Народные песни",
+        "en": "Folk Songs"
+    },
+    "folk_tale": {
+        "uk": "Народні казки",
+        "ru": "Народные сказки",
+        "en": "Folk tales"
+    },
+    "proverbs": {
+        "uk": "Прислів'я, приказки",
+        "ru": "Пословицы, поговорки",
+        "en": "Proverbs"
+    },
+    "folklore": {
+        "uk": "Фольклор: інше",
+        "ru": "Фольклор: прочее",
+        "en": "Folklore"
+    },
+    "limerick": {
+        "uk": "Частівки, примовки, потішки",
+        "ru": "Частушки, прибаутки, потешки",
+        "en": "Limerick"
+    }
+}

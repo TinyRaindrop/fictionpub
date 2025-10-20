@@ -1,0 +1,98 @@
+"""
+Handles command-line argument parsing and initiates the conversion.
+This is the entry point for the console script.
+"""
+import argparse
+import logging
+from pathlib import Path
+
+from tqdm import tqdm
+
+from .core.batch_processor import BatchProcessor
+from .utils.config import ConversionConfig
+
+
+log = logging.getLogger("fb2_converter")
+
+
+def int_in_range(min_val, max_val):
+    def checker(value):
+        ivalue = int(value)
+        if ivalue < min_val or ivalue > max_val:
+            raise argparse.ArgumentTypeError(f"Value must be between {min_val} and {max_val}, got {ivalue}")
+        return ivalue
+    return checker
+
+
+def run_cli():
+    """
+    The main function for the command-line interface.
+    Parses arguments and runs the conversion pipeline.
+    """
+    parser = argparse.ArgumentParser(
+        description="A robust FB2 to EPUB3 converter.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument("input_paths", type=Path, nargs="+", 
+                        help="Input .fb2, .fb2.zip files or/and folders separated by a space.")
+    parser.add_argument("-o", "--output", type=Path, default=None, 
+                        help="Output folder or filename (for single input). If omitted, each output is placed next to the input file.")
+    parser.add_argument("-t", "--toc-depth", type=int_in_range(1, 6), default=4,
+                        help="Maximum heading level to include in TOC [1..6] (e.g., 4 to include h1-h4).")
+    parser.add_argument("-s", "--split-level", type=int_in_range(1, 6), default=1, 
+                        help="Heading level to split chapters into separate files [1..6] (e.g. 2 to split at every h2).")
+    parser.add_argument("-z", "--split-size", type=int, default="0", 
+                        help="Increment split-level if XHTML files exceed this size in KB. 0 to disable.")
+    parser.add_argument("-c", "--css", type=Path, default=None, 
+                        help="Path to a custom CSS file.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging.")
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger("fb2_converter").setLevel(logging.DEBUG)
+        log.info("Verbose logging enabled.")
+
+    # Collect all files to be processed
+    files_to_process = []
+    for path in args.input_paths:
+        if not path.exists():
+            log.warning(f"Input path does not exist, skipping: {path}")
+            continue
+        if path.is_dir():
+            for ext in ("**/*.fb2", "**/*.fb2.zip"):
+                files_to_process.extend(path.rglob(ext))
+        elif path.is_file() and path.suffix in ['.fb2', '.zip']:
+            filename = str(path)
+            if filename.endswith('.fb2') or filename.endswith('.fb2.zip'):
+                files_to_process.append(path)
+
+    if not files_to_process:
+        log.warning("No .fb2 or .fb2.zip files found to process.")
+        return
+
+    # Create configuration and run batch processor
+    config = ConversionConfig(
+        output_path=args.output,
+        toc_depth=args.toc_depth,
+        split_level=args.split_level,
+        split_size_kb=args.split_size,
+        custom_stylesheet=args.css
+    )
+    processor = BatchProcessor(config)
+
+    num_files = len(files_to_process)
+    log.info(f"Found {len(files_to_process)} files. Starting conversion...")
+    
+    # Use tqdm for a progress bar
+    with tqdm(total=num_files, unit="file", desc="Converting") as pbar:
+        def progress_callback(path: Path, result: Path | None, exc: Exception | None):
+            if exc:
+            # Use logger to show detailed error with traceback
+                log.error(f"Failed to convert {path.name}:", exc_info=exc)
+                # tqdm.write(f"\nERROR converting {path.name}: {exc}")
+            pbar.update(1)
+        
+        processor.run(files_to_process, progress_callback)
+
+    log.info("Batch conversion finished.")

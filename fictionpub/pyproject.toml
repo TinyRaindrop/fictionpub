@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fictionpub"
+version = "0.1.0"
+description = "Convert FB2 eBooks to EPUB3."
+authors = [{ name = "jam" }]
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "KEK" }
+keywords = ["fb2", "epub", "ebook", "converter"]
+
+dependencies = [
+    "lxml>=5.2.0",
+    "pillow>=11.0.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "lxml-stubs>=0.5.0",
+    "isort>=5.12",
+    "flake8>=6.0",
+    "mypy>=1.10",
+    "pytest>=7.4"
+]
+
+# When a user types "fictionpub", it will run main() from fictionpub/main.py
+[project.scripts]
+fictionpub = "fictionpub.main:main"
+
+

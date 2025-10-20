@@ -1,0 +1,32 @@
+{
+    "cover": {
+        "uk": "Обкладинка",
+        "ru": "Обложка",
+        "en": "Cover"
+    },
+    "annotation": {
+        "uk": "Анотація",
+        "ru": "Аннотация",
+        "en": "Annotation"
+    },
+    "copyright": {
+        "uk": "Інформація",
+        "ru": "Информация",
+        "en": "Copyright"
+    },
+    "notes": {
+        "uk": "Примітки",
+        "ru": "Примечания",
+        "en": "Notes"
+    },
+    "comments": {
+        "uk": "Коментарі",
+        "ru": "Комментарии",
+        "en": "Comments"
+    },
+    "toc": {
+        "uk": "Зміст",
+        "ru": "Содержание",
+        "en": "Table of Contents"
+    }
+}

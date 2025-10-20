@@ -1,0 +1,299 @@
+/* ===== Default stylesheet  ===== */
+/* ==== FB2 => Epub converter ==== */
+
+/* Reset */
+body, div, p { margin: 0; padding: 0; }
+
+/* ==== BASIC ELEMENTS ==== */
+
+body {
+    margin: 12px;
+}
+
+h1, h2, h3, h4, h5, h6, p.subtitle {
+    margin-left: 1.25rem;
+    margin-right: 1.25rem;
+    text-align: center;
+    text-indent: 0;
+	/* wrap is unsupported by many readers */
+	/* text-wrap: balance; */  
+    font-weight: bold;
+    font-family: serif;
+    hyphens: none;
+    -epub-hyphens: none;
+    break-after: avoid;
+    page-break-after: avoid;
+}
+
+h1 {
+    margin-top: 20%;
+    margin-bottom: 3rem;
+    font-size: 2rem;
+}
+
+h2 {
+    margin-top: 3rem;
+    margin-bottom: 2.5rem;
+    font-size: 1.75rem;
+}
+
+h3 {
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
+    font-size: 1.33rem;
+}
+
+h4 {
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 1.15rem;
+}
+
+h5 {
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+h6 {
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: normal;
+}
+
+p {
+    margin: 0;
+    text-align: justify;
+    text-indent: 1.25em;
+    /*widows: 1;
+    orphans: 1;*/
+}
+
+/* Last paragraph in a file (before a page break) */
+body > p:last-child,
+section > p:last-child  {
+    /* top of the page */
+    widows: 2;
+}
+
+p.subtitle {
+    margin: 1.5em 1.25rem 1em;
+    text-align: center;
+    text-indent: 0;
+    font-weight: bold;
+    font-style: italic;
+}
+
+div.poem {
+    margin: 1em 0.5em 1em 10%;
+    /* Ideally, poems should use fit-content, but some readers don't support it */
+    /* width: fit-content; */
+}
+
+div.stanza {
+    margin-bottom: 1em;
+}
+
+.stanza + .stanza {
+    margin-top: 1em;
+}
+
+p.v {
+    /*margin-left: 1.25em;
+    text-indent: -1.25em;   */
+    text-indent: 1.25 hanging;  /* some readers might not support hanging indent */
+    text-align: left;
+    text-align-last: -cr-right-if-not-first;    /* crengine/KOReader specific */
+    hyphens: none;
+    -epub-hyphens: none;
+}
+
+blockquote {
+    margin: 0.5em 0.5em 0.5em 1.25em;
+}
+
+blockquote p {
+    font-size: 0.9em;
+    text-indent: 1.2em;
+}
+
+.annotation {
+    margin: 15% 8% 1.5em;
+    font-size: 0.9em;
+    /*hyphens: none;
+    -epub-hyphens: none;   */
+}
+
+.epigraph {
+    margin: 1rem 1rem 1rem 15%;
+    text-indent: 1.25em;
+    font-style: italic;
+    hyphens: none;
+    -epub-hyphens: none;
+}
+
+.epigraph p {
+    margin: 0.5em 0;    
+}
+
+/* We don't actually use <cite> during conversion */
+/* cite.text-author, */
+.text-author {
+    display: inline-block;
+    margin-top: 0.5em;
+    margin-left: 1.25em;
+    text-align: right;
+    font-size: 0.9em;
+    font-style: normal;
+}
+
+figure {
+  margin: 0.75em auto;
+  padding: 0;
+  width: 100%;
+  text-align: center;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+figure > img {
+  object-fit: contain;
+  margin: 0 auto;
+  height: auto;
+  max-width: 100%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/*
+figure > img[data-orientation=tall] { }
+
+figure > img[data-orientation=wide] { }
+
+figure > img[data-orientation=square] { }
+*/
+
+img {
+    /*display: block; 
+    margin: 1em auto;*/
+    max-width: 100%;
+    max-height: 98%;
+    /* some readers ignore VH/VW units */
+    max-height: 98vh;
+    height: auto;
+}
+
+/* Captions should be place inside the <figure> */
+figcaption {
+  margin: 0.5rem 1.25rem 0;
+  text-indent: 0;
+  text-align: justify;
+  text-align-last: center;
+  font-variant: small-caps;
+  font-size: 0.85em;
+  color: #131313;
+  break-before: avoid;
+  page-break-before: avoid;
+}
+
+
+
+/* ==== FOOTNOTES & COMMENTS ==== */
+
+.footnote {
+  font-size: 0.9em;
+}
+
+/* regular internal links */
+a {
+    text-decoration: underline;
+    color: #000096;
+}
+
+/* noteref links[1] */
+a.noteref {
+    font-size: 0.7em;
+    /* avoid oldstyle numbers */
+    /*font-variant-numeric: lining-nums;*/
+    vertical-align: super;
+    text-decoration: none;
+    color: inherit;
+}
+
+/* 1. backlinks inside p.footnote */
+a.backlink {
+    font-weight: bold;
+    text-decoration: none;
+    color: inherit;
+}
+
+
+/* ==== CUSTOM ELEMENTS ==== */
+
+/* Title page */
+.titlepage-body {
+  margin: 30% 1rem 0;
+  text-align: center;
+  hyphens: none;
+  -epub-hyphens: none;
+}
+
+.book-author {
+    margin-bottom: 1.5em;
+    font-size: 1.25em;
+    break-after: avoid;
+    page-break-after: avoid;
+}
+
+.book-title {
+    font-size: 2.5em;
+}
+
+/* Copyright page */
+.copyright-body {
+  font-size: 0.9em;
+  hyphens: none;
+  -epub-hyphens: none;
+}
+
+
+/* ==== TYPOGRAPHY, FIXES ==== */
+
+.em {
+  font-style: italic;
+}
+
+.bold {
+  font-weight: bold;
+}
+
+.left 	{ text-align: left; }
+.center { text-align: center; }
+.right 	{ text-align: right; }
+
+p.left, .left p,
+p.center, .center p,
+p.right, .right p {
+  text-indent: 0;
+}
+
+/* <empty-line/> is converted to this class */
+.space-after {
+    margin-bottom: 1rem;
+}
+
+.space-after + p {
+	/* don't leave an orphan line at bottom of the page 
+		after a spacer */
+	orphans: 2;		/* CONTROVERSIAL! */
+}
+
+/* Words inside <span>.nowrap will not be hyphenated */
+.nowrap { white-space: nowrap; }  
+
+*[hidden] {    
+    /* SumatraPDF displays hidden elements, 
+	thus we must explicitly hide them */
+    display: none;
+}
