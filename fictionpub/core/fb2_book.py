@@ -286,7 +286,7 @@ class FB2Book:
     def _map_internal_ids(self):
         """Creates a map of all `id` attributes for internal linking."""
         # TODO: make it actually useful
-        for element in self.tree.iterfind('//*[@id]'):
+        for element in self.tree.iterfind('.//*[@id]'):
             id_attr = element.get('id')
             if id_attr:
                 self.id_map[id_attr] = element
@@ -294,7 +294,7 @@ class FB2Book:
 
     def _create_referenced_ids_set(self):
         """Creates a set of all `href` links."""
-        for element in self.tree.iterfind('//*[@l:href]', namespaces=NS.FB2_MAP):
+        for element in self.tree.iterfind('.//*[@l:href]', namespaces=NS.FB2_MAP):
             id = element.get(f'{{{NS.XLINK}}}href')
             if id:
                 self.referenced_ids.add(id.lstrip('#'))

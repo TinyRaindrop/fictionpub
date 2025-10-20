@@ -7,7 +7,6 @@ core modules to perform specific tasks.
 from pathlib import Path
 
 from ..utils.config import ConversionConfig
-from ..utils.structures import FileInfo
 from .fb2_book import FB2Book
 from .fb2_to_html_converter import FB2ToHTMLConverter, ConversionMode
 from .epub_builder import EpubBuilder

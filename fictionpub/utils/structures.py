@@ -76,7 +76,7 @@ EPUB_TYPES_MAP: dict[str, EpubStructureItem] = {
 }
 
 
-@dataclass
+@dataclass(order=False)
 class FileInfo():
     """A container for xhtml file metadata and content."""
     id: str
@@ -85,11 +85,22 @@ class FileInfo():
     prop: str = ''
     is_note: bool = False
     order: int | None = None
-    """0, 1, 2, ... None, ... -2, -1"""
+    """Sorting order is [positive, None, negative reversed]: 0, 1, 2, None, -2, -1"""
 
     def __post_init__(self):
         self.filename = self.id + ".xhtml"
 
+    def __lt__(self, other):
+        return self._sort_key() < other._sort_key()
+
+    def _sort_key(self):
+        # Tuples are compared by first element, then second
+        if self.order is None:
+            return (1, 0)                 # Group 1: None values in the middle
+        elif self.order < 0:
+            return (2, -self.order)       # Group 2: Negative values, sorted descending
+        else:
+            return (0, self.order)        # Group 0: Positive values, sorted ascending
 
 @dataclass
 class BinaryInfo():
@@ -98,9 +109,8 @@ class BinaryInfo():
     type: str
     data: bytes
     prop: str = ''   # e.g. "cover-image"
-
-    _wh: tuple[int, int] | None = None  # width, height
     orientation: str = ''      # "v" (vertical) or "h" (horizontal)
+    _wh: tuple[int, int] | None = None  # width, height
     
     @property
     def dimensions(self) -> tuple[int, int] | None:
@@ -114,16 +124,6 @@ class BinaryInfo():
                 log.error(f"Error reading image '{self.filename}': {e}")
                 return None
         return self._wh
-
-    # TODO: remove setter    
-    @dimensions.setter
-    def dimensions(self, value: tuple[int, int]):
-        """Allow manual override of cached dimensions."""
-        # Validate input before setting
-        if not (isinstance(value, tuple) and len(value) == 2 and
-                all(isinstance(dim, int) and dim > 0 for dim in value)):
-            raise ValueError("Dimensions must be a tuple of two positive integers (width, height).")
-        self._wh = value
     
     def _update_orientation(self):
         """Internal helper to set 'orientation' based on current dimensions."""

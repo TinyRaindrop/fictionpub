@@ -53,14 +53,15 @@ class EpubBuilder:
         tmp: Path = source_path.parent / f"{source_path.stem}_epub_temp"
         self.paths: Paths = Paths.from_root(tmp)
         self.config = config
+
         self.metadata: dict = {}
+        self.annotation_el: etree._Element | None = None
         self.binaries: dict[str, BinaryInfo] = {}
         self.main_docs: list[FileInfo] = []
         self.note_docs: list[FileInfo] = []
         self.doc_list: list[FileInfo] = []
         self.toc_items: list[TOCItem] = []
-        self.annotation_el: etree._Element | None = None
-        self.id_to_file_map: dict[str, str] = {}
+        self.id_to_doc_map: dict[str, str] = {}
         self.local_terms: LocalizedTerms
 
 
@@ -98,20 +99,72 @@ class EpubBuilder:
 
     def set_binaries(self, binaries: dict[str, BinaryInfo]):
         self.binaries = binaries
-
-
-    def _collect_documents(self):
-        """Collects all xhtml documents into a list and filters out missing ones."""
-        self.doc_list: list[FileInfo] = [
-            doc for doc in self.front_docs + self.main_docs + self.note_docs
-            if doc is not None
-        ]
-        # TODO: implement sorting by 'order' attribute in FileInfo
-        # Sort documents by their 'order' attribute, retaining original order for those with order==None
-        # docs.sort(key=attrgetter('order') or float('inf'))  ??
         
 
-    def create_cover_page(self, use_svg = True):
+    def add_main_docs(self, converted_docs: list[ConvertedBody]):
+        """
+        Accepts split documents with pre-generated filenames and adds them to the list.
+        """
+        for doc in converted_docs:
+            html, body = self._create_html(doc.file_id, doc.title)
+            body.extend(list(doc.body))
+            # Move all children from converted body to new html
+            file_info = FileInfo(doc.file_id, doc.title, html)
+            self.doc_list.append(file_info)
+
+
+    def add_note_docs(self, converted_docs: list[ConvertedBody]):
+        """Accepts converted note bodies and adds them to the list."""
+        for doc in converted_docs:
+            title = self.local_terms.get_heading(doc.file_id)
+            html, body = self._create_html(doc.file_id, title)
+            # Move all children from converted body to new html
+            body.extend(list(doc.body))
+            # current_heading = body[0] if len(body) > 0 else None
+            # TODO: replace the existing heading with a proper one
+            heading = etree.Element("h1")
+            heading.text = title
+            body.insert(0, heading)
+            file_info = FileInfo(doc.file_id, title, html, is_note=True)
+            self.doc_list.append(file_info)
+
+
+    def build(self):
+        """
+        Generates metadata files and zips the workspace into an .epub file.
+        add_main_docs() and add_note_docs() must be called before building.
+        """
+        self._create_static_docs()
+        
+        # Sort doc_list according to the order attribute
+        self.doc_list.sort()
+
+        # Create an {id: doc} dictionary for faster lookup
+        self.doc_map = {doc.id: doc for doc in self.doc_list}
+
+        self._build_id_map()
+        self._resolve_internal_links()
+        self._insert_note_backlinks()
+        self._resolve_image_paths()
+        
+        # Build nested list of headings to be used in NAV/NCX generation
+        self._build_toc()
+        self._create_nav()
+        self.doc_list.sort()    # Re-sort after adding NAV
+        
+        # Generate additional files, assemble EPUB
+        self._create_ncx()
+        self._create_opf()
+        self._create_container_xml()
+        self._create_stylesheet()
+        self._write_documents()
+        self._write_binaries()
+        self._zip_epub()
+        # self.cleanup_workspace()
+        log.info("EPUB build complete.")
+
+
+    def _create_cover_page(self, use_svg = True):
         """
         Adds a cover image if it exists.
         Pass use_svg = False if <svg> causes issues.
@@ -168,7 +221,7 @@ class EpubBuilder:
         return FileInfo(fileid, local_title, html, prop, order=0)
 
 
-    def create_title_page(self) -> FileInfo:
+    def _create_title_page(self) -> FileInfo:
         """Creates Titlepage.xhtml"""
         fileid = "titlepage"
         book_title = self.metadata.get('title') or "[Untitled]"
@@ -182,7 +235,7 @@ class EpubBuilder:
         return FileInfo(fileid, book_title, html, order=1)
 
 
-    def create_copyright_page(self) -> FileInfo | None:
+    def _create_copyright_page(self) -> FileInfo | None:
         """Creates Copyright.xhtml"""
         info_sections = {
             "Publication Info": self.metadata.get('pub', {}),
@@ -225,8 +278,11 @@ class EpubBuilder:
         return FileInfo(fileid, local_title, html, order=-2)    # -2 = second last
 
 
-    def create_annotation_page(self) -> FileInfo | None:
-        """Creates Annotation.xhtml from an already converted <annotation>"""
+    def _create_annotation_page(self) -> FileInfo | None:
+        """
+        Creates Annotation.xhtml from an already converted <annotation>.
+        set_annotation() must be called first.
+        """
         if self.annotation_el is None:
             log.info("Found no annotation. Skipping.")
             return None
@@ -237,84 +293,20 @@ class EpubBuilder:
         etree.SubElement(body, "h1", attrib={'hidden': ''}).text = local_title
   
         body.append(self.annotation_el)
-        #for child in converted_annotation:
-        #   body.append(child)
 
         return FileInfo(fileid, local_title, html, order=3)
+    
 
-
-    def _create_front_docs(self):
-        """
-        Docstring for create_front_docs
-        
-        :param self: Description
-        """
+    def _create_static_docs(self):
+        """Creates front/back matter documents (cover, title, copyright)."""
         docs = [
-            self.create_cover_page(),
-            self.create_title_page(),
-            self.create_copyright_page(),
-            self.create_annotation_page(),
+            self._create_cover_page(),
+            self._create_title_page(),
+            self._create_copyright_page(),
+            self._create_annotation_page(),
         ]
-        self.front_docs = [d for d in docs if d is not None]
-        self.doc_list.extend(self.front_docs)
-
-
-    def process_main_bodies(self, bodies: list[etree._Element]):
-        """
-        Processes main content html bodies (typically only 1 exists).
-        Splits them into multiple XHTML documents based on heading levels or size in KB.
-        """
-        split_tags = [f"h{i}" for i in range(1, self.config.split_level + 1)]
-        file_counter = 0
-
-        for main_body in bodies:
-
-             # TODO: keep separate counters for every heading level, name files like this:
-            """
-            h1: part_01, part_02
-            h2: part_01_01, part_01_02 ...
-            h3: part_01_01_01, part_01_01_02 ...
-            """
-            fileid = f"part_{file_counter:03d}"
-
-            """
-            Perform splitting at each of split_tags
-            """
-            # TODO: set body title to be equal to its first heading
-            title = ''
-            html, body = self._create_html(fileid, title)
-            # Iterate over the tree, append elements to body until next split tag
-        
-            # Add finalized document to the list, 
-            self.main_docs.append(FileInfo(fileid, title, html))
-        
-
-        # Print a report about file splitting
-        split_tags_str = f"{', '.join(f'<{tag}>' for tag in split_tags)}"
-        log.info(f"Split main content into {len(self.main_docs)} files at {split_tags_str}")
-
-
-    def add_main_docs(self, converted_docs: list[ConvertedBody]):
-        """
-        Accepts split documents with pre-generated filenames and adds them to the list.
-        """
-        for doc in converted_docs:
-            html, body = self._create_html(doc.file_id, doc.title)
-            body.extend(list(doc.body))
-            # Move all children from converted body to new html
-            file_info = FileInfo(doc.file_id, doc.title, html)
-            self.doc_list.append(file_info)
-
-
-    def add_note_docs(self, converted_docs: list[ConvertedBody]):
-        """Accepts converted note bodies and adds them to the list."""
-        for doc in converted_docs:
-            title = self.local_terms.get_heading(doc.file_id)
-            html, body = self._create_html(doc.file_id, title)
-            # Move all children from converted body to new html
-            body.extend(list(doc.body))
-            file_info = FileInfo(doc.file_id, title, html, is_note=True)
-            self.doc_list.append(file_info)
+        docs = [d for d in docs if d is not None]
+        self.doc_list.extend(docs)
 
 
     def _build_toc(self):
@@ -504,7 +496,6 @@ class EpubBuilder:
         
         # Add all documents from doc_map to Manifest, Spine, Guide
         for doc in self.doc_list:
-            log.debug(f"{doc.id}")
             if doc is None: 
                 log.warning("[OPF] an xhtml file is missing. Skipping.")
                 continue
@@ -628,7 +619,7 @@ class EpubBuilder:
                     arcname = filepath.relative_to(self.paths.root)
                     zf.write(filepath, str(arcname))
     
-            log.info(f"\n✅ Success! EPUB file created at: {epub_path}")
+            log.info(f"✅ Success! EPUB file created at: {epub_path}")
 
 
     def _create_html(self, file_id: str | None, title: str = "", 
@@ -676,34 +667,6 @@ class EpubBuilder:
             log.info(f"Created: {Path(filepath).name}")
 
 
-    def build(self):
-        """
-        Generates metadata files and zips the workspace into an .epub file.
-        add_main_docs() and add_note_docs() must be called before building.
-        """
-        
-        self._create_front_docs()
-        self._build_id_map()
-        self._resolve_internal_links()
-        
-        # Build nested list of headings to be used in NAV/NCX generation
-        self._build_toc()
-        self._create_nav()
-
-        # TODO: sort documents
-
-        # Generate additional files, assemble EPUB
-        self._create_ncx()
-        self._create_opf()
-        self._create_container_xml()
-        self._create_stylesheet()
-        self._write_documents()
-        self._write_binaries()
-        self._zip_epub()
-        # self.cleanup_workspace()
-        log.info("EPUB build complete.")
-
-
     def _build_id_map(self):
         """Creates a map of all element IDs to their final host filename."""
         for doc in self.doc_list:
@@ -712,7 +675,7 @@ class EpubBuilder:
             for element in doc.html.iterfind(".//*[@id]"):
                 el_id = element.get('id')
                 if el_id:
-                    self.id_to_file_map[el_id] = doc.filename
+                    self.id_to_doc_map[el_id] = doc.id
 
 
     def _resolve_internal_links(self):
@@ -722,19 +685,22 @@ class EpubBuilder:
         for doc in self.doc_list:
             if doc.html is None: 
                 continue
-            for a in doc.html.iterfind(".//*[@href]"):
+            for a in doc.html.iterfind(".//a[@href]"):
                 href = a.get('href', '')
                 if not href.startswith('#'): 
                     log.debug("External link found, skipping.")
                     continue
 
                 target_id = href.lstrip('#')
-                target_filename = self.id_to_file_map.get(target_id)
+                target_doc_id = self.id_to_doc_map.get(target_id)
 
-                if target_filename:
+                if target_doc_id in self.doc_map:
+                    target_doc = self.doc_map[target_doc_id]
                     # Update the link to point to the correct file
-                    a.set('href', f"{target_filename}#{target_id}")
-                    if target_filename in ['notes.xhtml', 'comments.xhtml']:
+                    a.set('href', f"{target_doc.filename}#{target_id}")
+                    
+                    # If target doc is notes/comments
+                    if target_doc.is_note:
                         cls = 'noteref'
                         link_type = a.get('link-type')
                         if link_type:
@@ -747,18 +713,41 @@ class EpubBuilder:
                         })
                 else:
                     log.warning(f"Broken internal link found for id: {target_id}")
-                    a.tag = 'span'
-                    del a.attrib['href']
+                    a.set('broken', 'true')
+                    # a.tag = 'span'    # turn into <span>
+                    # del a.attrib['href']
     
     
-    def _insert_note_backlinks(self, xhtml_body: etree._Element):
+    def _insert_note_backlinks(self):
         """Adds a return link to the end of each footnote."""
-        for aside in xhtml_body.xpath('.//aside[@id]'):     # type: ignore
-            note_id = aside.get('id')
-            backlink_target_id = self.backlink_map.get(note_id)
-            if backlink_target_id:
-                p = etree.SubElement(aside, 'p', attrib={'class': 'backlink'})
-                target_file = self.id_to_file_map.get(backlink_target_id, '')
-                if target_file:
-                     a = etree.SubElement(p, 'a', href=f"{target_file}#{backlink_target_id}")
-                     a.text = '↩'
+        for doc in self.doc_list:
+            if not doc.is_note: continue
+            for aside in doc.html.iterfind('.//aside[@id]'):
+                note_id = aside.get('id')
+                backlink = aside.find(f'.//a[@id="{note_id}-back"]')
+                if not backlink: continue
+                back_href = backlink.get('href')
+                if not back_href: continue
+                back_href = back_href.lstrip('#')                    
+
+                target_doc_id = self.id_to_doc_map.get(back_href)
+                if target_doc_id:
+                    target_doc = self.doc_map.get(target_doc_id)
+                    if target_doc:
+                        backlink.set('href', f'{target_doc.filename}#{back_href}')
+
+
+    def _resolve_image_paths(self):
+        """Changes <img> placeholders to point to actual image files."""
+        for doc in self.doc_list:
+            for img in doc.html.iterfind('.//img[@data-fb2-id]'):
+                fb2_id = img.get('data-fb2-id')
+                if not fb2_id: continue
+                image_info = self.binaries.get(fb2_id)
+                if image_info:
+                    src = f"..{FN.IMAGES}/{image_info.filename}"
+                    del img.attrib['data-fb2-id']   # Clean up temporary attribute
+                else:
+                    src = "#"   # Fallback for missing images
+                    log.warning(f"Image source for ID '{fb2_id}' not found.")
+                img.set('src', src)
