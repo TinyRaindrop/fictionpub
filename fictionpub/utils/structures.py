@@ -2,9 +2,10 @@ import logging
 
 from dataclasses import dataclass, fields
 from typing import NamedTuple, get_type_hints
-from lxml import etree
 from PIL import Image
 from io import BytesIO
+
+from lxml import etree
 
 __all__ = ["EPUB_TYPES_MAP", "EpubStructureItem", "FileInfo", "BinaryInfo", "TOCItem", "FNames"]
 

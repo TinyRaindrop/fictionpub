@@ -41,3 +41,51 @@ def get_metadata_tags(element: etree._Element, tag_list: list[str]) -> dict:
         if (text := elem_findtext(element, f'fb:{tag}'))     # if not empty
     } 
     return meta
+
+# --- Conversion helpers ---
+
+def get_tag_name(element: etree._Element) -> str:
+    """Returns tag name without a namespace prefix."""
+    return etree.QName(element.tag).localname
+
+
+def copy_id(source: etree._Element, target: etree._Element):
+    """Sets target.id if source.id exists."""
+    if id := source.get('id'): 
+        target.set('id', id)
+
+
+def get_attrib_dict(element: etree._Element) -> dict[str, str]:
+    """Returns a proper dictionary of element attributes."""
+    return {str(k): str(v) for k, v in element.attrib.items()} 
+
+
+def unwrap_element(element: etree._Element, parent: etree._Element):
+    """Unwraps an element by moving its content to the parent and removing it."""
+    # Move text
+    parent.text = (parent.text or '') + (element.text or '')
+    # Move children
+    # TODO: test this function! It probably appends children to the end
+    for child in list(element):
+        parent.append(child)
+    # Move tail
+    parent.tail = (parent.tail or '') + (element.tail or '')
+    parent.remove(element)
+
+
+def replace_element(element: etree._Element, new_tag: str) -> etree._Element:
+    """Replaces an element with a new tag, preserving attributes and children."""
+    parent = element.getparent()
+    if parent is None:
+        raise ValueError("Element has no parent; cannot replace.")
+    
+    attrib = get_attrib_dict(element)
+    new_element = etree.Element(new_tag, attrib)
+    # Copy text 
+    new_element.text = element.text
+    for child in element:
+        new_element.append(child)
+    new_element.tail = element.tail
+
+    parent.replace(element, new_element)
+    return new_element

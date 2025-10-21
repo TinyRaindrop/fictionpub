@@ -4,11 +4,14 @@ Handles the conversion of FB2 XML elements to XHTML.
 import logging
 from enum import Enum, auto
 from typing import NamedTuple
+
 from lxml import etree
 
+from .post_processor import PostProcessor
+from ..utils import xml_utils as xu
 from ..utils.config import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, FileInfo, FNames as FN
+from ..utils.structures import BinaryInfo, FNames as FN
 
 
 log = logging.getLogger("fb2_converter")
@@ -115,19 +118,18 @@ class FB2ToHTMLConverter:
 
         # Post-process all converted bodies
         for body_obj in self._converted_bodies:
-            self._post_process(body_obj.body)
+            PostProcessor(body_obj.body, self.mode).run()
 
         return self._converted_bodies
 
 
     def convert_element(self, element: etree._Element) -> etree._Element | None:
-        self.mode = ConversionMode.MAIN
+        self.mode = ConversionMode.MAIN     # ConversionMode.ELEMENT ?
         tmp_parent = etree.Element('div')
-        self._recursive_convert(element, tmp_parent)   # ConversionMode.ELEMENT ?
+        self._recursive_convert(element, tmp_parent)   
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
         if result is not None:
-            self._post_process(result)
-            # self._improve_typography(result)
+            PostProcessor(result, self.mode).run()
         return result
 
   
@@ -170,7 +172,7 @@ class FB2ToHTMLConverter:
 
     def _recursive_convert(self, fb2_element: etree._Element, xhtml_parent: etree._Element):
         """Core recursive engine for converting FB2 elements to XHTML."""
-        tag = get_tag_name(fb2_element)
+        tag = xu.get_tag_name(fb2_element)
 
         # --- Isolate Splitting Logic ---
         # Check for the special split case before calling any handler.
@@ -222,19 +224,19 @@ class FB2ToHTMLConverter:
                 f'{{{NS.EPUB}}}type': 'footnote',
                 'role': 'doc-footnote',
             }
-            aside = Tag('aside', attrib).create()
+            aside = etree.Element('aside', attrib)
 
             title_el = element.find(f'{{{NS.FB2}}}title')
             if title_el is not None:
                 title_text = " ".join(title_el.itertext()).strip()  # type: ignore
                 attrib = {
-                    'href': f'#{element_id}-ref',   # backlink to the note reference
+                    'href': f'#{element_id}-ref',   # point to the note reference
                     'class': 'backlink',
                     'id': f'{element_id}-back',
                     f'{{{NS.EPUB}}}type': 'backlink',
                 }
-                backlink = Tag('a', attrib).create()
-                backlink.text = f"{title_text}. "  # dot + NBSP
+                backlink = etree.Element('a', attrib)
+                backlink.text = f"{title_text}.\u00A0"  # dot + NBSP
                 # insert as the 1st child, will be adjusted in post-processing
                 aside.insert(0, backlink) 
                 element.remove(title_el)
@@ -248,7 +250,7 @@ class FB2ToHTMLConverter:
             # TODO: unwrap sections
             tag = Tag('section')
         section = tag.create()
-        copy_id(element, section)
+        xu.copy_id(element, section)
         return section
     
 
@@ -276,7 +278,7 @@ class FB2ToHTMLConverter:
         # TODO: remove inner <p> if only one exists (in post-processing?)
 
         new_element = Tag(h).create()
-        copy_id(element, new_element)
+        xu.copy_id(element, new_element)
         return new_element
     
 
@@ -298,7 +300,7 @@ class FB2ToHTMLConverter:
         
         figure = etree.Element('figure', {'class': 'image'})
         img = etree.SubElement(figure, 'img', attrib)
-        copy_id(element, img)
+        xu.copy_id(element, img)
         return figure
 
     
@@ -316,7 +318,6 @@ class FB2ToHTMLConverter:
 
         link = etree.Element('a', attrib)
         return link
-        return Tag('a', attrib).create()
 
 
     def _handle_default(self, element: etree._Element) -> etree._Element | None:
@@ -324,7 +325,7 @@ class FB2ToHTMLConverter:
         if self.mode == ConversionMode.NOTE:
             pass
         
-        fb2_tag = get_tag_name(element)
+        fb2_tag = xu.get_tag_name(element)
         if fb2_tag in self.tag_map:
             html_tag, html_attrib = self.tag_map[fb2_tag]
         else:
@@ -332,12 +333,11 @@ class FB2ToHTMLConverter:
             html_attrib = {'class': fb2_tag}
         
         # Merge attributes with existing ones (typically only 'id', 'name')
-        attrib = {str(k): str(v) for k, v in element.attrib.items()} 
+        attrib = xu.get_attrib_dict(element) 
         attrib.update(html_attrib or {})
 
         elem = etree.Element(html_tag, attrib)
         return elem
-        return Tag(html_tag, attrib).create()
     
 
     def _get_heading_level(self, element: etree._Element) -> int:
@@ -345,152 +345,7 @@ class FB2ToHTMLConverter:
         # The tag must be in the Clark notation {namespace}tag
         section_tag = f"{{{NS.FB2}}}section"
         depth = sum(1 for _ in element.iterancestors(section_tag))
-        return min(depth, 6) or 1   # Min depth is 1, max is 6
-    
-    # --- Post-Processing Methods ---
+        return min(depth, 6) or 1   # Min depth is 1, max is 6     
 
-    def _post_process(self, xhtml_body: etree._Element):
-        """
-        NEW: A dedicated method for cleaning up the generated XHTML tree.
-        It uses native lxml methods for efficient and readable manipulation.
-        """
-        if self.mode == ConversionMode.NOTE:
-            self._fix_note_backlinks(xhtml_body)
-
-        self._strip_heading_formatting(xhtml_body)
-        self._handle_empty_line(xhtml_body)
-        self._remove_empty_elements(xhtml_body)
-        self._clean_noterefs(xhtml_body)
-        self._improve_typography(xhtml_body)
-
-    def _fix_note_backlinks(self, xhtml_body: etree._Element):
-        """Moves backlinks in footnotes inside the first <p> or <div>."""
-        for backlink in xhtml_body.iterfind(".//a[@class='backlink']"):
-            aside = backlink.getparent()            
-            next_el = backlink.getnext()
-            if next_el is not None and get_tag_name(next_el) in ['p', 'div']:
-                next_text = next_el.text
-                if next_text: 
-                    # add leading space after backlink and move the text to tail
-                    next_text = ' ' + next_text.strip()
-                    next_el.text = None
-                    next_el.insert(0, backlink)
-                    backlink.tail = next_text
-
-
-    def _strip_heading_formatting(self, xhtml_body: etree._Element):
-        """Strips unwanted formatting from headings."""
-        # TODO: p.subtitle as well?
-        for heading in xhtml_body.xpath('.//h1 | .//h2 | .//h3 | .//h4 | .//h5 | .//h6'): # type: ignore
-            # Strip bold/italic tags. // Leave italics intact?
-            etree.strip_tags(heading, 'em', 'strong', 'b', 'i')
-
-            # Strip <p> from headings, unwrap its content. Multiple <p>s become <span>s with <br/>. Convert <empty-line> to <br/>.
-            # Replace <empty-line> with <br>
-            for empty_line in heading.iterfind(".//empty-line"):
-                parent = empty_line.getparent()
-                if parent is not None:
-                    br = etree.Element('br')
-                    parent.replace(empty_line, br)
-
-            if len(heading) == 1:
-                if get_tag_name(heading[0]) == 'p':
-                    # Single <p>: unwrap directly
-                    unwrap_element(heading[0], heading)
-                else:
-                    log.debug(f"Heading contains single non-<p> element: <{get_tag_name(heading[0])}>")
-            elif len(heading) > 1:
-                # Multiple children: unwrap each <p> into <span> with <br/>
-                for child in heading:
-                    if get_tag_name(child) == 'p':
-                        span = replace_element(child, 'span')
-                        # Insert <br/> after the span if not the last child
-                        if span != heading[-1]:
-                            br = etree.Element('br')
-                            heading.insert(heading.index(span) + 1, br)
-                    else:
-                        log.debug(f"Heading contains non-<p> element: <{get_tag_name(child)}>")
-
-    def _remove_empty_elements(self, xhtml_body: etree._Element):
-        """Removes empty <p>, <div>, <span> elements."""
-        for tag in ['p', 'div', 'span']:
-            for el in xhtml_body.xpath(f".//{tag}[not(node())]"):  # type: ignore
-                parent = el.getparent()
-                if parent is not None:
-                    parent.remove(el)
-
-    def _handle_empty_line(self, xhtml_body: etree._Element):
-        """Replaces <empty-line/> elements with class="space-after" on preceding <p> or <div>."""
-        for empty_line in xhtml_body.xpath("//*[local-name()='empty-line']"):   # type: ignore
-            prev_el = empty_line.getprevious()
-            next_el = empty_line.getnext()
-            if all((el is not None) and (el.tag in ('p', 'div')) for el in [prev_el, next_el]):
-                prev_el.set("class", (prev_el.get("class", "") + " space-after").strip())
-            
-            parent = empty_line.getparent()
-            if parent is not None:
-                parent.remove(empty_line)
-
-    def _clean_noterefs(self, xhtml_body: etree._Element):
-        """Removes<sup> from note references (unwrap sup > a and a > sup)."""
-        for a in xhtml_body.iterfind(".//a[@class='noteref']"):
-            # Remove any child <sup> tags from <a>
-            etree.strip_tags(a, 'sup')
-            # If the <a> tag itself is wrapped in a <sup>, unwrap it
-            parent = a.getparent()
-            if parent is not None and parent.tag == 'sup':
-                grandparent = parent.getparent()
-                if grandparent is not None:
-                    # Replace the <sup> with its child <a>
-                    grandparent.replace(parent, a)
-
-
-    def _improve_typography(self, xhtml_body: etree._Element):
-        """Typography improvements like non-breaking spaces and special word hyphenation."""
-        # 1. Insert NBSP after/before first/last word inside <p>.
-        first_word_length = 1
-        last_word_length = 1
-
-        # 4. Wrap short words at the start and the end of <p> into span.nobreak to avoid hyphenation. 
-        first_word_length = 4
-        last_word_length = 7
 
     # --- END of ElementConverter ---
-
-
-def get_tag_name(element: etree._Element) -> str:
-    return etree.QName(element.tag).localname
-
-
-def copy_id(source: etree._Element, target: etree._Element):
-    if id := source.get('id'): 
-        target.set('id', id)
-
-
-def unwrap_element(element: etree._Element, parent: etree._Element):
-    """Unwraps an element by moving its content to the parent and removing it."""
-    # Move text
-    parent.text = (parent.text or '') + (element.text or '')
-    # Move children
-    for child in list(element):
-        parent.append(child)
-    # Move tail
-    parent.tail = (parent.tail or '') + (element.tail or '')
-    # Remove <p>
-    parent.remove(element)
-
-
-def replace_element(element: etree._Element, new_tag: str) -> etree._Element:
-    """Replaces an element with a new tag, preserving attributes and children."""
-    parent = element.getparent()
-    if parent is None:
-        raise ValueError("Element has no parent; cannot replace.")
-    
-    new_element = Tag(new_tag, dict(element.attrib)).create()
-    new_element.text = element.text
-    for child in element:
-        new_element.append(child)
-    new_element.tail = element.tail
-
-    parent.replace(element, new_element)
-    return new_element

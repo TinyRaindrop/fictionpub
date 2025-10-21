@@ -6,9 +6,10 @@ import logging
 import os
 import shutil
 import zipfile
-from lxml import etree
 from pathlib import Path
 from typing import NamedTuple
+
+from lxml import etree
 
 from ..terms.LocalizedTerms import LocalizedTerms
 from ..utils.config import ConversionConfig
