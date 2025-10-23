@@ -16,11 +16,22 @@ log = logging.getLogger("fb2_converter")
 
 
 def int_in_range(min_val, max_val):
+    """Checks if value is an int in [min_val, max_val] range."""
     def checker(value):
         ivalue = int(value)
-        if ivalue < min_val or ivalue > max_val:
+        # if ivalue < min_val or max_val < ivalue:
+        if not (min_val <= ivalue <= max_val):
             raise argparse.ArgumentTypeError(f"Value must be between {min_val} and {max_val}, got {ivalue}")
         return ivalue
+    return checker
+
+def int_tuple():
+    """Checks if value is an (int, int) tuple."""
+    def checker(value):
+        tvalue = tuple(int(v.strip()) for v in value.split(','))
+        if len(tvalue) != 2:
+            raise argparse.ArgumentTypeError(f"Value must be a comma separated (int, int) tuple, got {tvalue}")
+        return tvalue
     return checker
 
 
@@ -46,6 +57,9 @@ def run_cli():
     parser.add_argument("-c", "--css", type=Path, default=None, 
                         help="Path to a custom CSS file.")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging.")
+    parser.add_argument("-typ", "--typography", action="store_true", help="Enable typography post-processing.")
+    parser.add_argument("-typ-nbsp", type=int_tuple(), default=(1, 1), help="Typography: word length range to add NBSP (int, int).")
+    parser.add_argument("-typ-nobr", type=int_tuple(), default=(4, 6), help="Typography: word length range to wrap in <span>.nobreak (int, int).")
 
     args = parser.parse_args()
 
@@ -77,6 +91,9 @@ def run_cli():
         toc_depth=args.toc_depth,
         split_level=args.split_level,
         split_size_kb=args.split_size,
+        improve_typography=args.typography,
+        word_len_nbsp_range=args.typ_nbsp,
+        word_len_nobreak_range=args.typ_nobr,
         custom_stylesheet=args.css
     )
     processor = BatchProcessor(config)

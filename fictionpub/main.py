@@ -7,7 +7,7 @@ the command-line interface (CLI) or the graphical user interface (GUI).
 import sys
 import logging
 
-from .terms.LocalizedTerms import LocalizedTerms
+from .terms.localized_terms import LocalizedTerms
 from .utils.logger import setup_logger
 
 def main():

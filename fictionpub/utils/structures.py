@@ -7,7 +7,10 @@ from io import BytesIO
 
 from lxml import etree
 
-__all__ = ["EPUB_TYPES_MAP", "EpubStructureItem", "FileInfo", "BinaryInfo", "TOCItem", "FNames"]
+__all__ = [
+    "ConvertedBody", "EpubStructureItem", "EPUB_TYPES_MAP", 
+    "FileInfo", "BinaryInfo", "TOCItem", "FNames"
+]
 
 log = logging.getLogger("fb2_converter")
 
@@ -50,6 +53,13 @@ def enforce_namedtuple_types(cls):
 
     cls.__new__ = __new__
     return cls
+
+
+class ConvertedBody(NamedTuple):
+    """Container for a single converted XHTML body, its title, attributes, and ID."""
+    file_id: str
+    title: str
+    body: etree._Element
 
 
 class EpubStructureItem(NamedTuple):

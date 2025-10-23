@@ -5,7 +5,8 @@ import logging
 
 from lxml import etree
 
-from .fb2_to_html_converter import ConversionMode
+from . import typography
+from ..utils.config import ConversionConfig, ConversionMode
 from ..utils import xml_utils as xu
 
 log = logging.getLogger("fb2_converter")
@@ -17,13 +18,15 @@ class PostProcessor():
     Fixes unfinished element conversions, cleans up redundant tags,
     applies typographic improvements.
     """
-    def __init__(self, xhtml_body: etree._Element, mode = ConversionMode.MAIN):
-        self.xhtml_body = xhtml_body
+    def __init__(self, config: ConversionConfig, mode = ConversionMode.MAIN):
+        self.config = config
         self.mode = mode
 
 
-    def run(self):
+    def run(self, xhtml_body: etree._Element):
         """Method to run for cleaning up the generated XHTML tree."""
+        self.body = xhtml_body
+
         if self.mode == ConversionMode.NOTE:
             self._fix_note_backlinks()
 
@@ -31,28 +34,32 @@ class PostProcessor():
         self._handle_empty_line()
         self._remove_empty_elements()
         self._clean_noterefs()
-        self._improve_typography()
+
+        if self.config.improve_typography:
+            typography.improve_typography(
+                self.body,
+                self.config.word_len_nbsp_range,
+                self.config.word_len_nobreak_range
+            )
 
 
     def _fix_note_backlinks(self):
-        """Moves backlinks in footnotes inside the first <p> or <div>."""
-        for backlink in self.xhtml_body.iterfind(".//a[@class='backlink']"):
-            aside = backlink.getparent()            
+        """Moves backlinks in footnotes inside the first `p or div`."""
+        for backlink in self.body.iterfind(".//a[@class='backlink']"):
             next_el = backlink.getnext()
             if next_el is not None and xu.get_tag_name(next_el) in ['p', 'div']:
                 next_text = next_el.text
                 if next_text: 
-                    # add leading space after backlink and move the text to tail
-                    next_text = ' ' + next_text.strip()
+                    # move <p/div> text to backlink's tail
                     next_el.text = None
                     next_el.insert(0, backlink)
-                    backlink.tail = next_text
+                    backlink.tail = next_text.lstrip()
 
 
     def _strip_heading_formatting(self):
         """Strips unwanted formatting from headings."""
         # TODO: p.subtitle as well?
-        for heading in xhtml_body.xpath('.//h1 | .//h2 | .//h3 | .//h4 | .//h5 | .//h6'): # type: ignore
+        for heading in self.body.xpath('.//h1 | .//h2 | .//h3 | .//h4 | .//h5 | .//h6'): # type: ignore
             # Strip bold/italic tags. // Leave italics intact?
             etree.strip_tags(heading, 'em', 'strong', 'b', 'i')
 
@@ -83,19 +90,12 @@ class PostProcessor():
                         log.debug(f"Heading contains non-<p> element: <{xu.get_tag_name(child)}>")
 
 
-    def _remove_empty_elements(self):
-        """Removes empty <p>, <div>, <span> elements."""
-        for tag in ['p', 'div', 'span']:
-            for el in self.xhtml_body.xpath(f".//{tag}[not(node())]"):  # type: ignore
-                parent = el.getparent()
-                if parent is not None:
-                    parent.remove(el)
-                    log.debug(f"Removed empty {el} from {parent}.")
-
-
     def _handle_empty_line(self):
-        """Replaces <empty-line/> elements with class="space-after" on preceding <p> or <div>."""
-        for empty_line in self.xhtml_body.xpath("//*[local-name()='empty-line']"):   # type: ignore
+        """
+        Replaces `empty-line` elements with `class="space-after"` on preceding `p or div`.
+        Should be run after _strip_heading_formatting().
+        """
+        for empty_line in self.body.xpath("//*[local-name()='empty-line']"):   # type: ignore
             prev_el = empty_line.getprevious()
             next_el = empty_line.getnext()
             if all((el is not None) and (el.tag in ('p', 'div')) for el in [prev_el, next_el]):
@@ -107,63 +107,43 @@ class PostProcessor():
 
 
     def _clean_noterefs(self):
-        """Removes<sup> from note references (unwrap sup > a and a > sup)."""
-        for a in self.xhtml_body.iterfind(".//a[@class='noteref']"):
-            # Remove any child <sup> tags from <a>
-            etree.strip_tags(a, 'sup')
-            # If the <a> tag itself is wrapped in a <sup>, unwrap it
-            parent = a.getparent()
-            if parent is not None and parent.tag == 'sup':
-                grandparent = parent.getparent()
-                if grandparent is not None:
-                    # Replace the <sup> with its child <a>
-                    grandparent.replace(parent, a)
+        """Removes `sup` from note references (unwrap `sup > a` and `a > sup`)."""
+        # TODO: remove this method
+        # class="noteref" doesn't exist at this stage, it's added later in EpubBuilder
+        for sup in self.body.iterfind('.//sup'):
+            parent = sup.getparent()
+            if parent is None: continue
+            # a > sup
+            if parent.tag == 'a':
+                etree.strip_tags(parent, 'sup')
+            # sup > a
+            elif len(sup) == 1 and sup[0].tag == 'a':
+                a = sup[0]
+                parent.replace(sup, a)
 
 
-    def _improve_typography(self):
-        """Typography improvements like non-breaking spaces and special word hyphenation."""
-        # 1. Insert NBSP after/before first/last word inside <p>.
-        word_length_nbsp = (1, 1)   # first, last word lengths
-        # 2. Wrap short words at the start and the end of <p> into <span>.nobreak to avoid hyphenation. 
-        word_length_nobreak = (4, 7)
+    def _remove_empty_elements(self):
+        """Removes empty `p, div, span` elements."""
+        for tag in ['p', 'div', 'span']:
+            for el in self.body.xpath(f".//{tag}[not(node())]"):  # type: ignore
+                parent = el.getparent()
+                if parent is not None:
+                    parent.remove(el)
+                    log.debug(f"Removed empty {el} from {parent}.")
 
-        def process_paragraphs(xhtml_body):
-            for p in xhtml_body.iterfind(".//p"):
-                # Using itertext to get text and tags together
-                words = []
-                for text in p.itertext():  # Iterate through the text content
-                    words.extend(text.split())  # Split the text into words and collect them
 
-                if not words:
-                    continue
-
-                # Check the first and last words
-                first_word, last_word = words[0], words[-1]
-
-                # Create a new list to hold the processed words
-                processed_words = []
-
-                # Process the first word for NBSP and nobreak
-                if len(first_word) == word_length_nbsp[0]:
-                    processed_words.append(f"{first_word}\u00A0")  # Add NBSP after the first word
-                elif len(first_word) <= word_length_nobreak[0]:
-                    processed_words.append(f'<span class="nobreak">{first_word}</span>')  # Wrap with span.nobreak
-                else:
-                    processed_words.append(first_word)
-
-                # Add the middle words as they are
-                processed_words.extend(words[1:-1])
-
-                # Process the last word for NBSP and nobreak
-                if len(last_word) == word_length_nbsp[1]:
-                    processed_words.append(f"\u00A0{last_word}")  # Add NBSP before the last word
-                elif len(last_word) <= word_length_nobreak[1]:
-                    processed_words.append(f'<span class="nobreak">{last_word}</span>')  # Wrap with span.nobreak
-                else:
-                    processed_words.append(last_word)
-
-                # Now, we need to reconstruct the paragraph with modified words
-                p.clear()  # Clear the original content of the <p> tag
-                p.text = " ".join(processed_words)  # Set the modified text as the new content
-
+    @staticmethod
+    def remove_sup_from_noteref(a: etree._Element):
+        """
+        Removes `sup` from a note reference link (from `sup > a` and `a > sup`).
+        Noterefs are styled via CSS and don't need a `sup` tag.
+        """
+        etree.strip_tags(a, 'sup')
+        # If the <a> tag itself is wrapped in a <sup>, unwrap it
+        parent = a.getparent()
+        if parent is not None and parent.tag == 'sup':
+            grandparent = parent.getparent()
+            if grandparent is not None:
+                # Replace the <sup> with its child <a>
+                grandparent.replace(parent, a)
 

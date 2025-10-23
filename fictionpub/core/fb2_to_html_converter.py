@@ -2,26 +2,18 @@
 Handles the conversion of FB2 XML elements to XHTML.
 """
 import logging
-from enum import Enum, auto
 from typing import NamedTuple
 
 from lxml import etree
 
 from .post_processor import PostProcessor
 from ..utils import xml_utils as xu
-from ..utils.config import ConversionConfig
+from ..utils.config import ConversionConfig, ConversionMode
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, FNames as FN
+from ..utils.structures import BinaryInfo, ConvertedBody, FNames as FN
 
 
 log = logging.getLogger("fb2_converter")
-
-
-class ConversionMode(Enum):
-    """Defines the context for the conversion (e.g., main text vs. notes)."""
-    MAIN = auto()   # main content bodies
-    NOTE = auto()   # note / comment bodies
-    ELEMENT = auto()
 
 
 class Tag(NamedTuple):
@@ -32,16 +24,6 @@ class Tag(NamedTuple):
     def create(self) -> etree._Element:
         """Creates an lxml Element with the specified tag and attributes."""
         return etree.Element(self.name, self.attrib)
-
-
-class ConvertedBody(NamedTuple):
-    """
-    Container for a single converted XHTML body, its title,
-    attributes, and ID.
-    """
-    file_id: str
-    title: str
-    body: etree._Element
 
 
 class FB2ToHTMLConverter:
@@ -118,7 +100,7 @@ class FB2ToHTMLConverter:
 
         # Post-process all converted bodies
         for body_obj in self._converted_bodies:
-            PostProcessor(body_obj.body, self.mode).run()
+            PostProcessor(self.config, self.mode).run(body_obj.body)
 
         return self._converted_bodies
 
@@ -129,7 +111,7 @@ class FB2ToHTMLConverter:
         self._recursive_convert(element, tmp_parent)   
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
         if result is not None:
-            PostProcessor(result, self.mode).run()
+            PostProcessor(self.config, self.mode).run(result)
         return result
 
   

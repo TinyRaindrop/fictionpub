@@ -11,12 +11,11 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..terms.LocalizedTerms import LocalizedTerms
+from ..terms.localized_terms import LocalizedTerms
 from ..utils.config import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
-from ..utils.structures import EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
-from .fb2_to_html_converter import ConvertedBody
+from ..utils.structures import ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
 
 
 log = logging.getLogger("fb2_converter")
@@ -145,7 +144,7 @@ class EpubBuilder:
 
         self._build_id_map()
         self._resolve_internal_links()
-        self._insert_note_backlinks()
+        self._insert_backlink_hrefs()
         self._resolve_image_paths()
         
         # Build nested list of headings to be used in NAV/NCX generation
@@ -337,8 +336,9 @@ class EpubBuilder:
                 # --- Clean titles from noteref links ---
                 toc_text = ""
                 # Check if the heading contains a noteref link
+                heading_clone = copy.deepcopy(heading)
+                etree.strip_tags(heading_clone, 'br')
                 if heading.find('.//a[@class="noteref"]') is not None:
-                    heading_clone = copy.deepcopy(heading)
                     # Find and remove all noteref links from the clone
                     for noteref in heading_clone.iterfind('.//a[@class="noteref"]'):
                         parent = noteref.getparent()
@@ -351,7 +351,7 @@ class EpubBuilder:
 
                 else:
                     # If no noteref, get the text normally
-                    toc_text = "".join(heading.itertext()).strip()
+                    toc_text = "".join(heading_clone.itertext()).strip()
 
                 level = int(heading.tag[-1])
                 
@@ -425,7 +425,7 @@ class EpubBuilder:
                 a.text = self.local_terms.get_heading(doc.id)
 
         file_info = FileInfo(fileid, local_title, html, prop='nav', order=-1)    # -1 = last
-        return file_info
+        self.doc_list.append(file_info)
 
 
     def _create_ncx(self):
@@ -712,6 +712,10 @@ class EpubBuilder:
                             'class': cls, 
                             f'{{{NS.EPUB}}}type': 'noteref',
                         })
+                    
+                        # PostProcessor.remove_sup_from_noteref(a)
+
+
                 else:
                     log.warning(f"Broken internal link found for id: {target_id}")
                     a.set('broken', 'true')
@@ -719,18 +723,18 @@ class EpubBuilder:
                     # del a.attrib['href']
     
     
-    def _insert_note_backlinks(self):
+    def _insert_backlink_hrefs(self):
         """Adds a return link to the end of each footnote."""
         for doc in self.doc_list:
             if not doc.is_note: continue
-            for aside in doc.html.iterfind('.//aside[@id]'):
-                note_id = aside.get('id')
-                backlink = aside.find(f'.//a[@id="{note_id}-back"]')
-                if not backlink: continue
+            for backlink in doc.html.iterfind(f'.//a[@class="backlink"]'):
                 back_href = backlink.get('href')
-                if not back_href: continue
-                back_href = back_href.lstrip('#')                    
-
+                
+                if not back_href:
+                    log.debug(f"Broken backlink: id='{backlink.get('id')}")
+                    continue
+                
+                back_href = back_href.lstrip('#')               
                 target_doc_id = self.id_to_doc_map.get(back_href)
                 if target_doc_id:
                     target_doc = self.doc_map.get(target_doc_id)
