@@ -4,6 +4,7 @@ Handles the creation of the EPUB file structure and packaging.
 import copy
 import logging
 import os
+import re
 import shutil
 import zipfile
 from pathlib import Path
@@ -333,25 +334,19 @@ class EpubBuilder:
                     heading.set('id', heading_id)
                     id_counter += 1
 
-                # --- Clean titles from noteref links ---
                 toc_text = ""
-                # Check if the heading contains a noteref link
+                # Create a copy for modification
                 heading_clone = copy.deepcopy(heading)
-                etree.strip_tags(heading_clone, 'br')
-                if heading.find('.//a[@class="noteref"]') is not None:
-                    # Find and remove all noteref links from the clone
-                    for noteref in heading_clone.iterfind('.//a[@class="noteref"]'):
-                        parent = noteref.getparent()
-                        if parent is not None:
-                            parent.remove(noteref)
-                    
-                    # Get the clean text from the clone and set it as title
-                    toc_text = "".join(heading_clone.itertext()).strip()
-                    heading.set('title', toc_text)
 
-                else:
-                    # If no noteref, get the text normally
-                    toc_text = "".join(heading_clone.itertext()).strip()
+                # Remove <a>.noteref and <br> elements
+                for el in heading_clone.xpath('.//a[@class="noteref"] | .//br'):
+                    parent = el.getparent()
+                    if parent is not None:
+                        parent.remove(el)
+
+                # Join text, remove newlines and collapse multiple spaces
+                toc_text = "".join(heading_clone.itertext())
+                toc_text = re.sub(r'\s+', ' ', toc_text).strip()
 
                 level = int(heading.tag[-1])
                 

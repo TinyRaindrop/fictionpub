@@ -295,6 +295,10 @@ p.right, .right p {
 	orphans: 2;		/* CONTROVERSIAL! */
 }
 
+.space-before {
+    margin-top: 1rem;
+}
+
 /* Words inside <span>.nowrap will not be hyphenated */
 .nowrap { white-space: nowrap; }  
 

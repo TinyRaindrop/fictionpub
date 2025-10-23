@@ -92,15 +92,30 @@ class PostProcessor():
 
     def _handle_empty_line(self):
         """
-        Replaces `empty-line` elements with `class="space-after"` on preceding `p or div`.
+        Replaces `empty-line` elements with `class="space-after/before"` 
+        on preceding/following `p or div`.
         Should be run after _strip_heading_formatting().
         """
-        for empty_line in self.body.xpath("//*[local-name()='empty-line']"):   # type: ignore
-            prev_el = empty_line.getprevious()
-            next_el = empty_line.getnext()
-            if all((el is not None) and (el.tag in ('p', 'div')) for el in [prev_el, next_el]):
-                prev_el.set("class", (prev_el.get("class", "") + " space-after").strip())
-            
+        tags = ('p', 'div')
+        for empty_line in self.body.iterfind(".//empty-line"):
+            target_el = empty_line.getprevious()
+            cls = ""
+
+            # If previous element exists and is of valid type, use it
+            if target_el is not None and target_el.tag in tags:
+                cls = " space-after"
+            else:
+                # Otherwise, check the next element
+                next_el = empty_line.getnext()
+                if next_el is not None and next_el.tag in tags:
+                    target_el = next_el
+                    cls = " space-before"
+
+            # If a valid target element was found, update the class
+            if target_el is not None:
+                el_cls = target_el.get("class", "").strip()
+                target_el.set("class", (el_cls + cls))
+
             parent = empty_line.getparent()
             if parent is not None:
                 parent.remove(empty_line)
