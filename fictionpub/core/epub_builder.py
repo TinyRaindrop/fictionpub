@@ -394,7 +394,7 @@ class EpubBuilder:
             a.text = item.text
 
             # If we need to go deeper, create a new <ol> and add it to our tracker
-            if item.level > len(level_parents):
+            if item.level >= len(level_parents):
                 new_ol = etree.SubElement(li, "ol")
                 level_parents.append(new_ol)
 
