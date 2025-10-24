@@ -41,7 +41,7 @@ class FB2ToHTMLConverter:
         dispatch maps for tag conversion.
         """
         self.binary_map: dict[str, BinaryInfo] = binary_map
-        self.id_map = id_map
+        self.id_map = id_map    # TODO: consider using it for noteref identification
         self.split_level = config.split_level
         self.split_size = config.split_size_kb
         self.config = config
@@ -78,6 +78,7 @@ class FB2ToHTMLConverter:
             'title': self._handle_title,
             'a': self._handle_link,
             'image': self._handle_image,
+            'style': self._handle_style,
         }
 
 
@@ -173,10 +174,9 @@ class FB2ToHTMLConverter:
         new_xhtml_element = handler(fb2_element)
 
         if new_xhtml_element is None: return
-        
-        xhtml_parent.append(new_xhtml_element)
-
+    
         new_xhtml_element.text = fb2_element.text
+        xhtml_parent.append(new_xhtml_element)
 
         for child in fb2_element:
             # Recursion continues inside the newly created element.
@@ -242,22 +242,27 @@ class FB2ToHTMLConverter:
         - If one <p>, its content is unwrapped directly into the heading.
         - If multiple <p>s, they become <span>s separated by <br/>.
         """
+        parent = element.getparent()
+        if parent is None:
+            log.debug("Found <title> without a parent. Skipping.")
+            return None
+
+        # <poem> title => p.subtitle
+        if xu.get_tag_name(parent) == "poem":
+            return self._handle_default(element, convert_as='subtitle')
+            
         level = self._get_heading_level(element)
         if self.mode == ConversionMode.NOTE: level = 1
         h = f'h{level}'
         title_text = " ".join(element.itertext()).strip() # type: ignore
 
-        parent = element.getparent()
-        if parent is not None:
-            parent_level = self._get_heading_level(parent)
-            # TODO: investigate usage of _current_title
-            if parent_level == self.split_level - 1:
-                self._current_title = title_text
-                if self._converted_bodies:
-                    last_doc = self._converted_bodies[-1]
-                    self._converted_bodies[-1] = last_doc._replace(title=title_text)
-
-        # TODO: remove inner <p> if only one exists (in post-processing?)
+        parent_level = self._get_heading_level(parent)
+        # TODO: investigate usage of _current_title
+        if parent_level == self.split_level - 1:
+            self._current_title = title_text
+            if self._converted_bodies:
+                last_doc = self._converted_bodies[-1]
+                self._converted_bodies[-1] = last_doc._replace(title=title_text)
 
         new_element = etree.Element(h)
         xu.copy_id(element, new_element)
@@ -304,9 +309,25 @@ class FB2ToHTMLConverter:
         return link
 
 
-    def _handle_default(self, element: etree._Element) -> etree._Element | None:
-        """Handles simple tag conversions using the `tag_map`."""
-        fb2_tag = xu.get_tag_name(element)
+    def _handle_style(self, element: etree._Element) -> etree._Element | None:
+        name = element.get('name')
+        if not name:
+            return
+        span = etree.Element('span', attrib={'class': name})
+        return span
+
+
+    def _handle_default(self, element: etree._Element, convert_as: str | None = None) -> etree._Element | None:
+        """
+        Handles simple tag conversions using the `tag_map`.
+        Defaults to `div class="tag"` for the rest of cases.
+        
+        Args:
+            element: The FB2 element to convert.
+            convert_as: Optional FB2 tag name to override the default mapping.
+        """        
+        fb2_tag = convert_as or xu.get_tag_name(element)
+
         if fb2_tag in self.tag_map:
             html_tag, html_attrib = self.tag_map[fb2_tag]
         else:

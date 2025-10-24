@@ -80,9 +80,15 @@ section > p:last-child  {
 p.subtitle {
     margin: 1.5em 1.25rem 1em;
     text-align: center;
-    text-indent: 0;
     font-weight: bold;
     font-style: italic;
+}
+
+.poem .subtitle {
+    margin: 0;
+    margin-bottom: 0.5em;
+    text-align: center;
+    font-weight: bold;
 }
 
 div.poem {
@@ -141,7 +147,7 @@ blockquote p {
 /* We don't actually use <cite> during conversion */
 /* cite.text-author, */
 .text-author {
-    display: inline-block;
+    /*! blockquote > .text-author still has right margin */
     margin-top: 0.5em;
     margin-left: 1.25em;
     text-align: right;

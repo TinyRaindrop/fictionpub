@@ -246,6 +246,7 @@ class EpubBuilder:
             "Original Publication": self.metadata.get('src', {}),
             "Document Info": self.metadata.get('doc', {}),
             # 'title-info' doesn't exist, its keys are top level
+            # TODO: move corresponding keys to 'title-info' 
             "Book Info": self.metadata.get('title-info', {})
         }
         
@@ -320,15 +321,16 @@ class EpubBuilder:
         """
         id_counter = 1
 
+        # h1..h[depth]
         heading_tags = [f'h{i}' for i in range(1, self.config.toc_depth + 1)]
-        headings_query = " | ".join([f".//{tag}" for tag in heading_tags])
+        heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
         
         for doc in self.doc_list:
             if not isinstance(doc.html, etree._Element):
                 log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
                 continue
 
-            headings = doc.html.xpath(headings_query)
+            headings = doc.html.xpath(heading_query)
             
             for heading in headings:     # type: ignore
                 heading_id = heading.get('id')
@@ -523,9 +525,11 @@ class EpubBuilder:
 
 
         # Add images to Manifest
-        for id, img in self.binaries.items():
+        for img in self.binaries.values():
             href = f"{FN.IMAGES}/{img.filename}"
-            item = etree.SubElement(manifest, "item", id=id, href=href, attrib={"media-type": img.type})
+            # using img.filename as ID
+            item = etree.SubElement(
+                manifest, "item", id=img.filename, href=href, attrib={"media-type": img.type})
             if img.prop:
                 item.set('properties', img.prop)
 

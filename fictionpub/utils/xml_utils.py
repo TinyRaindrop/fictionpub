@@ -77,7 +77,7 @@ def replace_element(element: etree._Element, new_tag: str) -> etree._Element:
     """Replaces an element with a new tag, preserving attributes and children."""
     parent = element.getparent()
     if parent is None:
-        raise ValueError("Element has no parent; cannot replace.")
+        raise ValueError(f"Element {element.tag} has no parent; cannot replace.")
     
     attrib = get_attrib_dict(element)
     new_element = etree.Element(new_tag, attrib)

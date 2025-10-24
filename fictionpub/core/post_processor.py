@@ -57,28 +57,27 @@ class PostProcessor():
 
 
     def _strip_heading_formatting(self):
-        """Strips unwanted formatting from headings."""
-        # TODO: p.subtitle as well?
-        for heading in self.body.xpath('.//h1 | .//h2 | .//h3 | .//h4 | .//h5 | .//h6'): # type: ignore
-            # Strip bold/italic tags. // Leave italics intact?
+        """
+        Strips unwanted formatting from headings.
+        Strips `<p>`, unwraps its content. Multiple `<p>`s become `<span>`s with `<br/>`.
+        """
+        # h1..h6, p.subtitle
+        heading_tags = [f'h{i}' for i in range(1, 6)]
+        heading_tags.append('p[@class="subtitle"]')
+        heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
+        
+        for heading in self.body.xpath(heading_query):  # type: ignore
+            # 1. Strip bold/italic tags. // Leave italics intact?
             etree.strip_tags(heading, 'em', 'strong', 'b', 'i')
-
-            # Strip <p> from headings, unwrap its content. Multiple <p>s become <span>s with <br/>. Convert <empty-line> to <br/>.
-            # Replace <empty-line> with <br>
-            for empty_line in heading.iterfind(".//empty-line"):
-                parent = empty_line.getparent()
-                if parent is not None:
-                    br = etree.Element('br')
-                    parent.replace(empty_line, br)
-
+            
             if len(heading) == 1:
                 if xu.get_tag_name(heading[0]) == 'p':
-                    # Single <p>: unwrap directly
+                    # 3. Single <p>: unwrap directly
                     xu.unwrap_element(heading[0], heading)
                 else:
                     log.debug(f"Heading contains single non-<p> element: <{xu.get_tag_name(heading[0])}>")
             elif len(heading) > 1:
-                # Multiple children: unwrap each <p> into <span> with <br/>
+                # 4. Multiple children: unwrap each <p> into <span> with <br/>
                 for child in heading:
                     if xu.get_tag_name(child) == 'p':
                         span = xu.replace_element(child, 'span')
@@ -92,33 +91,58 @@ class PostProcessor():
 
     def _handle_empty_line(self):
         """
-        Replaces `empty-line` elements with `class="space-after/before"` 
-        on preceding/following `p or div`.
-        Should be run after _strip_heading_formatting().
+        Converts necessary `empty-line`, discards redundant ones.
+        Replaces `empty-line` with `class="space-after/before"` on a sibling element.
+        Replaces `empty-line` with `br` inside titles.
         """
-        tags = ('p', 'div')
+        target_tags = ('p', 'div')
+    
+        # h1..h6, p.subtitle
+        heading_tags = [f'h{i}' for i in range(1, 6)]
+        heading_tags.append('p[@class="subtitle"]') # TODO: this will not match 'if in' check
+        excl_tags = ['figure']
+        excl_tags.extend(heading_tags)
+
         for empty_line in self.body.iterfind(".//empty-line"):
-            target_el = empty_line.getprevious()
-            cls = ""
-
-            # If previous element exists and is of valid type, use it
-            if target_el is not None and target_el.tag in tags:
-                cls = " space-after"
-            else:
-                # Otherwise, check the next element
-                next_el = empty_line.getnext()
-                if next_el is not None and next_el.tag in tags:
-                    target_el = next_el
-                    cls = " space-before"
-
-            # If a valid target element was found, update the class
-            if target_el is not None:
-                el_cls = target_el.get("class", "").strip()
-                target_el.set("class", (el_cls + cls))
-
             parent = empty_line.getparent()
-            if parent is not None:
-                parent.remove(empty_line)
+            if parent is None: 
+                log.debug(f"<empty-line> has no parent. Skipping.")
+                continue
+
+            # 1. Inside titles - convert to <br/> or remove
+            if xu.get_tag_name(parent) in heading_tags:
+                next_el = empty_line.getnext()
+                # If empty-line is the last child or is followed by another empty-line
+                if next_el is None or xu.get_tag_name(next_el) == 'empty-line':
+                    parent.remove(empty_line)
+                    continue          
+                
+                br = etree.Element('br')
+                parent.replace(empty_line, br)
+
+            # 2. As spacers between other elements
+            else:
+                target_el = empty_line.getprevious()
+                cls = ""
+
+                # If previous element exists and is of valid type, use it
+                if target_el is not None and target_el.tag not in excl_tags:
+                    cls = " space-after"
+                else:
+                    # Otherwise, check the next element
+                    next_el = empty_line.getnext()
+                    if next_el is not None and next_el.tag not in excl_tags:
+                        target_el = next_el
+                        cls = " space-before"
+
+                # If a valid target element was found, update the class
+                if target_el is not None:
+                    el_cls = target_el.get("class", "").strip()
+                    target_el.set("class", (el_cls + cls))
+
+                parent = empty_line.getparent()
+                if parent is not None:
+                    parent.remove(empty_line)
 
 
     def _clean_noterefs(self):
@@ -134,6 +158,7 @@ class PostProcessor():
             # sup > a
             elif len(sup) == 1 and sup[0].tag == 'a':
                 a = sup[0]
+                a.tail = sup.tail
                 parent.replace(sup, a)
 
 

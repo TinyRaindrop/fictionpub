@@ -33,7 +33,7 @@ class FB2Book:
         self.metadata: dict[str, str | dict ] = {}
         self.binaries: dict[str, BinaryInfo] = {}
         self.referenced_ids = set()
-        self.id_map: dict[str, etree._Element] = {}
+        self.id_map: dict[str, str] = {}
         self.cover_img: tuple[str, int, int] | None = None
         self.main_bodies: list[etree._Element] = []
         self.note_bodies: list[etree._Element] = []
@@ -287,10 +287,11 @@ class FB2Book:
     def _map_internal_ids(self):
         """Creates a map of all `id` attributes for internal linking."""
         # TODO: make it actually useful
-        for element in self.tree.iterfind('.//*[@id]'):
-            id_attr = element.get('id')
-            if id_attr:
-                self.id_map[id_attr] = element
+        for body in self.tree.iterfind('.//body'):
+            for element in body.iterfind('.//*[@id]'):
+                element_id = element.get('id')
+                if element_id:
+                    self.id_map[element_id] = body.get('name', 'main')
 
 
     def _create_referenced_ids_set(self):
