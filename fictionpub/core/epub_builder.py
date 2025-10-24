@@ -377,26 +377,29 @@ class EpubBuilder:
         
         # A list that tracks the parent <ol> for each level. level_parents[0] is the root.
         level_parents = [ol]
-    
+
         for item in self.toc_items:
             if item.level > self.config.toc_depth:
                 continue
 
-            # Go up the hierarchy until we find the correct parent
-            while item.level < len(level_parents):
-                level_parents.pop()
+            # If we need to go deeper, create a new <ol> and add it to the list
+            if item.level > len(level_parents):
+                # Get the last <li> in the current parent <ol>
+                # TODO: add range checks to avoid going out of bounds
+                last_li = level_parents[-1][-1]
+                ol = etree.SubElement(last_li, "ol")
+                level_parents.append(ol)
+            else:
+                # Go up in levels
+                while item.level < len(level_parents):
+                    level_parents.pop()
+                # Get last <ol>
+                ol = level_parents[-1]
 
-            # Get the direct parent <ol> for this item
-            parent_ol = level_parents[-1]
-            
-            li = etree.SubElement(parent_ol, "li")
+            # ol is the current parent <ol>
+            li = etree.SubElement(ol, "li")
             a = etree.SubElement(li, "a", href=item.href_nav)
             a.text = item.text
-
-            # If we need to go deeper, create a new <ol> and add it to our tracker
-            if item.level >= len(level_parents):
-                new_ol = etree.SubElement(li, "ol")
-                level_parents.append(new_ol)
 
         # --- Landmarks ---
         nav_landmarks = etree.SubElement(body, "nav", attrib={
@@ -751,3 +754,8 @@ class EpubBuilder:
                     src = "#"   # Fallback for missing images
                     log.warning(f"Image source for ID '{fb2_id}' not found.")
                 img.set('src', src)
+
+def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
+    """Returns a pretty-printed XML string of the element/tree."""
+    # return etree.tostring(element, pretty_print=True, encoding='utf-8').decode('utf-8')
+    return etree.tostring(element, pretty_print=True, encoding='unicode')
