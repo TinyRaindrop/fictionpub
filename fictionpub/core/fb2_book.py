@@ -206,10 +206,11 @@ class FB2Book:
             pub_info_tags = ['book-name', 'publisher', 'city', 'year', 'isbn']
             meta['pub'] = xu.get_metadata_tags(pub_info, pub_info_tags)
 
-        # --- Genre Translation ---
-        # TODO: move it into EpubBuilder (metadata generation)
-        # meta['genres'] = [self.local_terms.get_genre(g) for g in genres]
+        # Genre keys will be processed by EpubBuilder.
+        meta['genres'] = genres
         
+        # TODO: parse <custom-info>
+
         self.metadata = meta
 
 

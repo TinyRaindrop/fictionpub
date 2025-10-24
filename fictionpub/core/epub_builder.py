@@ -91,6 +91,9 @@ class EpubBuilder:
         self.lang: str = metadata.get('lang', '')
         self.local_terms = LocalizedTerms(self.lang)
 
+        # With local_terms initialized, get translated genre names
+        self.metadata['genres'] = [self.local_terms.get_genre(g) for g in metadata['genres']]
+
 
     def set_annotation(self, converted_annotation: etree._Element | None):
         """Sets the converted <annotation> element in metadata."""
@@ -507,7 +510,7 @@ class EpubBuilder:
                 item.set('properties', doc.prop)
 
             # Spine
-            if doc.id in ['notes', 'comments']:     # ? make 'cover' non-linear as well ?
+            if doc.is_note:     # ? make 'cover' non-linear as well ?
                 # Footnote bodies are non-linear
                 spine.append(etree.Element("itemref", idref=doc.id, linear="no"))   
             else:
@@ -704,8 +707,10 @@ class EpubBuilder:
                         link_type = a.get('link-type')
                         if link_type:
                             if link_type != 'note':
-                                cls += ' comment'
+                                log.debug(f"Noteref id='{a.get('id')}', invalid link-type")
                             a.attrib.pop('link-type')
+                        else:
+                            cls += ' comment'
                         a.attrib.update({
                             'class': cls, 
                             f'{{{NS.EPUB}}}type': 'noteref',

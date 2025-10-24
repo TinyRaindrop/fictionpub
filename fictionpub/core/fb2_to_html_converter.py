@@ -231,7 +231,7 @@ class FB2ToHTMLConverter:
             # ConversionMode.MAIN or ELEMENT
             # TODO: unwrap sections
             tag = Tag('section')
-        section = tag.create()
+        section = etree.Element(tag.name, tag.attrib)
         xu.copy_id(element, section)
         return section
     
@@ -259,7 +259,7 @@ class FB2ToHTMLConverter:
 
         # TODO: remove inner <p> if only one exists (in post-processing?)
 
-        new_element = Tag(h).create()
+        new_element = etree.Element(h)
         xu.copy_id(element, new_element)
         return new_element
     
@@ -294,6 +294,8 @@ class FB2ToHTMLConverter:
                 'href': f'#{href}',
                 'id': f'{href}-ref'
             }
+            # TODO: remove? link-type isn't very useful. 
+            # Instead, use a dict of <aside> IDs to identify noterefs
             link_type = element.get('type')
             if link_type:
                 attrib['link-type'] = link_type
@@ -304,13 +306,11 @@ class FB2ToHTMLConverter:
 
     def _handle_default(self, element: etree._Element) -> etree._Element | None:
         """Handles simple tag conversions using the `tag_map`."""
-        if self.mode == ConversionMode.NOTE:
-            pass
-        
         fb2_tag = xu.get_tag_name(element)
         if fb2_tag in self.tag_map:
             html_tag, html_attrib = self.tag_map[fb2_tag]
         else:
+            # <div class="fb2_tag"> for poem, epigraph, etc.
             html_tag = 'div'
             html_attrib = {'class': fb2_tag}
         

@@ -106,6 +106,8 @@ class FileInfo():
 
     def _sort_key(self):
         # Tuples are compared by first element, then second
+        if self.is_note:
+            return (3, 0)                 # Group 3: notes/comments at the very end
         if self.order is None:
             return (1, 0)                 # Group 1: None values in the middle
         elif self.order < 0:
