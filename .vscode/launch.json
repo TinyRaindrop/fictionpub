@@ -12,6 +12,20 @@
             "args": ["books/bierce.fb2", "-o", "books/bierce.epub", "-v"]
         },
         {
+            "name": "Run CLI {FB2} 1 thread",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "fictionpub.main",
+            "args": ["{FB2}", "-vv", "--threads", "1"]
+        },
+        {
+            "name": "Run CLI {FB2}",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "fictionpub.main",
+            "args": ["{FB2}"]
+        },
+        {
             "name": "Run GUI",
             "type": "debugpy",
             "request": "launch",

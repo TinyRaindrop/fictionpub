@@ -20,7 +20,7 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> Path:
     A standalone function to be the target for the executor.
     It runs the full conversion pipeline on a single file.
     """
-    log.info(f"Processing {path}")
+    print(f"\nProcessing {path}", flush=True)
     pipeline = ConversionPipeline(config)
     pipeline.convert(path)
     return path  # Return the path on success
@@ -35,17 +35,19 @@ class BatchProcessor:
 
     def run(self, files: list[Path], progress_callback: Callable | None = None):
         """
-        Processes a list of files in parallel using a ThreadPoolExecutor.
+        Processes a list of files in parallel using Thread/ProcessPoolExecutor.
 
         Args:
             files: A list of Path objects to convert.
             progress_callback: A function to be called as each file completes.
                                It receives the result (Path) or exception.
         """
-        max_workers = (os.cpu_count() or 1) + 4        # os.process_cpu_count() in python>=3.13
-        log.info(f"Starting batch processing with up to {max_workers} worker threads.")
+        # Determine the number of worker threads
+        th = self.config.num_threads
+        max_workers = th if th > 0 else (os.cpu_count() or 1)
+        print(f"\nStarting batch processing with up to {max_workers} worker threads.", flush=True)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers) as executor:
+        with concurrent.futures.ProcessPoolExecutor(max_workers) as executor:
             # Submit all conversion tasks
             future_to_path = {
                 executor.submit(_convert_single_file, path, self.config): path

@@ -56,16 +56,29 @@ def run_cli():
                         help="Increment split-level if XHTML files exceed this size in KB. 0 to disable.")
     parser.add_argument("-c", "--css", type=Path, default=None, 
                         help="Path to a custom CSS file.")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose debug logging.")
+    parser.add_argument("-v", "--verbosity", action="count", default=0, help="Verbosity. vvv: debug, vv: info, v: warning. Default: error only.")
     parser.add_argument("-typ", "--typography", action="store_true", help="Enable typography post-processing.")
     parser.add_argument("-typ-nbsp", type=int_tuple(), default=(1, 1), help="Typography: word length range to add NBSP (int, int).")
     parser.add_argument("-typ-nobr", type=int_tuple(), default=(4, 6), help="Typography: word length range to wrap in <span>.nobreak (int, int).")
+    parser.add_argument("--threads", type=int, default="0", 
+                        help="Number of parallel threads to use for conversion. 0 to use max.")
 
     args = parser.parse_args()
 
-    if args.verbose:
-        logging.getLogger("fb2_converter").setLevel(logging.DEBUG)
-        log.info("Verbose logging enabled.")
+    # Set up logging level
+    # vvv = debug, vv = info, v = warning, no v = error
+    match args.verbosity:
+        case 0:
+            level = logging.ERROR
+        case 1:
+            level = logging.WARNING
+        case 2:
+            level = logging.INFO
+        case _:
+            level = logging.DEBUG
+
+    log.info(f"Logger set to level: {logging.getLevelName(level)}")
+    logging.getLogger("fb2_converter").setLevel(level)
 
     # Collect all files to be processed
     files_to_process = []
@@ -94,20 +107,27 @@ def run_cli():
         improve_typography=args.typography,
         word_len_nbsp_range=args.typ_nbsp,
         word_len_nobreak_range=args.typ_nobr,
-        custom_stylesheet=args.css
+        custom_stylesheet=args.css,
+        num_threads=args.threads,
     )
     processor = BatchProcessor(config)
 
     num_files = len(files_to_process)
-    log.info(f"Found {len(files_to_process)} files. Starting conversion...")
+    print(f"Found {len(files_to_process)} files. Starting conversion...")
     
     # Use tqdm for a progress bar
     with tqdm(total=num_files, unit="file", desc="Converting") as pbar:
+        completed = 0
         def progress_callback(path: Path, result: Path | None, exc: Exception | None):
+            nonlocal completed
+            completed += 1
+            if result:
+                print(f"[{completed}/{num_files}] ✅ Done: {path}", flush=True)
             if exc:
-            # Use logger to show detailed error with traceback
+                print(f"[{completed}/{num_files}] ❌ Fail: {path}", flush=True)
+                if progress_callback:
+                    progress_callback(path, None, exc)
                 log.error(f"Failed to convert {path.name}:", exc_info=exc)
-                # tqdm.write(f"\nERROR converting {path.name}: {exc}")
             pbar.update(1)
         
         processor.run(files_to_process, progress_callback)

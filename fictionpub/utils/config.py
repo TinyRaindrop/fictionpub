@@ -24,6 +24,7 @@ class ConversionConfig:
     word_len_nbsp_range: tuple[int, int] = (1, 1)  
     word_len_nobreak_range: tuple[int, int] = (4, 6)
     custom_stylesheet: Path | None = None
+    num_threads: int = 0    # 0 means auto-detect
 
 
 class ConversionMode(Enum):
