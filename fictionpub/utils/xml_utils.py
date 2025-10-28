@@ -73,7 +73,7 @@ def unwrap_element(element: etree._Element, parent: etree._Element):
     parent.remove(element)
 
 
-def replace_element(element: etree._Element, new_tag: str) -> etree._Element:
+def replace_tag(element: etree._Element, new_tag: str) -> etree._Element:
     """Replaces an element with a new tag, preserving attributes and children."""
     parent = element.getparent()
     if parent is None:

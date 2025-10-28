@@ -70,17 +70,19 @@ class PostProcessor():
             # 1. Strip bold/italic tags. // Leave italics intact?
             etree.strip_tags(heading, 'em', 'strong', 'b', 'i')
             
+            # 2. Single <p>: unwrap directly
             if len(heading) == 1:
                 if xu.get_tag_name(heading[0]) == 'p':
-                    # 3. Single <p>: unwrap directly
+                    
                     xu.unwrap_element(heading[0], heading)
                 else:
                     log.debug(f"Heading contains single non-<p> element: <{xu.get_tag_name(heading[0])}>")
+
+            # 3. Multiple children: unwrap each <p> into <span> with <br/>
             elif len(heading) > 1:
-                # 4. Multiple children: unwrap each <p> into <span> with <br/>
                 for child in heading:
                     if xu.get_tag_name(child) == 'p':
-                        span = xu.replace_element(child, 'span')
+                        span = xu.replace_tag(child, 'span')
                         # Insert <br/> after the span if not the last child
                         if span != heading[-1]:
                             br = etree.Element('br')
@@ -93,7 +95,7 @@ class PostProcessor():
         """
         Converts necessary `empty-line`, discards redundant ones.
         Replaces `empty-line` with `class="space-after/before"` on a sibling element.
-        Replaces `empty-line` with `br` inside titles.
+        Inside titles, replaces `empty-line` with `br`.
         """
         target_tags = ('p', 'div')
     
