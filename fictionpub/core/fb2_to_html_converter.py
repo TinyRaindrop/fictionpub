@@ -6,7 +6,7 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from .post_processor import PostProcessor
+from ..post_processing.post_processor import PostProcessor
 from ..utils import xml_utils as xu
 from ..utils.config import ConversionConfig, ConversionMode
 from ..utils.namespaces import Namespaces as NS

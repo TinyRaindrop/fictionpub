@@ -5,9 +5,12 @@ import logging
 
 from lxml import etree
 
-from . import typography
 from ..utils.config import ConversionConfig, ConversionMode
 from ..utils import xml_utils as xu
+
+# Post processing plugins. Must work on xhtml_body
+from . import typography
+
 
 log = logging.getLogger("fb2_converter")
 
@@ -73,7 +76,6 @@ class PostProcessor():
             # 2. Single <p>: unwrap directly
             if len(heading) == 1:
                 if xu.get_tag_name(heading[0]) == 'p':
-                    
                     xu.unwrap_element(heading[0], heading)
                 else:
                     log.debug(f"Heading contains single non-<p> element: <{xu.get_tag_name(heading[0])}>")
