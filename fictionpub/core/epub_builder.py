@@ -164,7 +164,7 @@ class EpubBuilder:
         self._write_documents()
         self._write_binaries()
         self._zip_epub()
-        # self.cleanup_workspace()
+        self.cleanup_workspace()
         log.info("EPUB build complete.")
 
 

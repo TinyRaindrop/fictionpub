@@ -10,20 +10,48 @@ from typing import Callable
 
 from .pipeline import ConversionPipeline
 from ..utils.config import ConversionConfig
+from ..utils.logger import setup_worker_logger
 
-
+# The main logger is configured by the entry point (CLI/GUI)
+# We just get it here to write high-level status updates from the main process
 log = logging.getLogger("fb2_converter")
 
 
-def _convert_single_file(path: Path, config: ConversionConfig) -> Path:
+def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, str, Exception | None]:
     """
     A standalone function to be the target for the executor.
-    It runs the full conversion pipeline on a single file.
+    It runs the full conversion pipeline on a single file and
+    captures all its log output.
+
+    Returns:
+        tuple[Path, str, Exception | None]:
+            - The path of the processed file.
+            - The captured log output as a string.
+            - An exception object if one occurred, else None.
     """
-    print(f"\nProcessing {path}", flush=True)
-    pipeline = ConversionPipeline(config)
-    pipeline.convert(path)
-    return path  # Return the path on success
+    # Set up in-memory logging for this worker process
+    log_stream, log_handler = setup_worker_logger()
+    worker_log = logging.getLogger("fb2_converter")
+
+    try:
+        worker_log.info(f"Converting: {path.name}")
+        
+        # Main Conversion Logic
+        pipeline = ConversionPipeline(config)
+        pipeline.convert(path)
+        
+        worker_log.info(f"Successfully finished conversion for: {path.name}")
+        return path, log_stream.getvalue(), None
+
+    except Exception as e:
+        # Log the full exception *to the worker's buffer*
+        worker_log.error(f"Failed conversion for: {path.name}", exc_info=True)
+        return path, log_stream.getvalue(), e
+
+    finally:
+        # Clean up handlers and close the stream
+        log_handler.close()
+        log_stream.close()
 
 
 class BatchProcessor:
@@ -40,12 +68,20 @@ class BatchProcessor:
         Args:
             files: A list of Path objects to convert.
             progress_callback: A function to be called as each file completes.
-                               It receives the result (Path) or exception.
+                               It receives the (path, result, exception).
         """
         # Determine the number of worker threads
         th = self.config.num_threads
         max_workers = th if th > 0 else (os.cpu_count() or 1)
         print(f"\nStarting batch processing with up to {max_workers} worker threads.", flush=True)
+
+        # Map paths to their original index to maintain order
+        path_to_index = {path: i for i, path in enumerate(files)}
+        
+        # This list will store results in the original file order
+        # Each item will be: (path, log_string, exception)
+        ordered_results: list[tuple[Path, str, Exception | None] | None] = [None] * len(files)
+
 
         with concurrent.futures.ProcessPoolExecutor(max_workers) as executor:
             # Submit all conversion tasks
@@ -57,14 +93,52 @@ class BatchProcessor:
             # Process results as they are completed
             for future in concurrent.futures.as_completed(future_to_path):
                 path = future_to_path[future]
+                idx = path_to_index[path]
 
-                # The responsibility of handling the exception is now passed   
-                # to the callback function provided by the caller (CLI or GUI).
-                exc = future.exception()
-                if progress_callback:
-                    if exc:
-                        # Pass the exception object to the callback
-                        progress_callback(path, None, exc)
-                    else:
-                        # Pass the result to the callback
-                        progress_callback(path, future.result(), None)
+                try:
+                    # Get the worker's result: (path, log_string, exception)
+                    p, log_string, exc = future.result()
+                    ordered_results[idx] = (p, log_string, exc)
+
+                    # Call progress callback *as items complete*
+                    if progress_callback:
+                        if exc:
+                            progress_callback(path, None, exc)
+                        else:
+                            progress_callback(path, path, None)
+
+                except Exception as e:
+                    # This catches a critical failure *in the worker itself*
+                    # (e.g., the process died)
+                    log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
+                    err_msg = f"CRITICAL FAILURE: {e}\n"
+                    ordered_results[idx] = (path, err_msg, e)
+
+            # --- All processing is done ---
+        log.info("Batch processing complete. Writing ordered logs...")
+
+        # Find the main file handler to write the buffered logs
+        file_handler = next(
+            (h for h in log.handlers if isinstance(h, logging.FileHandler)), None
+        )
+
+        # Now, iterate over the results in the original order
+        for result in ordered_results:
+            if result is None:
+                # This should not happen if logic is correct
+                log.error("Missing result in ordered list.")
+                continue
+
+            path, log_string, exc = result
+
+            # Write the buffered log from the worker to the main log file
+            if file_handler and log_string:
+                try:
+                    file_handler.stream.write(f"\n--- Log for {path.name} ---\n")
+                    file_handler.stream.write(log_string)
+                    file_handler.stream.write(f"--- End log for {path.name} ---\n")
+                except Exception as e:
+                    log.error(f"Failed to write buffered log for {path.name}: {e}")
+
+        log.info("Ordered log writing complete.")
+

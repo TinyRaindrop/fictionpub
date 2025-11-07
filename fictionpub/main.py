@@ -8,13 +8,12 @@ import sys
 import logging
 
 from .terms.localized_terms import LocalizedTerms
-from .utils.logger import setup_logger
+
 
 def main():
     """
     Launches either the CLI or the GUI based on the presence of command-line arguments.
     """
-    setup_logger()
     log = logging.getLogger("fb2_converter")
 
     # Load term translations from JSONs

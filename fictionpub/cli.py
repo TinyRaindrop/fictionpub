@@ -6,12 +6,12 @@ import argparse
 import logging
 from pathlib import Path
 
-from tqdm import tqdm
-
 from .core.batch_processor import BatchProcessor
 from .utils.config import ConversionConfig
+from .utils.logger import setup_main_logger  # Import the new setup function
 
 
+# Get logger (will be configured in run_cli)
 log = logging.getLogger("fb2_converter")
 
 
@@ -56,7 +56,6 @@ def run_cli():
                         help="Increment split-level if XHTML files exceed this size in KB. 0 to disable.")
     parser.add_argument("-c", "--css", type=Path, default=None, 
                         help="Path to a custom CSS file.")
-    parser.add_argument("-v", "--verbosity", action="count", default=0, help="Verbosity. vvv: debug, vv: info, v: warning. Default: error only.")
     parser.add_argument("-typ", "--typography", action="store_true", help="Enable typography post-processing.")
     parser.add_argument("-typ-nbsp", type=int_tuple(), default=(1, 1), help="Typography: word length range to add NBSP (int, int).")
     parser.add_argument("-typ-nobr", type=int_tuple(), default=(4, 6), help="Typography: word length range to wrap in <span>.nobreak (int, int).")
@@ -64,21 +63,10 @@ def run_cli():
                         help="Number of parallel threads to use for conversion. 0 to use max.")
 
     args = parser.parse_args()
-
-    # Set up logging level
-    # vvv = debug, vv = info, v = warning, no v = error
-    match args.verbosity:
-        case 0:
-            level = logging.ERROR
-        case 1:
-            level = logging.WARNING
-        case 2:
-            level = logging.INFO
-        case _:
-            level = logging.DEBUG
-
-    log.info(f"Logger set to level: {logging.getLevelName(level)}")
-    logging.getLogger("fb2_converter").setLevel(level)
+    
+    console_level = logging.ERROR
+    setup_main_logger(console_level)
+    log.info(f"Console logger set to level: {logging.getLevelName(console_level)}")
 
     # Collect all files to be processed
     files_to_process = []
@@ -113,23 +101,25 @@ def run_cli():
     processor = BatchProcessor(config)
 
     num_files = len(files_to_process)
-    print(f"Found {len(files_to_process)} files. Starting conversion...")
+    log.info(f"Found {len(files_to_process)} files. Starting conversion...")
     
-    # Use tqdm for a progress bar
-    with tqdm(total=num_files, unit="file", desc="Converting") as pbar:
-        completed = 0
-        def progress_callback(path: Path, result: Path | None, exc: Exception | None):
-            nonlocal completed
-            completed += 1
-            if result:
-                print(f"[{completed}/{num_files}] ✅ Done: {path}", flush=True)
-            if exc:
-                print(f"[{completed}/{num_files}] ❌ Fail: {path}", flush=True)
-                if progress_callback:
-                    progress_callback(path, None, exc)
-                log.error(f"Failed to convert {path.name}:", exc_info=exc)
-            pbar.update(1)
-        
-        processor.run(files_to_process, progress_callback)
+    completed_count = 0
+    def progress_callback(path: Path, result: Path | None, exc: Exception | None):
+        nonlocal completed_count
+        completed_count += 1
+        # pad completed_count with spaces for alignment
+        completed_str = str(completed_count).rjust(len(str(num_files)))
+        prefix = f"[{completed_str}/{num_files}]"
+        if exc:
+            print(f"{prefix} ❌ Error: {path.name}", flush=True)
+            print(f"  └─ {exc}", flush=True)
+            # Also log the error to file/console handlers
+            # Set exc_info=False to avoid duplicate stack trace on console
+            # (file log will have full trace from worker)
+            log.error(f"Failed to convert {path.name}: {exc}", exc_info=False) 
+        else:
+            print(f"{prefix} ✅ Done: {path.name}", flush=True)
+    
+    processor.run(files_to_process, progress_callback)
 
-    log.info("Batch conversion finished.")
+    print("\nBatch conversion finished.")

@@ -12,6 +12,7 @@ from pathlib import Path
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
+from tkinterdnd2 import DND_FILES, TkinterDND
 
 from .utils.config import ConversionConfig
 from .core.batch_processor import BatchProcessor
@@ -77,11 +78,24 @@ class ConverterApp:
         self.root.geometry("960x600")
         self.root.minsize(600, 400)
 
-        # Data Storage
+        self.conversion_thread = None
         self.file_map = {}
         self.directory_nodes = {}
         self.selection_map = {}
         self.conversion_config = ConversionConfig()
+        
+        # Base64 encoded tiny images for state
+        # TODO: replace with PNG
+        # Empty (pending)
+        PENDING_B64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAALUlEQVQ4T2NkoAEwUqAyoGBCUoFhQJqB1IFBcBqRhYHarwMEEwM1IHIx0EAEsQAAYQYB/8UPomEAAAAASUVORK5CYII="
+        # Green Check (success)
+        SUCCESS_B64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACl0lEQVQ4T41TTWtTURD+Vne9N0mTJjGJU5M0qVlTjAup2lZtqV1FhLgSxEUK6kaCi4i4F3EhAhdBrlq1K4i6EJeiXFz5Aa66EKEiXGlT06T5vPcmTZo0adO01M8OPDszOzvzPcN+XFwePj6mP/i/oK+vD8Vi8cbj8V08Ht+Lx+PB4XA0Nzc3LIvVag2NRmN/vV4fA4GAisVisECIEMdxvN1spmKx+B0Mw8fQarX+y31h18wBIIoihBAIAoFAv9+PJpNJc3NzLMsSjUZDlGVJpVIhCAKEw+GAIAgQhiGz2QwjEWOMsWazGWOMsVwuQ5ZlyWQyrNdr0Gg0aDQaGIYBgBDGGOPxeChb02q1kMvlAAohBDs7OxCLxcjlcqRSKYiiiFgsRjAYpG+G5vN5xWKRmEwmxsbGOHDgwB8uXLjAzc2Nm5ubmJub4+HhgaenJ7quf6HRaLDb7RBCgGAYBul0msPhgCAISJIkHo+HeDwOiUAIAYRSqRSHw4EoikilUhBCgCAIkM/ni8VigBAKhcLvVqs1mqaJZrNB0zRhGCabzQJtmmYymSSdTgNhGCYSiQCqYrH4G8MwLBaL+v1+URSxWq1gcRzzAyzLkmq1isViEQqFAABBEACAMQaApmnQNM1utwshRBRFHMdxOBwKjUYDmqaRz+fh+77dbocsy4jH43A4HIhGoxRFwXVdsixjfX0dRVFQLpeRSqWILMs4HA5AkiSEEOVyGWEYgqZpsixjPB4DwDAMBgMRx3EMwxCLxaBarUKr1RJCgGEYYrEYiBDy+RwgCPJ+vweA1+slGo3yfr8PhmE0nU4zDMM4HA5EkiQymQyZTAYZhiGZTAIAy7IkGo2S3W5HFEWaphFCiKLI6XSK4/EYDAZAIoQQCoX8fv/V6/VCoRA+n08VBEH4ff+ryWQSmqbpN5sNkUgEAACNRsNyuQzHcbZt22azeXw+n1ar9Z3neXmNMQDAt23bbrdDkiQ+nw+KoqDVakEITdP8B0Y5/xG1k3FIAAAAAElFTkSuQmCC"
+        # Red X (failure)
+        FAILURE_B64 = "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACaklEQVQ4T6WTTUhUURTHf/emx6yZRh0zdFqD0Ai6UW1oF5FudAm6EBfqErVpoW5SFAVBtGjRQkF0IyKIiKA3kZAWBBU703YxPZ9z7j13bt/MvDcYhGbIgfNx7vN/zrn3A/AfLly4cCIQCPwQCAR+C4VC9oGBAZpMJoPBYFhUVITVam1ra2s2m83A6/WWVqvNsVgsyMfjcXNzczo6Oubl5eW/6ojP5+Pv7x9dXV1zc3PzmJqawuVyAfj4+DgcDsPlcjE3NwdAOBx2Op2WpqamkM/nq1wuBQGfYIhhGNdxHDs7OzRNw/O8R0dHfH19AYiKigIA8Pl8rKyswOv14PF4kE6nAYDX68UwjOd5x3GcFBUV+blcDu/3e2trK4eHh3EcBwBBEABQsVh0u93L5XIAAgaDARqN5o8cTwjDyWQymUwmIRqNfsePHycvLw+xWAxzc3NwOByMj4/T1NQEwHIiJiamvb0dIyMjvL29AQiFQvu+LwCwWCzy+Tz8PhgMQoIgkEgkgiAI+P1+vV5PENQ0zXw+v2q1Gk3TBAKBQEiSpNFoENF1nclkMhqNwuFwBINBkMvl4HkeQRBQUVEBtGmaTCbDbreDz+dDoVAgCALm5+f5/v4G4OjoiNfrxev1gkBQFMVut3t3d5eTkxMAoVDI4XCAIAjBYBBmZmbY3t6G4zgYY5LJJIQQCoUCm82GlZUV+v0+LMsiSRIeDoeHhwdEo1GSpEmlUsiyrKurC13X+Xw+Wq0Wu90OAFmWqdVqGAwGuq6bzWajadrr9RJFkXK5nHg8Hk3TyOfz0+k0m81mgBAApVL5P/0H/gX9G0P8A+e1MQzO1l3gAAAAAElFTkSuQmCC"
+        
+        self.pending_img = tk.PhotoImage(data=PENDING_B64)
+        self.success_img = tk.PhotoImage(data=SUCCESS_B64)
+        self.failure_img = tk.PhotoImage(data=FAILURE_B64)
 
         # GIF data for checkboxes
         self.checked_img = tk.PhotoImage(
