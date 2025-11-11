@@ -2,6 +2,9 @@
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["fictionpub"]
+
 [project]
 name = "fictionpub"
 version = "0.1.0"
@@ -9,12 +12,13 @@ description = "Convert FB2 eBooks to EPUB3."
 authors = [{ name = "jam" }]
 readme = "README.md"
 requires-python = ">=3.12"
-license = { text = "KEK" }
+license = "MIT"
 keywords = ["fb2", "epub", "ebook", "converter"]
 
 dependencies = [
     "lxml>=5.2.0",
-    "pillow>=11.0.0"
+    "pillow>=11.0.0",
+    "tkinterdnd2>=0.4.3",
 ]
 
 [project.optional-dependencies]
