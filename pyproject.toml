@@ -5,15 +5,28 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["fictionpub"]
 
+[tool.setuptools.dynamic]
+version = { attr = "fictionpub.__version__" }
+
 [project]
 name = "fictionpub"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Convert FB2 eBooks to EPUB3."
-authors = [{ name = "jam" }]
+authors = [{ name = "TinyRaindrop" }]
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 keywords = ["fb2", "epub", "ebook", "converter"]
+
+[project.urls]
+Homepage = "https://github.com/TinyRaindrop/fictionpub"
+Issues = "https://github.com/TinyRaindrop/fictionpub/issues"
+
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
 
 dependencies = [
     "lxml>=5.2.0",
@@ -27,8 +40,12 @@ dev = [
     "isort>=5.12",
     "flake8>=6.0",
     "mypy>=1.10",
-    "pytest>=7.4"
+    "pytest>=7.4",
+    "pyinstaller>=6.15.0",
+    "nuitka>=2.8.8"
 ]
+
+dynamic = ["version"]
 
 # When a user types "fictionpub", it will run main() from fictionpub/main.py
 [project.scripts]

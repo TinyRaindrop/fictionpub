@@ -9,8 +9,10 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
-develop-eggs/
 dist/
+*.build/
+*.dist/
+develop-eggs/
 downloads/
 eggs/
 .eggs/
@@ -107,3 +109,7 @@ _notes/
 _FB2*/
 bak/
 logs/
+
+.github/
+
+*crash-report.xml
