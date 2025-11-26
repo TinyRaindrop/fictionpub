@@ -1,16 +1,16 @@
 """
 Contains the code for a feature-rich graphical user interface (GUI).
-
-This GUI supports batch processing of files and directories, asynchronous
-metadata parsing, and conversion, ensuring the UI remains responsive.
 """
-import dataclasses
-import importlib.resources as res
 import logging
-import traceback
 import threading
 import queue
 import re
+import dataclasses
+import importlib.resources as res
+import os
+import platform
+import subprocess
+import concurrent.futures
 from pathlib import Path
 
 import tkinter as tk
@@ -19,20 +19,50 @@ from tkinter import ttk, filedialog, messagebox
 try:
     from tkinterdnd2 import DND_FILES, TkinterDnD
 except ImportError:
-    TkinterDnD = None # Flag that it's not available
+    TkinterDnD = None
 
 from .utils.config import ConversionConfig
 from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
-from .utils.logger import setup_main_logger
+from .utils.logger import setup_main_logger, LOG_DIR
 
 log = logging.getLogger("fb2_converter")
+
+
+def load_icon(name: str) -> tk.PhotoImage:
+    """Loads an icon image from resources and scales it down if necessary."""
+    try:
+        with res.open_binary('fictionpub.resources.icons', name) as img_file:
+            data = img_file.read()
+            img = tk.PhotoImage(data=data)
+            if img.width() > 24:
+                scale = img.width() // 18 
+                if scale > 1:
+                    img = img.subsample(scale)
+            return img
+    except Exception as e:
+        log.error(f"Failed to load icon {name}: {e}")
+        return tk.PhotoImage(width=16, height=16)
+
+
+def open_path(path: Path):
+    """Opens a file or directory in the system's default explorer."""
+    try:
+        if platform.system() == "Windows":
+            os.startfile(path)
+        elif platform.system() == "Darwin":
+            subprocess.Popen(["open", str(path)])
+        else:
+            subprocess.Popen(["xdg-open", str(path)])
+    except Exception as e:
+        log.error(f"Failed to open path {path}: {e}")
 
 
 class SettingsDialog(tk.Toplevel):
     """A dialog for configuring conversion settings."""
     def __init__(self, parent, config: ConversionConfig):
         super().__init__(parent)
+        self.withdraw() # Start hidden
         self.transient(parent)
         self.title("Conversion Settings")
         self.config: ConversionConfig = config
@@ -47,427 +77,464 @@ class SettingsDialog(tk.Toplevel):
 
         body = ttk.Frame(self, padding="10")
         body.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
-
-        # Create fields
         self._create_widgets(body)
-
-        self.grab_set()  # Modal
-        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         
+        # Center without flash
+        self._center_window(parent)
+        self.deiconify() # Show only after geometry is set
+
+        self.grab_set()
+        self.protocol("WM_DELETE_WINDOW", self.on_cancel)
         self.resizable(False, False)
         self.wait_window(self)
+
+    def _center_window(self, parent):
+        self.update_idletasks()
+        width = self.winfo_reqwidth()
+        height = self.winfo_reqheight()
+        
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+        
+        x = parent_x + (parent_width // 2) - (width // 2)
+        y = parent_y + (parent_height // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
 
     def _create_widgets(self, parent):
         frame = ttk.Frame(parent)
         frame.pack(fill=tk.X, expand=True)
-
-        # TOC Depth
-        ttk.Label(frame, text="TOC Depth (1-6):").grid(row=0, column=0, sticky=tk.W, pady=2)
-        ttk.Spinbox(frame, from_=1, to=6, textvariable=self.toc_depth_var, width=5).grid(row=0, column=1, sticky=tk.W, pady=2)
-
-        # Split Level
-        ttk.Label(frame, text="Split Level (1-6):").grid(row=1, column=0, sticky=tk.W, pady=2)
-        ttk.Spinbox(frame, from_=1, to=6, textvariable=self.split_level_var, width=5).grid(row=1, column=1, sticky=tk.W, pady=2)
-
-        # Split Size
-        ttk.Label(frame, text="Split Size (KB, 0=off):").grid(row=2, column=0, sticky=tk.W, pady=2)
-        ttk.Entry(frame, textvariable=self.split_size_var, width=7).grid(row=2, column=1, sticky=tk.W, pady=2)
         
-        # Threads
-        ttk.Label(frame, text="Threads (0=auto):").grid(row=3, column=0, sticky=tk.W, pady=2)
-        ttk.Entry(frame, textvariable=self.threads_var, width=7).grid(row=3, column=1, sticky=tk.W, pady=2)
+        def add_row(row, label, widget):
+            ttk.Label(frame, text=label).grid(row=row, column=0, sticky=tk.W, pady=2)
+            widget.grid(row=row, column=1, sticky=tk.W, pady=2, padx=5)
 
-        # Typography
+        add_row(0, "TOC Depth (1-6):", ttk.Spinbox(frame, from_=1, to=6, textvariable=self.toc_depth_var, width=5))
+        add_row(1, "Split Level (1-6):", ttk.Spinbox(frame, from_=1, to=6, textvariable=self.split_level_var, width=5))
+        add_row(2, "Split Size (KB, 0=off):", ttk.Entry(frame, textvariable=self.split_size_var, width=7))
+        add_row(3, "Threads (0=auto):", ttk.Entry(frame, textvariable=self.threads_var, width=7))
         ttk.Checkbutton(frame, text="Improve Typography", variable=self.typography_var).grid(row=4, column=0, columnspan=2, sticky=tk.W, pady=5)
+        
+        ttk.Label(frame, text="Custom CSS:").grid(row=5, column=0, sticky=tk.W, pady=2)
+        css_frame = ttk.Frame(frame)
+        css_frame.grid(row=6, column=0, columnspan=2, sticky=tk.EW, pady=2)
+        ttk.Entry(css_frame, textvariable=self.stylesheet_var, width=40).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Button(css_frame, text="...", command=self.on_browse_css, width=3).pack(side=tk.LEFT, padx=5)
 
-        # Stylesheet
-        ttk.Label(frame, text="Custom CSS File:").grid(row=5, column=0, sticky=tk.W, pady=2)
-        stylesheet_frame = ttk.Frame(frame)
-        stylesheet_frame.grid(row=6, column=0, columnspan=2, sticky=tk.EW, pady=2)
-        ttk.Entry(stylesheet_frame, textvariable=self.stylesheet_var, width=40).pack(side=tk.LEFT, fill=tk.X, expand=True)
-        ttk.Button(stylesheet_frame, text="...", command=self.on_browse_css, width=3).pack(side=tk.LEFT, padx=(5, 0))
-
-        # OK/Cancel Buttons
-        button_frame = ttk.Frame(parent)
-        button_frame.pack(fill=tk.X, pady=(10, 0))
-        ttk.Button(button_frame, text="OK", command=self.on_ok).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT)
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(fill=tk.X, pady=(10, 0))
+        ttk.Button(btn_frame, text="Cancel", command=self.on_cancel).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(btn_frame, text="OK", command=self.on_ok).pack(side=tk.RIGHT)
 
     def on_browse_css(self):
         file = filedialog.askopenfilename(
-            title="Select Stylesheet",
             filetypes=[("CSS Files", "*.css"), ("All Files", "*.*")]
         )
-        if file:
-            self.stylesheet_var.set(file)
+        if file: self.stylesheet_var.set(file)
 
     def on_ok(self):
         try:
-            css_path = self.stylesheet_var.get()
-            
-            self.result = dataclasses.replace(self.config,
+            css = self.stylesheet_var.get()
+            self.result = dataclasses.replace(
+                self.config,
                 toc_depth=self.toc_depth_var.get(),
                 split_level=self.split_level_var.get(),
                 split_size_kb=self.split_size_var.get(),
-                custom_stylesheet=Path(css_path) if css_path else None,
+                custom_stylesheet=Path(css) if css else None,
                 num_threads=self.threads_var.get(),
                 improve_typography=self.typography_var.get()
             )
             self.on_cancel()
         except ValueError:
-            messagebox.showerror("Invalid Input", "Please enter valid numbers for fields.")
+            messagebox.showerror("Invalid Input", "Please enter valid numbers.")
 
     def on_cancel(self):
         self.grab_release()
         self.destroy()
 
 
-def load_icon(name: str) -> tk.PhotoImage:
-    """Loads an icon image from the package resources."""
-    with res.open_binary('fictionpub.resources.icons', name) as img_file:
-        return tk.PhotoImage(data=img_file.read())
-
-
 class ConverterApp:
-    """The main application class for the GUI."""
     def __init__(self, root):
         self.root = root
         self.root.title("FB2 to EPUB Converter")
-        self.root.geometry("700x500")
+        self.root.geometry("950x600")
 
-        # Set up the main logger for the GUI
         setup_main_logger(logging.INFO)
 
         self.conversion_config = ConversionConfig()
         self.queue = queue.Queue()
         self.conversion_thread: threading.Thread | None = None
-        self.file_map = {}  # Maps file path str to tree item_id
+        
+        # Thread pool for metadata parsing (prevents creating thousands of threads)
+        self.meta_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+        
+        self.file_map = {} 
+        self.folder_nodes = {}
 
-        self.pending_img = load_icon("mark_pending.png")
-        self.success_img = load_icon("mark_success.png")
-        self.failure_img = load_icon("mark_error.png")
-
+        self._load_resources()
         self._create_widgets()
         self._setup_layout()
-        self._update_button_states()
+        self._bind_events()
         self._process_queue()
 
+    def _load_resources(self):
+        self.icon_unselected = load_icon("mark_unselected.png")
+        self.icon_selected = load_icon("mark_selected.png")
+        self.icon_success = load_icon("mark_success.png")
+        self.icon_failure = load_icon("mark_error.png")
+
     def _create_widgets(self):
-        """Creates all the widgets for the application."""
         self.main_frame = ttk.Frame(self.root, padding="5")
 
-        # --- Settings Frame ---
-        self.settings_frame = ttk.Frame(self.main_frame)
-        self.add_files_btn = ttk.Button(self.settings_frame, text="Add Files", command=self.on_add_files_click)
-        self.add_folder_btn = ttk.Button(self.settings_frame, text="Add Folder", command=self.on_add_folder_click)
-        self.clear_btn = ttk.Button(self.settings_frame, text="Clear List", command=self.on_clear_list_click)
-        self.settings_btn = ttk.Button(self.settings_frame, text="Settings", command=self.on_settings_click)
+        # Toolbar
+        self.toolbar = ttk.Frame(self.main_frame)
+        self.add_files_btn = ttk.Button(self.toolbar, text="Add Files", command=self.on_add_files_click)
+        self.add_folder_btn = ttk.Button(self.toolbar, text="Add Folder", command=self.on_add_folder_click)
+        self.remove_btn = ttk.Button(self.toolbar, text="Remove Selected", command=self.on_remove_click)
+        self.remove_all_btn = ttk.Button(self.toolbar, text="Remove All", command=self.on_remove_all_click)
         
-        # --- File List Frame ---
+        self.right_toolbar = ttk.Frame(self.toolbar)
+        self.logs_btn = ttk.Button(self.right_toolbar, text="Logs", command=self.on_logs_click)
+        self.settings_btn = ttk.Button(self.right_toolbar, text="Settings", command=self.on_settings_click)
+
+        # Treeview
         self.tree_frame = ttk.Frame(self.main_frame)
-        self._create_treeview(self.tree_frame)
-
-        # --- Convert Frame ---
-        self.convert_frame = ttk.Frame(self.main_frame)
-        self.convert_btn = ttk.Button(self.convert_frame, text="Convert", command=self.on_convert_click)
-        
-        # --- Status Frame ---
-        self.status_frame = ttk.Frame(self.main_frame, relief=tk.SUNKEN, padding="2")
-        self.status_label = ttk.Label(self.status_frame, text="Ready", anchor=tk.W)
-
-    def _create_treeview(self, parent):
-        """Creates the Treeview for file listing."""
         self.tree = ttk.Treeview(
-            parent,
-            columns=("state", "title", "author", "path"),
-            show="headings"
+            self.tree_frame,
+            columns=("author", "title", "date", "lang"),
+            selectmode="extended" 
         )
-        self.tree_scroll_y = ttk.Scrollbar(parent, orient=tk.VERTICAL, command=self.tree.yview)
+        self.tree_scroll_y = ttk.Scrollbar(self.tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=self.tree_scroll_y.set)
 
-        self.tree.heading("state", text="", anchor=tk.W)
-        self.tree.heading("title", text="Title")
-        self.tree.heading("author", text="Author")
-        self.tree.heading("path", text="File Path")
+        self.tree.tag_configure('dimmed', foreground='gray')
 
-        self.tree.column("state", width=30, stretch=tk.NO, anchor=tk.CENTER)
-        self.tree.column("title", width=250)
+        # Configure columns
+        self.tree.heading("#0", text="Status / Filename", anchor=tk.W, command=self.on_header_click)
+        self.tree.column("#0", width=400, anchor=tk.W)
+        self.tree.heading("author", text="Author", anchor=tk.W)
         self.tree.column("author", width=150)
-        self.tree.column("path", width=200)
+        self.tree.heading("title", text="Title", anchor=tk.W)
+        self.tree.column("title", width=200)
+        
+        # Narrow columns that don't stretch
+        self.tree.heading("date", text="Date", anchor=tk.W)
+        self.tree.column("date", width=60, minwidth=60, stretch=False)
+        self.tree.heading("lang", text="Lang", anchor=tk.W)
+        self.tree.column("lang", width=50, minwidth=50, stretch=False)
 
-        # Register drag-and-drop
         if TkinterDnD:
             self.tree.drop_target_register(DND_FILES)
             self.tree.dnd_bind('<<Drop>>', self.on_drop)
-        else:
-            log.warning("tkinterdnd2 not found. Drag-and-drop will be disabled.")
+
+        self.bottom_panel = ttk.Frame(self.main_frame)
+        self.convert_btn = ttk.Button(self.bottom_panel, text="Convert Checked Items", command=self.on_convert_click)
+        
+        self.status_frame = ttk.Frame(self.main_frame, relief=tk.SUNKEN, padding="2")
+        self.status_label = ttk.Label(self.status_frame, text="Ready", anchor=tk.W)
 
     def _setup_layout(self):
-        """Packs all widgets into the root window."""
         self.main_frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Settings
-        self.settings_frame.pack(fill=tk.X, pady=5)
+
+        self.toolbar.pack(fill=tk.X, pady=(0, 5))
         self.add_files_btn.pack(side=tk.LEFT, padx=2)
         self.add_folder_btn.pack(side=tk.LEFT, padx=2)
-        self.clear_btn.pack(side=tk.LEFT, padx=2)
-        self.settings_btn.pack(side=tk.RIGHT, padx=2)
+        self.remove_btn.pack(side=tk.LEFT, padx=2)
+        self.remove_all_btn.pack(side=tk.LEFT, padx=2)
+        
+        self.right_toolbar.pack(side=tk.RIGHT)
+        self.logs_btn.pack(side=tk.LEFT, padx=2)
+        self.settings_btn.pack(side=tk.LEFT, padx=2)
 
-        # Treeview
-        self.tree_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+        self.tree_frame.pack(fill=tk.BOTH, expand=True)
         self.tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Convert
-        self.convert_frame.pack(fill=tk.X, pady=5)
+        self.bottom_panel.pack(fill=tk.X, pady=5)
         self.convert_btn.pack(side=tk.RIGHT)
 
-        # Status
         self.status_frame.pack(fill=tk.X, side=tk.BOTTOM)
         self.status_label.pack(fill=tk.X)
 
-    def on_add_files_click(self):
-        """Opens a file dialog to select .fb2/.fb2.zip files."""
-        files = filedialog.askopenfilenames(
-            title="Select FB2 Files",
-            filetypes=[
-                ("FB2 Files", "*.fb2 *.fb2.zip"),
-                ("All Files", "*.*")
-            ]
-        )
-        if files:
-            self.add_files_to_list(files)
+    def _bind_events(self):
+        self.tree.bind("<Button-1>", self.on_tree_click)
+        self.tree.bind("<Delete>", lambda e: self.on_remove_click())
+        self.root.bind("<Control-a>", self.on_select_all)
+        self.tree.bind("<space>", self.on_space_toggle)
 
-    def add_files_to_list(self, file_paths):
-        """
-        Adds a list of file paths to the treeview and starts parsing them.
-        """
-        self.status_label.config(text="Parsing metadata...")
-        for file_path in file_paths:
-            path = Path(file_path)
-            if str(path) in self.file_map:
-                continue  # Skip duplicates
-            
-            item_id = self.tree.insert(
-                "", tk.END, text="", 
-                image=self.pending_img, # Use pending image
-                values=("", "Parsing...", "", str(path))
-            )
-            self.file_map[str(path)] = item_id
-            
-            # Start a background thread to parse this file's metadata
-            parse_thread = threading.Thread(
-                target=self._parse_metadata_thread, 
-                args=(item_id, path),
-                daemon=True
-            )
-            parse_thread.start()
+    # --- Actions ---
 
-    def on_add_folder_click(self):
-        """Opens a dialog to select a folder to scan."""
-        folder = filedialog.askdirectory()
-        if folder:
-            self.add_folder_to_list(Path(folder))
-
-    def add_folder_to_list(self, folder_path: Path):
-        """Scans a folder and adds all found files to the list."""
-        self.status_label.config(text=f"Scanning {folder_path}...")
-        self.root.update_idletasks()  # Force status update
-        
-        files_to_add = []
-        for ext in ("**/*.fb2", "**/*.fb2.zip"):
-            files_to_add.extend(folder_path.rglob(ext))
-        
-        self.add_files_to_list(files_to_add)
-        self.status_label.config(text=f"Added {len(files_to_add)} files from {folder_path}.")
-
-    def on_drop(self, event):
-        """Handles files dropped onto the treeview."""
-        raw_paths = event.data.strip()
-        if not raw_paths:
-            return
-        
-        paths_str = []
-        try:
-            # Find all content within braces or non-spaced content
-            # Handles "{C:/path/file one.fb2} {C:/path/file two.fb2}"
-            paths_str = re.findall(r'\{([^}]+)\}|([^{\s}]+)', raw_paths)
-            # re.findall returns tuples if groups are used: [('path1', ''), ('', 'path2')]
-            paths_str = [p[0] or p[1] for p in paths_str]
-        except Exception as e:
-            log.error(f"Error parsing dropped paths: {e}")
-            paths_str = [raw_paths] # Fallback
-
-        if not paths_str:
-            return
-
-        log.info(f"Parsing dropped paths: {paths_str}")
-        
-        paths_to_add = [Path(p) for p in paths_str]
-        
-        files_to_process = []
-        folders_to_scan = []
-        
-        for path in paths_to_add:
-            if not path.exists():
-                log.warning(f"Dropped path does not exist: {path}")
-                continue
-            if path.is_dir():
-                folders_to_scan.append(path)
-            elif path.is_file() and path.suffix in ['.fb2', '.zip']:
-                filename = str(path)
-                if filename.endswith('.fb2') or filename.endswith('.fb2.zip'):
-                    files_to_process.append(path)
-        
-        # Add individual files
-        if files_to_process:
-            self.add_files_to_list(files_to_process)
-        
-        # Add folders
-        if folders_to_scan:
-            for folder_path in folders_to_scan:
-                self.add_folder_to_list(folder_path)
-
-    def on_clear_list_click(self):
-        """Clears all items from the file list."""
-        if self.conversion_thread and self.conversion_thread.is_alive():
-            messagebox.showwarning("Busy", "Cannot clear list while conversion is in progress.")
-            return
-        for item_id in self.tree.get_children():
-            self.tree.delete(item_id)
-        self.file_map.clear()
-        self.status_label.config(text="Ready")
+    def on_logs_click(self):
+        """Opens the logs directory."""
+        if LOG_DIR.exists():
+            open_path(LOG_DIR)
+        else:
+            messagebox.showinfo("Logs", "Log directory does not exist yet.")
 
     def on_settings_click(self):
-        """Opens the settings dialog."""
         dialog = SettingsDialog(self.root, self.conversion_config)
         if dialog.result:
             self.conversion_config = dialog.result
-            self.status_label.config(text="Settings updated.")
+            self.status_label.config(text="Settings saved.")
 
-    def on_convert_click(self):
-        """Starts the batch conversion process."""
-        if not self.file_map:
-            messagebox.showinfo("No Files", "Please add files to the list first.")
-            return
+    # --- Selection Logic ---
 
-        output_dir = filedialog.askdirectory(title="Select Output Folder (Cancel to save alongside originals)")
+    def on_select_all(self, event=None):
+        children = self.tree.get_children()
+        if not children: return
+        selection = []
+        for child in children:
+            selection.append(child)
+            selection.extend(self.tree.get_children(child))
+        self.tree.selection_set(selection)
 
-        self.conversion_config = dataclasses.replace(self.conversion_config,
-            output_path=Path(output_dir) if output_dir else None
-        )
+    def _set_item_state(self, item_id, selected: bool):
+        """Helper to toggle item visual state between selected and unselected/dimmed."""
+        img = self.icon_selected if selected else self.icon_unselected
+        tags = () if selected else ('dimmed',)
+        self.tree.item(item_id, image=img, tags=tags)
         
-        self._start_conversion_thread()
+        if item_id in self.folder_nodes.values():
+            for child in self.tree.get_children(item_id):
+                self.tree.item(child, image=img, tags=tags)
 
-    def _update_button_states(self, converting=False):
-        """Enables or disables buttons based on application state."""
-        state = tk.DISABLED if converting else tk.NORMAL
+    def on_space_toggle(self, event=None):
+        selected_items = self.tree.selection()
+        if not selected_items: return
+        
+        first = selected_items[0]
+        curr_img = self.tree.item(first, "image")
+        target_selected = str(self.icon_unselected) in str(curr_img)
+        
+        for item_id in selected_items:
+            self._set_item_state(item_id, target_selected)
+
+    def on_tree_click(self, event):
+        region = self.tree.identify_region(event.x, event.y)
+        if region == "tree" or region == "image":
+            item_id = self.tree.identify_row(event.y)
+            if not item_id: return
+            if self.conversion_thread and self.conversion_thread.is_alive(): return
+
+            curr_img = self.tree.item(item_id, "image")
+            is_currently_unselected = str(self.icon_unselected) in str(curr_img)
+            self._set_item_state(item_id, is_currently_unselected)
+
+    def on_header_click(self):
+        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        children = self.tree.get_children()
+        if not children: return
+        
+        first_img = self.tree.item(children[0], "image")
+        target_selected = str(self.icon_unselected) in str(first_img)
+        
+        for item in children:
+            self._set_item_state(item, target_selected)
+
+    def on_remove_click(self):
+        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        selected = self.tree.selection()
+        if not selected: return
+        
+        for item_id in selected:
+            if item_id in self.folder_nodes.values():
+                for child in self.tree.get_children(item_id):
+                    self._remove_from_map(child)
+                key = next((k for k, v in self.folder_nodes.items() if v == item_id), None)
+                if key: del self.folder_nodes[key]
+            else:
+                self._remove_from_map(item_id)
+            self.tree.delete(item_id)
+        
+        self.status_label.config(text="Items removed.")
+
+    def on_remove_all_click(self):
+        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        self.tree.delete(*self.tree.get_children())
+        self.file_map.clear()
+        self.folder_nodes.clear()
+        self.status_label.config(text="All items removed.")
+
+    def _remove_from_map(self, item_id):
+        path_to_remove = next((k for k, v in self.file_map.items() if v == item_id), None)
+        if path_to_remove: del self.file_map[path_to_remove]
+
+    # --- Async File Adding ---
+
+    def _update_ui_state(self, busy):
+        state = tk.DISABLED if busy else tk.NORMAL
         self.add_files_btn.config(state=state)
         self.add_folder_btn.config(state=state)
-        self.clear_btn.config(state=state)
-        self.settings_btn.config(state=state)
+        self.remove_btn.config(state=state)
+        self.remove_all_btn.config(state=state)
         self.convert_btn.config(state=state)
 
-    def _parse_metadata_thread(self, item_id: str, path: Path):
-        """Worker thread to parse FB2 metadata."""
+    def on_add_files_click(self):
+        files = filedialog.askopenfilenames(title="Select FB2 Files", filetypes=[("FB2 Files", "*.fb2 *.fb2.zip"), ("All Files", "*.*")])
+        if files: 
+            self._start_scanning([Path(f) for f in files])
+
+    def on_add_folder_click(self):
+        folder = filedialog.askdirectory()
+        if folder: 
+            self._start_scanning([Path(folder)])
+
+    def on_drop(self, event):
+        data = event.data
+        if not data: return
         try:
-            metadata = FB2Book.get_quick_metadata(path)
-            title = metadata.get("title", "Unknown Title")
-            author = metadata.get("author", "Unknown Author")
-            self.queue.put(("parse_ok", item_id, (title, author)))
+            paths_list = self.root.tk.splitlist(data)
+        except Exception:
+            paths_list = re.findall(r'\{([^}]+)\}|([^{\s}]+)', data)
+            paths_list = [p[0] or p[1] for p in paths_list]
+        
+        if paths_list:
+            self._start_scanning([Path(p) for p in paths_list])
+
+    def _start_scanning(self, input_paths: list[Path]):
+        """Starts a background thread to scan directories and add files."""
+        self._update_ui_state(busy=True)
+        self.status_label.config(text="Scanning files...")
+        
+        threading.Thread(target=self._scan_worker, args=(input_paths,), daemon=True).start()
+
+    def _scan_worker(self, input_paths: list[Path]):
+        """Background worker to scan for files."""
+        found_files = []
+        for p in input_paths:
+            if p.is_file() and p.suffix in ['.fb2', '.zip']:
+                found_files.append(p)
+            elif p.is_dir():
+                for ext in ("**/*.fb2", "**/*.fb2.zip"):
+                    found_files.extend(p.rglob(ext))
+        
+        # Send result back to main thread
+        self.queue.put(("scan_complete", None, found_files))
+
+    def _batch_add_files(self, files: list[Path]):
+        """Adds files to treeview and queues metadata parsing. Runs on main thread."""
+        added_count = 0
+        for path in files:
+            s_path = str(path)
+            if s_path in self.file_map: continue
+            
+            parent = path.parent
+            s_parent = str(parent)
+            
+            if s_parent not in self.folder_nodes:
+                node = self.tree.insert("", tk.END, text=s_parent, image=self.icon_selected, open=True)
+                self.folder_nodes[s_parent] = node
+            
+            p_node = self.folder_nodes[s_parent]
+            item_id = self.tree.insert(p_node, tk.END, text=path.name, image=self.icon_selected, values=("Parsing...", "", "", ""))
+            self.file_map[s_path] = item_id
+            added_count += 1
+            
+            # Submit to ThreadPool instead of creating a new thread
+            self.meta_executor.submit(self._parse_meta_task, item_id, path)
+            
+        self.status_label.config(text=f"Added {added_count} new files.")
+
+    def _parse_meta_task(self, item_id, path):
+        """Task running in thread pool."""
+        try:
+            meta = FB2Book.get_quick_metadata(path)
+            self.queue.put(("parse_ok", item_id, meta))
         except Exception as e:
-            log.warning(f"Failed to parse metadata for {path.name}: {e}")
             self.queue.put(("parse_fail", item_id, str(e)))
 
-    def _start_conversion_thread(self):
-        """Gathers files and starts the batch processor in a new thread."""
-        files_to_convert = [Path(p) for p in self.file_map.keys()]
+    # --- Conversion ---
+
+    def on_convert_click(self):
+        if self.conversion_thread and self.conversion_thread.is_alive(): return
+
+        files_to_convert = []
+        for s_path, item_id in self.file_map.items():
+            if not self.tree.exists(item_id): continue
+            if str(self.icon_selected) in str(self.tree.item(item_id, "image")):
+                files_to_convert.append(Path(s_path))
+        
         if not files_to_convert:
+            messagebox.showinfo("Info", "No files checked for conversion.")
             return
 
-        self._update_button_states(converting=True)
-        self.status_label.config(text=f"Starting conversion of {len(files_to_convert)} files...")
+        out_dir = filedialog.askdirectory(title="Output Folder (Cancel for default)")
+        
+        self.conversion_config = dataclasses.replace(
+            self.conversion_config,
+            output_path=Path(out_dir) if out_dir else None
+        )
 
-        # Reset all icons to pending
-        for item_id in self.file_map.values():
-            self.tree.item(item_id, image=self.pending_img, tags=())
+        self._start_conversion(files_to_convert)
 
-        def conversion_task():
+    def _start_conversion(self, files):
+        self._update_ui_state(busy=True)
+        self.status_label.config(text=f"Converting {len(files)} files...")
+        
+        def run_batch():
             try:
-                processor = BatchProcessor(self.conversion_config)
-                processor.run(files_to_convert, self._conversion_progress_callback)
-                self.queue.put(("conversion_done", None, "Batch conversion finished."))
+                proc = BatchProcessor(self.conversion_config)
+                proc.run(files, self._progress_callback)
+                self.queue.put(("batch_done", None, None))
             except Exception as e:
-                log.error("Fatal error in conversion thread", exc_info=True)
                 self.queue.put(("fatal_error", None, str(e)))
 
-        self.conversion_thread = threading.Thread(target=conversion_task, daemon=True)
+        self.conversion_thread = threading.Thread(target=run_batch, daemon=True)
         self.conversion_thread.start()
 
-    def _conversion_progress_callback(self, path: Path, result: Path | None, exc: Exception | None):
-        """
-        Callback for the BatchProcessor.
-        This runs in the conversion thread and puts results in the queue.
-        """
+    def _progress_callback(self, path: Path, result: Path | None, exc: Exception | None):
         item_id = self.file_map.get(str(path))
-        if not item_id:
-            return 
-        
-        if exc:
-            self.queue.put(("convert_fail", item_id, str(exc)))
-        else:
-            self.queue.put(("convert_ok", item_id, None))
+        if item_id:
+            if exc:
+                self.queue.put(("convert_fail", item_id, str(exc)))
+            else:
+                self.queue.put(("convert_ok", item_id, None))
 
     def _process_queue(self):
-        """
-        Processes messages from the worker threads in the main UI thread.
-        This is the *only* place UI elements should be updated.
-        """
         try:
             while True:
-                task_type, item_id, data = self.queue.get_nowait()
-
-                if item_id and not self.tree.exists(item_id):
-                    # Item was cleared from list, ignore update
+                task, item_id, data = self.queue.get_nowait()
+                
+                # Handle non-item tasks
+                if task == "scan_complete":
+                    self._update_ui_state(busy=False)
+                    self._batch_add_files(data)
+                    continue
+                elif task == "batch_done":
+                    self._update_ui_state(busy=False)
+                    messagebox.showinfo("Done", "Conversion complete.")
+                    continue
+                elif task == "fatal_error":
+                    self._update_ui_state(busy=False)
+                    messagebox.showerror("Error", data)
                     continue
 
-                match task_type:
+                # Handle item-specific tasks
+                if item_id and not self.tree.exists(item_id): continue
+
+                match task:
                     case "parse_ok":
-                        title, author = data
-                        self.tree.item(item_id, values=("", title, author, self.tree.item(item_id, "values")[-1]))
+                        self.tree.item(item_id, values=data)
                     case "parse_fail":
-                        self.tree.item(item_id, values=("", "Failed to parse", f"Error: {data}", self.tree.item(item_id, "values")[-1]))
-                    case "status":
-                        self.status_label.config(text=data)
+                        self.tree.item(item_id, values=("Error", str(data), "", ""))
                     case "convert_ok":
-                        self.tree.item(item_id, tags=('success',), image=self.success_img)
-                        self.tree.tag_configure('success', foreground='green')
+                        self.tree.item(item_id, image=self.icon_success, tags=("success",))
+                        self.tree.tag_configure("success", foreground="green")
                     case "convert_fail":
-                        self.tree.item(item_id, tags=('failure',), image=self.failure_img)
-                        self.tree.tag_configure('failure', foreground='red')
-                        log.error(f"Failed to convert item {item_id}: {data}")
-                    case "conversion_done":
-                        self.status_label.config(text=data)
-                        self._update_button_states(converting=False)
-                        messagebox.showinfo("Complete", "Batch conversion process has finished.")
-                    case "fatal_error":
-                        self.status_label.config(text="A fatal error stopped the conversion.")
-                        messagebox.showerror("Fatal Error", str(data))
-                        self._update_button_states(converting=False)
-                    case _:
-                        log.error(f"Unknown task type: {task_type}")
-        
+                        self.tree.item(item_id, image=self.icon_failure, tags=("failure",))
+                        self.tree.tag_configure("failure", foreground="red")
+                        log.error(f"GUI Fail: {data}")
+
         except queue.Empty:
-            # No more tasks, schedule next check
-            self.root.after(100, self._process_queue)
+            pass
+        self.root.after(100, self._process_queue)
 
 
 def run_gui():
-    """Launches the GUI application."""
     if TkinterDnD:
         root = TkinterDnD.Tk()
     else:
         root = tk.Tk()
-        
     app = ConverterApp(root)
     root.mainloop()

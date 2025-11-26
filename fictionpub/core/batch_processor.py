@@ -44,10 +44,18 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, st
         return path, log_stream.getvalue(), None
 
     except Exception as e:
-        # Log the full exception *to the worker's buffer*
+        # 1. Log the full traceback locally to the worker's buffer. 
+        # This ensures the details are saved to the log file later.
         worker_log.error(f"Failed conversion for: {path.name}", exc_info=True)
-        return path, log_stream.getvalue(), e
 
+        # 2. Sanitize the exception.
+        # Convert the exception to a built-in type with the string message.
+        # This allows the main process to receive the error without crashing.
+        safe_error_msg = f"{type(e).__name__}: {str(e)}"
+        safe_exc = RuntimeError(safe_error_msg)
+        
+        return path, log_stream.getvalue(), safe_exc
+    
     finally:
         # Clean up handlers and close the stream
         log_handler.close()

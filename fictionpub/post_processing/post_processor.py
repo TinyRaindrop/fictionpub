@@ -126,23 +126,24 @@ class PostProcessor():
 
             # 2. As spacers between other elements
             else:
+                # TODO: check if both prev and next are in excl_tags (empty-line around figure)
                 target_el = empty_line.getprevious()
                 cls = ""
 
                 # If previous element exists and is of valid type, use it
                 if target_el is not None and target_el.tag not in excl_tags:
-                    cls = " space-after"
+                    cls = "space-after"
                 else:
                     # Otherwise, check the next element
                     next_el = empty_line.getnext()
                     if next_el is not None and next_el.tag not in excl_tags:
                         target_el = next_el
-                        cls = " space-before"
+                        cls = "space-before"
 
                 # If a valid target element was found, update the class
                 if target_el is not None:
-                    el_cls = target_el.get("class", "").strip()
-                    target_el.set("class", (el_cls + cls))
+                    el_cls = target_el.get("class", "")
+                    target_el.set("class", " ".join((el_cls, cls)).strip())
 
                 parent = empty_line.getparent()
                 if parent is not None:

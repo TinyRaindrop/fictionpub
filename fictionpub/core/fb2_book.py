@@ -3,6 +3,7 @@ Contains the logic for parsing and representing an FB2 file.
 """
 import base64
 import logging
+import re
 import uuid
 import zipfile
 from pathlib import Path
@@ -58,54 +59,82 @@ class FB2Book:
 
 
     @staticmethod
-    def get_quick_metadata(filepath: Path) -> dict[str, str]:
+    def get_quick_metadata(filepath: Path) -> tuple[str, str, str, str]:
         """
-        A fast method to parse only the essential metadata from an FB2 file
-        without loading the entire document.
-        Returns a dictionary with 'author' and 'title'.
-        """
-        author = "Unknown Author"
-        title = "Untitled"
+        Quickly extracts metadata (Author, Title, Year, Lang) from an FB2 file
+        without parsing the entire XML tree. Supports .fb2 and .fb2.zip.
         
-        def _parse_title_info(element):
-            """Helper to extract data from a title-info element."""
-            nonlocal author, title
-            title_elem = xu.elem_find(element, 'fb:book-title')
-            if title_elem is not None and title_elem.text:
-                title = title_elem.text
+        Returns:
+            tuple[str, str, str, str]: (author, title, year, lang)
+        """
+        source = None
+        opened_zip = None
 
-                authors = [
-                    xu.get_person_name(author)
-                    for author in xu.elem_findall(elem, 'fb:author') ]
-                author = ", ".join(authors)
-
-                elem.clear()    # Clear the element from memory
+        title_info_tags = ['book-title', 'date', 'lang']
+        
+        # Default dict with empty values. 
+        meta = {'author': ""}
+        meta.update({key: "" for key in title_info_tags})
+        
+        def meta_tuple() -> tuple:
+            """Converts meta dict to a tuple."""
+            nonlocal meta
+            return tuple(meta.values())
 
         try:
-            events = ("end",)
-            tag_to_find = f"{{{NS.FB2}}}title-info"
-
-            if str(filepath).endswith('.fb2.zip'):
-                with zipfile.ZipFile(filepath, 'r') as zf:
-                    fb2_files = [name for name in zf.namelist() if name.endswith('.fb2')]
-                    if not fb2_files: return {'author': 'N/A', 'title': 'No .fb2 in zip'}
-                    with zf.open(fb2_files[0]) as fb2_file:
-                        context = etree.iterparse(fb2_file, events=events, tag=tag_to_find)
-                        for _, elem in context:
-                            _parse_title_info(elem)
-                            break   # Stop parsing after the first title-info is found
+            # Handle ZIP files
+            # TODO: support all zips indiscriminately?
+            # filepath.suffix.lower() == '.zip'
+            if str(filepath).lower().endswith('.fb2.zip'):
+                opened_zip = zipfile.ZipFile(filepath, 'r')
+                # Find first .fb2 file in zip
+                fb2_name = next((n for n in opened_zip.namelist() if n.lower().endswith('.fb2')), None)
+                if not fb2_name:
+                    meta.update({'author': "N/A", 'book-title': "No .fb2 in zip"})
+                    return meta_tuple()
+                source = opened_zip.open(fb2_name)
             else:
-                # Same logic for a regular file
-                context = etree.iterparse(str(filepath), events=events, tag=tag_to_find)
-                for _, elem in context:
-                    _parse_title_info(elem)
-                    break
+                source = str(filepath)
 
-        except (etree.XMLSyntaxError, zipfile.BadZipFile, FileNotFoundError) as e:
-            log.warning(f"Quick metadata parse failed for {filepath.name}: {e}")
-            return {'author': 'Parse Error', 'title': 'Parse Error'}
+            # Use iterparse to find the title-info block efficiently
+            tag_to_find = f"{{{NS.FB2}}}title-info"
+            context = etree.iterparse(source, events=('end',), tag=tag_to_find)
             
-        return {'author': author, 'title': title}
+            for _, elem in context:
+                # Fill in data from `title-info`
+                meta.update(xu.get_metadata_tags(elem, title_info_tags))
+                
+                authors = [
+                    xu.get_person_name(author)
+                    for author in xu.elem_findall(elem, 'fb:author')
+                ]
+                if authors:
+                    meta['author'] = ", ".join(filter(None, authors))
+
+                # TODO: Try to extract year specifically. Remove?
+                raw_date = meta['date']
+                if raw_date:
+                    pass
+                    # match = re.search(r'\d{4}', raw_date)
+                    # year = match.group(0) if match else raw_date
+
+                # Clean up memory
+                elem.clear()
+                # Stop after the first title-info
+                break
+            
+            return meta_tuple()
+
+        except Exception as e:
+            log.warning(f"Quick metadata extraction failed for {filepath.name}: {e}")
+            meta.update({'author': "*ERROR*", 'book-title': "* Failed to read metadata *"})
+            return meta_tuple()
+            
+        finally:
+            if source is not None and not isinstance(source, str) and hasattr(source, 'close'):
+                source.close()
+            if opened_zip:
+                opened_zip.close()
     
 
     def _parse_xml_tree(self):
