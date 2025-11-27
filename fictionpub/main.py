@@ -10,6 +10,26 @@ import logging
 from .terms.localized_terms import LocalizedTerms
 
 
+def strip_pyinstaller_args():
+    """
+    Remove arguments PyInstaller injects into sys.argv 
+    when spawning a multiprocessing bootstrap process.
+    """
+    pyinst_prefixes = (
+        "--multiprocessing-fork",
+        "--multiprocessing-spawn",
+        "--piesubproc",
+    )
+
+    def is_bad(a):
+        return a.startswith(pyinst_prefixes) or (
+            # Arguments like: parent_pid=123, pipe_handle=123
+            "=" in a and a.split("=")[0] in ("parent_pid", "pipe_handle")
+        )
+
+    sys.argv = [a for a in sys.argv if not is_bad(a)]
+
+
 def main():
     """
     Launches either the CLI or the GUI based on the presence of command-line arguments.
@@ -19,6 +39,8 @@ def main():
     # Load term translations from JSONs
     LocalizedTerms.load_terms()
     
+    strip_pyinstaller_args()
+
     # sys.argv[0] is always the name of the script itself.
     # If the list has more than one item, it means the user has provided arguments.
     
