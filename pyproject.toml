@@ -45,8 +45,6 @@ dev = [
     "nuitka>=2.8.8"
 ]
 
-dynamic = ["version"]
-
 # When a user types "fictionpub", it will run main() from fictionpub/main.py
 [project.scripts]
 fictionpub = "fictionpub.main:main"
