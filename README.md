@@ -18,14 +18,12 @@ FB2 to EPUB3 ebook converter with CLI / GUI.
 
 
 ## Installation
-`pip install git+https://github.com/TinyRaindrop/fictionpub.git`
+```pip install git+https://github.com/TinyRaindrop/fictionpub.git```
 or manually
 ```git clone https://github.com/TinyRaindrop/fictionpub
 cd fictionpub
 pip install .
 ```
-
-
 
 ## Development
 Build package
@@ -35,22 +33,21 @@ pip install dist/fictionpub-*.whl
 ```
 
 Install in editable mode
-`pip install -e .`
+```pip install -e .```
 
 Compile .exe with Nuitka
-`python -m nuitka --config-file=nuitka.ini`
+```python -m nuitka --msvc=latest fictionpub/main.py```
 or
-`python -m nuitka --onefile --assume-yes-for-downloads fictionpub/main.py --output-filename=fictionpub.exe`
+```python -m nuitka --onefile --assume-yes-for-downloads fictionpub/main.py --output-filename=fictionpub.exe```
 
 Compile .exe with Pyinstaller
-`pyinstaller fictionpub.spec`
-
+```pyinstaller fictionpub.spec```
 
 
 ## Usage
 Run GUI
-`fictionpub`
+```fictionpub```
 
 Run CLI
-`fictionpub [input] [args]`
+```fictionpub [input] [args]```
 **input** can be file/folder path, or paths separated with spaces.

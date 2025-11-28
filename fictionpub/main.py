@@ -1,3 +1,24 @@
+# #nuitka-project: --onefile
+# #nuitka-project: --standalone
+# nuitka-project: --output-filename=fictionpub.exe
+# nuitka-project: --output-dir=./dist/
+
+# nuitka-project: --windows-console-mode=force
+# (disable/force/attach/hide)
+
+# nuitka-project: --lto=yes
+# nuitka-project: --assume-yes-for-downloads
+
+# nuitka-project: --enable-plugin=tk-inter
+
+# include resource folder
+# nuitka-project: --include-data-dir=fictionpub/resources=resources
+# nuitka-project: --include-data-files=fictionpub/terms/*.json=terms/
+
+# nuitka-project: --static-libpython=auto
+# nuitka-project: --follow-imports
+
+
 """
 The main entry point for the FB2 to EPUB Converter application.
 
