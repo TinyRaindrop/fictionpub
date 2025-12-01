@@ -19,9 +19,7 @@
 
 # include resource folder
 # nuitka-project: --include-package-data=fictionpub.resources
-# nuitka-project: --include-package-data=fictionpub.terms
 # nuitka-project: --include-data-dir=fictionpub/resources=fictionpub/resources
-# nuitka-project: --include-data-dir=fictionpub/terms=fictionpub/terms
 
 # nuitka-project: --windows-icon-from-ico=fictionpub/resources/app.ico
 

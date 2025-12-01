@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import zipfile
+from importlib import resources as res
 from pathlib import Path
 from typing import NamedTuple
 
@@ -92,7 +93,10 @@ class EpubBuilder:
         self.local_terms = LocalizedTerms(self.lang)
 
         # With local_terms initialized, get translated genre names
-        self.metadata['genres'] = [self.local_terms.get_genre(g) for g in metadata['genres']]
+        self.metadata['genres'] = [
+            self.local_terms.get_genre(g) 
+            for g in metadata['genres']
+        ]
 
 
     def set_annotation(self, converted_annotation: etree._Element | None):
@@ -553,16 +557,13 @@ class EpubBuilder:
         """Copies the default or custom CSS file to the Styles directory."""
         source: Path | None = None
         destination: Path = self.paths.styles / FN.CSS
-        
-        def get_package_path():
-            package_name = __package__ or ""
-            # Compute number of levels: 1 if top-level, >1 if in subpackages
-            levels_up = max(len(package_name.split('.')), 1)
-            # Go up to top-level package
-            package_root = Path(__file__).parents[levels_up - 1]
-            return package_root
 
-        default_css: Path = get_package_path() / "css" / "default.css"
+        def get_default_css_path() -> Path:
+            resource = res.files("fictionpub.resources.css").joinpath("default.css")
+            with res.as_file(resource) as real_path:
+                return Path(real_path)
+    
+        default_css: Path = get_default_css_path()
         
         if self.config.custom_stylesheet:
             custom_css = Path(self.config.custom_stylesheet)

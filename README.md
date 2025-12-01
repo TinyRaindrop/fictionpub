@@ -35,12 +35,13 @@ pip install dist/fictionpub-*.whl
 Install in editable mode
 ```pip install -e .```
 
-Compile .exe with Nuitka
+**Compile .exe with Nuitka**
+Use Python 3.12. TkInter isn't supported in 3.13, and 3.14 isn't supported by Nuitka at all.
 ```python -m nuitka --msvc=latest fictionpub/main.py```
 or
 ```python -m nuitka --onefile --assume-yes-for-downloads fictionpub/main.py --output-filename=fictionpub.exe```
 
-Compile .exe with Pyinstaller
+**Compile .exe with Pyinstaller**
 ```pyinstaller fictionpub.spec```
 
 

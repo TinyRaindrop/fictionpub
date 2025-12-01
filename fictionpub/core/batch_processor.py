@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Callable
 
 from .pipeline import ConversionPipeline
+from ..terms.localized_terms import LocalizedTerms
 from ..utils.config import ConversionConfig
 from ..utils.logger import setup_worker_logger
 
@@ -16,6 +17,13 @@ from ..utils.logger import setup_worker_logger
 # We just get it here to write high-level status updates from the main process
 log = logging.getLogger("fb2_converter")
 
+
+def _init_worker(genres, headings):
+    """
+    This function runs once inside every new child process.
+    It receives the data and injects it into the local class.
+    """
+    LocalizedTerms.inject_terms((genres, headings))
 
 def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, str, Exception | None]:
     """
@@ -90,8 +98,11 @@ class BatchProcessor:
         # Each item will be: (path, log_string, exception)
         ordered_results: list[tuple[Path, str, Exception | None] | None] = [None] * len(files)
 
-
-        with concurrent.futures.ProcessPoolExecutor(max_workers) as executor:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers,
+            initializer=_init_worker,                # Function to run on start
+            initargs=(LocalizedTerms.get_terms())   # Arguments for that function
+        ) as executor:
             # Submit all conversion tasks
             future_to_path = {
                 executor.submit(_convert_single_file, path, self.config): path
@@ -149,4 +160,6 @@ class BatchProcessor:
                     log.error(f"Failed to write buffered log for {path.name}: {e}")
 
         log.info("Ordered log writing complete.")
+
+
 

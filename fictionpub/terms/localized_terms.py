@@ -1,5 +1,6 @@
 import json
 import logging
+from importlib import resources as res
 from pathlib import Path
 from typing import NamedTuple
 
@@ -21,26 +22,57 @@ class LocalizedTerms:
     """
     _GENRES: dict[str, Term] = {}
     _HEADINGS: dict[str, Term] = {}
+    
+    @property
+    def GENRES(self):
+        return self.__class__._GENRES
+
+    @property
+    def HEADINGS(self):
+        return self.__class__._HEADINGS
+    
 
     @staticmethod
-    def _get_json_data(filename) -> dict[str, Term]:
-        json_path = Path(__file__).parent / filename    # or simply use relative Path(filename)
-        if not json_path.is_file():
-            log.warning(f"[LocalizedTerms]: {filename} is not found")
+    def _get_json_data(filename: str) -> dict[str, Term]:
+        package = "fictionpub.resources.terms"
+
+        try:
+            resource = res.files(package).joinpath(filename)
+            with res.as_file(resource) as json_path:
+                if not json_path.is_file():
+                    log.warning(f"[LocalizedTerms]: {filename} is not found")
+                    return {}
+
+                with open(json_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return {k: Term(**v) for k, v in data.items()}
+
+        except Exception as e:
+            log.error(f"[LocalizedTerms]: Failed to load {filename}: {e}")
             return {}
-        
-        terms: dict = {}
-        with open(json_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
-            for key, translations in data.items():
-                terms[key] = Term(**translations)
-        return terms
     
+
     @classmethod
     def load_terms(cls):
         """LocalizedTerms.load_terms() must be called once before creating instances."""
         cls._GENRES = cls._get_json_data("genres.json")
         cls._HEADINGS = cls._get_json_data("headings.json")
+
+
+    @classmethod
+    def inject_terms(cls, terms: tuple):
+        """
+        Manually sets terms data returned by get_terms(). 
+        Used for initialization in multiprocessing.
+        """
+        cls._GENRES, cls._HEADINGS = terms
+
+    
+    @classmethod
+    def get_terms(cls) -> tuple:
+        """Returns (GENRES, HEADINGS) tuple."""
+        return cls._GENRES, cls._HEADINGS
+        
 
     def __init__(self, lang: str ='uk', default_lang = 'uk'):
         """Pass lang=metadata['lang']. Default_lang is used as a fallback in getters."""
@@ -49,6 +81,11 @@ class LocalizedTerms:
             lang = default_lang
         self.lang = lang or default_lang
         self.default_lang = default_lang    # used as a fallback in getters
+
+        if not self.__class__._GENRES or not self.__class__._HEADINGS:
+            log.debug(f"[LocalizedTerms] Missing terms. Loading from file.") 
+            self.__class__.load_terms()
+
 
     def _get_translation(self, dictionary, key, default='') -> str:
         """General method to fetch a term from a dictionary with language fallback."""
@@ -64,14 +101,17 @@ class LocalizedTerms:
 
         return translation
 
+
     def get_genre(self, key, default=''):
         """Get a genre translation."""
         return self._get_translation(self._GENRES, key, default)
     
+
     def get_heading(self, key, default=''):
         """Get a heading translation."""
         return self._get_translation(self._HEADINGS, key, default)
     
+
     def get_all_headings(self, key, default=''):
         """Get a list of all heading translations for a given key."""
         term = self._HEADINGS.get(key)
