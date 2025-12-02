@@ -31,8 +31,10 @@ log = logging.getLogger("fb2_converter")
 
 def load_icon(name: str) -> tk.PhotoImage:
     """Loads an icon image from resources and scales it down if necessary."""
+    package = "fictionpub.resources.icons"
+    
     try:
-        with res.open_binary('fictionpub.resources.icons', name) as img_file:
+        with res.open_binary(package, name) as img_file:
             data = img_file.read()
             img = tk.PhotoImage(data=data)
             if img.width() > 24:
@@ -40,6 +42,7 @@ def load_icon(name: str) -> tk.PhotoImage:
                 if scale > 1:
                     img = img.subsample(scale)
             return img
+    
     except Exception as e:
         log.error(f"Failed to load icon {name}: {e}")
         return tk.PhotoImage(width=16, height=16)

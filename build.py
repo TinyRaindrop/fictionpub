@@ -12,14 +12,18 @@ build_options = [
     "--file-description=FB2 to EPUB converter",
     "--file-version=1.0.0",
     "--product-version=1.0.0",
+    "--onefile",    # Single .exe
     "--standalone",
     "--output-dir=./dist/",
     "--lto=yes",
     "--assume-yes-for-downloads",
     "--enable-plugin=tk-inter",
-    "--include-data-dir=fictionpub/resources=fictionpub/resources",
-    "--include-data-dir=fictionpub/terms=fictionpub/terms",
-    "--windows-icon-from-ico=fictionpub/resources/app.ico",
+    "--include-package=fictionpub.resources",
+    "--include-package=fictionpub.resources.css",
+    "--include-package=fictionpub.resources.icons",
+    "--include-package=fictionpub.resources.terms",
+    "--include-package-data=fictionpub.resources",
+    # "--windows-icon-from-ico=fictionpub/resources/app.ico",
     "--static-libpython=auto",
     "--follow-imports",
 ]
@@ -43,5 +47,5 @@ def compile_gui():
     subprocess.check_call([sys.executable, "-m", "nuitka"] + options)
 
 if __name__ == "__main__":
-    compile_cli()
+    # compile_cli()
     compile_gui()

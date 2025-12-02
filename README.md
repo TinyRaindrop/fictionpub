@@ -37,18 +37,26 @@ Install in editable mode
 
 **Compile .exe with Nuitka**
 Use Python 3.12. TkInter isn't supported in 3.13, and 3.14 isn't supported by Nuitka at all.
-```python -m nuitka --msvc=latest fictionpub/main.py```
+```python build.py```
 or
-```python -m nuitka --onefile --assume-yes-for-downloads fictionpub/main.py --output-filename=fictionpub.exe```
+```python -m nuitka --onefile --assume-yes-for-downloads run_app.py --output-filename=fictionpub.exe```
 
 **Compile .exe with Pyinstaller**
 ```pyinstaller fictionpub.spec```
 
 
 ## Usage
+### When installed as a Python package
 Run GUI
 ```fictionpub```
 
 Run CLI
 ```fictionpub [input] [args]```
 **input** can be file/folder path, or paths separated with spaces.
+
+### Using .exe
+Run GUI
+```fictionpub.exe```
+
+Run CLI
+```fictionpub_cli.exe [input] [args]```
