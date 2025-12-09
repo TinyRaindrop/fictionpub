@@ -8,9 +8,8 @@ import os
 import io
 from pathlib import Path
 from datetime import datetime
-from logging.handlers import RotatingFileHandler
 
-# Define a consistent log directory
+
 LOG_DIR = Path("./logs")
 MAX_LOG_FILES = 20
 CONSOLE_LOG_FORMAT = "%(levelname)s: %(message)s"

@@ -4,6 +4,8 @@ from importlib import resources as res
 from pathlib import Path
 from typing import NamedTuple
 
+from ..resources.loader import load_terms_json
+
 
 log = logging.getLogger("fb2_converter")
 
@@ -22,7 +24,7 @@ class LocalizedTerms:
     """
     _GENRES: dict[str, Term] = {}
     _HEADINGS: dict[str, Term] = {}
-    
+
     @property
     def GENRES(self):
         return self.__class__._GENRES
@@ -30,27 +32,14 @@ class LocalizedTerms:
     @property
     def HEADINGS(self):
         return self.__class__._HEADINGS
-    
+
 
     @staticmethod
     def _get_json_data(filename: str) -> dict[str, Term]:
-        package = "fictionpub.resources.terms"
+        """Parses json data and returns a dict of {key: Term}."""
+        data = load_terms_json(filename)
+        return {k: Term(**v) for k, v in data.items()}
 
-        try:
-            resource = res.files(package).joinpath(filename)
-            with res.as_file(resource) as json_path:
-                if not json_path.is_file():
-                    log.warning(f"[LocalizedTerms]: {filename} is not found")
-                    return {}
-
-                with open(json_path, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-                    return {k: Term(**v) for k, v in data.items()}
-
-        except Exception as e:
-            log.error(f"[LocalizedTerms]: Failed to load {filename}: {e}")
-            return {}
-    
 
     @classmethod
     def load_terms(cls):
@@ -62,17 +51,17 @@ class LocalizedTerms:
     @classmethod
     def inject_terms(cls, terms: tuple):
         """
-        Manually sets terms data returned by get_terms(). 
+        Manually sets terms data returned by get_terms().
         Used for initialization in multiprocessing.
         """
         cls._GENRES, cls._HEADINGS = terms
 
-    
+
     @classmethod
     def get_terms(cls) -> tuple:
         """Returns (GENRES, HEADINGS) tuple."""
         return cls._GENRES, cls._HEADINGS
-        
+
 
     def __init__(self, lang: str ='uk', default_lang = 'uk'):
         """Pass lang=metadata['lang']. Default_lang is used as a fallback in getters."""
@@ -83,7 +72,7 @@ class LocalizedTerms:
         self.default_lang = default_lang    # used as a fallback in getters
 
         if not self.__class__._GENRES or not self.__class__._HEADINGS:
-            log.debug(f"[LocalizedTerms] Missing terms. Loading from file.") 
+            log.debug(f"[LocalizedTerms] Missing terms. Loading from file.")
             self.__class__.load_terms()
 
 
@@ -92,7 +81,7 @@ class LocalizedTerms:
         term = dictionary.get(key)
         if not term:
             return default
-    
+
         translation = getattr(term, self.lang, None)
 
         # Fall back to default lang if requested lang doesn't have a translation
@@ -105,12 +94,12 @@ class LocalizedTerms:
     def get_genre(self, key, default=''):
         """Get a genre translation."""
         return self._get_translation(self._GENRES, key, default)
-    
+
 
     def get_heading(self, key, default=''):
         """Get a heading translation."""
         return self._get_translation(self._HEADINGS, key, default)
-    
+
 
     def get_all_headings(self, key, default=''):
         """Get a list of all heading translations for a given key."""

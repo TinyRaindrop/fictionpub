@@ -42,7 +42,6 @@ class ConversionPipeline:
 
         # 3. Initialize the builder, set up the workspace, pass some FB2 data
         builder = EpubBuilder(source_path, self.config)
-        builder.setup_workspace()
         builder.set_binaries(fb2_book.binaries)
         builder.set_metadata(fb2_book.metadata)
 

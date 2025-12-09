@@ -18,45 +18,63 @@ FB2 to EPUB3 ebook converter with CLI / GUI.
 
 
 ## Installation
-```pip install git+https://github.com/TinyRaindrop/fictionpub.git```
+
+    pip install git+https://github.com/TinyRaindrop/fictionpub.git
+
 or manually
-```git clone https://github.com/TinyRaindrop/fictionpub
-cd fictionpub
-pip install .
-```
+
+    git clone https://github.com/TinyRaindrop/fictionpub
+    cd fictionpub
+    pip install .
+
 
 ## Development
+
 Build package
-```python -m pip install build
-python -m build
-pip install dist/fictionpub-*.whl
-```
+
+    python -m pip install build
+    python -m build
+    pip install dist/fictionpub-*.whl
 
 Install in editable mode
-```pip install -e .```
+
+    pip install -e .
 
 **Compile .exe with Nuitka**
+
 Use Python 3.12. TkInter isn't supported in 3.13, and 3.14 isn't supported by Nuitka at all.
-```python build.py```
+
+    python build.py
+
 or
-```python -m nuitka --onefile --assume-yes-for-downloads run_app.py --output-filename=fictionpub.exe```
+
+    python -m nuitka --onefile --assume-yes-for-downloads run_app.py --output-filename=fictionpub.exe
 
 **Compile .exe with Pyinstaller**
-```pyinstaller fictionpub.spec```
+
+    pyinstaller fictionpub.spec
 
 
 ## Usage
 ### When installed as a Python package
 Run GUI
-```fictionpub```
+
+    python fictionpub
 
 Run CLI
-```fictionpub [input] [args]```
-**input** can be file/folder path, or paths separated with spaces.
 
-### Using .exe
-Run GUI
-```fictionpub.exe```
+    python fictionpub [input] [args]
+
+**Input** can be file/folder path, or paths separated with spaces.
+Run `fictionpub --help` to see the list of possible **arguments**.
+
+### Using compiled .exe
+Run GUI by launching `fictionpub.exe`
 
 Run CLI
-```fictionpub_cli.exe [input] [args]```
+
+    fictionpub_cli.exe [input] [args]
+
+
+# Credits
+Icons by Freepik - [Flaticon](www.flaticon.com)

@@ -21,31 +21,15 @@ try:
 except ImportError:
     TkinterDnD = None
 
-from .utils.config import ConversionConfig
 from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
+from .resources.loader import load_icon_image, get_icon_path
+from .utils.config import ConversionConfig
 from .utils.logger import setup_main_logger, LOG_DIR
 
+
 log = logging.getLogger("fb2_converter")
-
-
-def load_icon(name: str) -> tk.PhotoImage:
-    """Loads an icon image from resources and scales it down if necessary."""
-    package = "fictionpub.resources.icons"
-    
-    try:
-        with res.open_binary(package, name) as img_file:
-            data = img_file.read()
-            img = tk.PhotoImage(data=data)
-            if img.width() > 24:
-                scale = img.width() // 18 
-                if scale > 1:
-                    img = img.subsample(scale)
-            return img
-    
-    except Exception as e:
-        log.error(f"Failed to load icon {name}: {e}")
-        return tk.PhotoImage(width=16, height=16)
+icons_package = "fictionpub.resources.icons"
 
 
 def open_path(path: Path):
@@ -182,10 +166,15 @@ class ConverterApp:
         self._process_queue()
 
     def _load_resources(self):
-        self.icon_unselected = load_icon("mark_unselected.png")
-        self.icon_selected = load_icon("mark_selected.png")
-        self.icon_success = load_icon("mark_success.png")
-        self.icon_failure = load_icon("mark_error.png")
+        self.icon_unselected = load_icon_image("mark_unselected.png")
+        self.icon_selected = load_icon_image("mark_selected.png")
+        self.icon_success = load_icon_image("mark_success.png")
+        self.icon_failure = load_icon_image("mark_error.png")
+        
+        # Tkinter requires a real .ico file.
+        app_icon_path = str(get_icon_path("app.ico") or "")
+        if app_icon_path:
+            self.root.iconbitmap(app_icon_path)
 
     def _create_widgets(self):
         self.main_frame = ttk.Frame(self.root, padding="5")
@@ -228,8 +217,8 @@ class ConverterApp:
         self.tree.column("lang", width=50, minwidth=50, stretch=False)
 
         if TkinterDnD:
-            self.tree.drop_target_register(DND_FILES)
-            self.tree.dnd_bind('<<Drop>>', self.on_drop)
+            self.tree.drop_target_register(DND_FILES)       # type: ignore
+            self.tree.dnd_bind('<<Drop>>', self.on_drop)    # type: ignore
 
         self.bottom_panel = ttk.Frame(self.main_frame)
         self.convert_btn = ttk.Button(self.bottom_panel, text="Convert Checked Items", command=self.on_convert_click)

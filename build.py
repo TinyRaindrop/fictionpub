@@ -2,9 +2,9 @@
 Nuitka build script.
 Compiles 2 separate executables for GUI and CLI.
 """
-
 import subprocess
 import sys
+
 
 build_options = [
     "--product-name=FictionPub",
@@ -19,11 +19,8 @@ build_options = [
     "--assume-yes-for-downloads",
     "--enable-plugin=tk-inter",
     "--include-package=fictionpub.resources",
-    "--include-package=fictionpub.resources.css",
-    "--include-package=fictionpub.resources.icons",
-    "--include-package=fictionpub.resources.terms",
-    "--include-package-data=fictionpub.resources",
-    # "--windows-icon-from-ico=fictionpub/resources/app.ico",
+    "--include-data-dir=fictionpub/resources=fictionpub/resources",
+    "--windows-icon-from-ico=fictionpub/resources/icons/app.ico",
     "--static-libpython=auto",
     "--follow-imports",
 ]
