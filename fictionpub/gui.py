@@ -6,7 +6,6 @@ import threading
 import queue
 import re
 import dataclasses
-import importlib.resources as res
 import os
 import platform
 import subprocess
@@ -166,10 +165,11 @@ class ConverterApp:
         self._process_queue()
 
     def _load_resources(self):
-        self.icon_unselected = load_icon_image("mark_unselected.png")
-        self.icon_selected = load_icon_image("mark_selected.png")
-        self.icon_success = load_icon_image("mark_success.png")
-        self.icon_failure = load_icon_image("mark_error.png")
+        LI_SIZE = 16    # list icon max dimension (px)
+        self.icon_unselected = load_icon_image("mark_unselected.png", LI_SIZE)
+        self.icon_selected = load_icon_image("mark_selected.png", LI_SIZE)
+        self.icon_success = load_icon_image("mark_success.png", LI_SIZE)
+        self.icon_failure = load_icon_image("mark_error.png", LI_SIZE)
         
         # Tkinter requires a real .ico file.
         app_icon_path = str(get_icon_path("app.ico") or "")

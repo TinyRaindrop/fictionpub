@@ -2,7 +2,8 @@ import json
 import logging
 from pathlib import Path
 from importlib import resources as res
-import tkinter as tk
+
+from PIL import Image, ImageTk
 
 
 log = logging.getLogger("fb2_converter")
@@ -51,31 +52,35 @@ def load_terms_json(filename: str):
     return load_json(TERMS_PACKAGE, filename)
 
 
-def load_binary(package: str, filename: str) -> bytes | None:
-    """Return bytes from resource file."""
+def _load_pil_image(package: str, filename: str) -> Image.Image | None:
+    """Load and return a PIL Image from a resource file."""
     path = _resource_path(package, filename)
     if not path or not path.is_file():
         return None
-    return path.read_bytes()
+    return Image.open(path)
 
 
-def load_icon_image(filename: str) -> tk.PhotoImage:
+def load_icon_image(filename: str, size: int) -> ImageTk.PhotoImage:
     """
     Load a Tkinter PhotoImage from packaged resources/icons/*.png
-    Scales down large images automatically.
+    Scales down large images to specified size in px.
     """
-    data = load_binary(ICONS_PACKAGE, filename)
-    if data is None:
+    img = _load_pil_image(ICONS_PACKAGE, filename)
+    if img is None:
         log.error(f"Failed to load icon {filename}")
-        return tk.PhotoImage(width=16, height=16)
+        # Fallback: blank image of required size
+        img = Image.new("RGBA", (size, size))
+    
+    else:
+        # Downscale if needed
+        max_dimension = max(img.size)
+        print(max_dimension)
+        if max_dimension > size:
+            img = img.resize((size, size), Image.Resampling.LANCZOS)
 
-    img = tk.PhotoImage(data=data)
-    if img.width() > 24:
-        scale = img.width() // 16
-        if scale > 1:
-            img = img.subsample(scale)
+    # Convert back to Tk-compatible PhotoImage
+    return ImageTk.PhotoImage(img)
 
-    return img
 
 
 def get_icon_path(filename: str) -> Path | None:
