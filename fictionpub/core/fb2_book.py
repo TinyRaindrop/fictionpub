@@ -3,7 +3,6 @@ Contains the logic for parsing and representing an FB2 file.
 """
 import base64
 import logging
-import re
 import uuid
 import zipfile
 from pathlib import Path

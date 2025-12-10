@@ -25,6 +25,7 @@ def _init_worker(genres, headings):
     """
     LocalizedTerms.inject_terms((genres, headings))
 
+
 def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, str, Exception | None]:
     """
     A standalone function to be the target for the executor.

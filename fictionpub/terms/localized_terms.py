@@ -1,7 +1,4 @@
-import json
 import logging
-from importlib import resources as res
-from pathlib import Path
 from typing import NamedTuple
 
 from ..resources.loader import load_terms_json
@@ -24,15 +21,6 @@ class LocalizedTerms:
     """
     _GENRES: dict[str, Term] = {}
     _HEADINGS: dict[str, Term] = {}
-
-    @property
-    def GENRES(self):
-        return self.__class__._GENRES
-
-    @property
-    def HEADINGS(self):
-        return self.__class__._HEADINGS
-
 
     @staticmethod
     def _get_json_data(filename: str) -> dict[str, Term]:
@@ -93,12 +81,12 @@ class LocalizedTerms:
 
     def get_genre(self, key, default=''):
         """Get a genre translation."""
-        return self._get_translation(self._GENRES, key, default)
+        return self._get_translation(self.__class__._GENRES, key, default)
 
 
     def get_heading(self, key, default=''):
         """Get a heading translation."""
-        return self._get_translation(self._HEADINGS, key, default)
+        return self._get_translation(self.__class__._HEADINGS, key, default)
 
 
     def get_all_headings(self, key, default=''):
