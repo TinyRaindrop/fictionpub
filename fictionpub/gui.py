@@ -451,12 +451,14 @@ class ConverterApp:
             messagebox.showinfo("Info", "No files checked for conversion.")
             return
 
+        """
         out_dir = filedialog.askdirectory(title="Output Folder (Cancel for default)")
         
         self.conversion_config = dataclasses.replace(
             self.conversion_config,
             output_path=Path(out_dir) if out_dir else None
         )
+        """
 
         self._start_conversion(files_to_convert)
 
