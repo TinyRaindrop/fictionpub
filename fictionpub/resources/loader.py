@@ -82,7 +82,6 @@ def load_icon_image(filename: str, size: int) -> ImageTk.PhotoImage:
     return ImageTk.PhotoImage(img)
 
 
-
 def get_icon_path(filename: str) -> Path | None:
     """Return filesystem path to an image inside resources/icons."""
     return _resource_path(ICONS_PACKAGE, filename)

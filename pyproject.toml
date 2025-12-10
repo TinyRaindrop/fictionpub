@@ -1,16 +1,16 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=68", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["fictionpub"]
 
-[tool.setuptools.dynamic]
-version = { attr = "fictionpub.__version__" }
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
 
 [project]
 name = "fictionpub"
-dynamic = ["version"]
 description = "Convert FB2 eBooks to EPUB3."
 authors = [{ name = "TinyRaindrop" }]
 readme = "README.md"
@@ -37,11 +37,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "lxml-stubs>=0.5.0",
-    "isort>=5.12",
-    "flake8>=6.0",
-    "mypy>=1.10",
-    "pytest>=7.4",
-    "pyinstaller>=6.15.0",
+    "setuptools_scm">="9.0.0",
     "nuitka>=2.8.8"
 ]
 
