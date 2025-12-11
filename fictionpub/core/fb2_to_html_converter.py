@@ -292,11 +292,21 @@ class FB2ToHTMLConverter:
 
     
     def _handle_link(self, element: etree._Element) -> etree._Element | None:
-        href = element.get(f'{{{NS.XLINK}}}href', '').lstrip('#')
+        """Creates `a` and copies over href."""
+        href = element.get(f'{{{NS.XLINK}}}href')
         attrib = {}
+        
         if href:
+            is_external = not href.startswith("#")
+            # Save prefix and clear it from href
+            prefix = "" if is_external else "#"
+            href = href.lstrip("#")
+
+            a_id = element.get('id')
+            if (a_id):
+                log.warning(f"Overwriting existing <a> id: {a_id}")
             attrib = {
-                'href': f'#{href}',
+                'href': f'{prefix}{href}',
                 'id': f'{href}-ref'
             }
             # TODO: remove? link-type isn't very useful. 
@@ -305,6 +315,9 @@ class FB2ToHTMLConverter:
             if link_type:
                 attrib['link-type'] = link_type
 
+        else:
+            attrib={'class': 'empty'}
+        
         link = etree.Element('a', attrib)
         return link
 

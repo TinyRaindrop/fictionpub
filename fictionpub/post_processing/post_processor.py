@@ -52,11 +52,10 @@ class PostProcessor():
             next_el = backlink.getnext()
             if next_el is not None and xu.get_tag_name(next_el) in ['p', 'div']:
                 next_text = next_el.text
-                if next_text: 
-                    # move <p/div> text to backlink's tail
-                    next_el.text = None
-                    next_el.insert(0, backlink)
-                    backlink.tail = next_text.lstrip()
+                # move <p/div> text to backlink's tail
+                next_el.text = None
+                next_el.insert(0, backlink)
+                backlink.tail = next_text
 
 
     def _strip_heading_formatting(self):
