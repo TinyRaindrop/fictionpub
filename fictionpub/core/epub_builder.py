@@ -186,7 +186,7 @@ class EpubBuilder:
         """
         cover_id = self.metadata.get('cover-id')
         if cover_id is None:
-            log.warning("No cover image was found. Skipping coverpage creation.")
+            log.info("No cover image was found. Skipping coverpage creation.")
             return None
 
         cover_img = self.binaries.get(cover_id)
@@ -701,7 +701,7 @@ class EpubBuilder:
 
                 target_id = href.lstrip('#')
                 target_doc_id = self.id_to_doc_map.get(target_id)
-
+            
                 if target_doc_id in self.doc_map:
                     target_doc = self.doc_map[target_doc_id]
                     # Update the link to point to the correct file
@@ -723,7 +723,6 @@ class EpubBuilder:
                         })
 
                         # PostProcessor.remove_sup_from_noteref(a)
-
 
                 else:
                     log.warning(f"Broken internal link found for id: {target_id}")
