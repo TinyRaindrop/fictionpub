@@ -13,6 +13,18 @@ class Term(NamedTuple):
     ru: str
     en: str
 
+ 
+def clear_lang(lang):
+    """Returns first 2 letters of a language code."""
+    # Direct replacement mapping
+    lang_map = {
+        'ua': 'uk'
+    }
+    clean_lang = lang_map.get(lang) or lang[:2].lower()
+    if clean_lang != lang:
+        log.info(f"[Language]: Using {clean_lang} instead of {lang}.")
+    return clean_lang
+
 
 class LocalizedTerms:
     """
@@ -53,6 +65,8 @@ class LocalizedTerms:
 
     def __init__(self, lang: str ='uk', default_lang = 'uk'):
         """Pass lang=metadata['lang']. Default_lang is used as a fallback in getters."""
+        lang = clear_lang(lang)
+        
         if lang not in Term._fields:
             log.warning(f"Unsupported book language: '{lang}'. Must be one of {Term._fields}. Falling back to [{default_lang}].")
             lang = default_lang
