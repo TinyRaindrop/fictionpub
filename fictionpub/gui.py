@@ -22,13 +22,12 @@ except ImportError:
 
 from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
-from .resources.loader import load_icon_image, get_icon_path
+from .resources.loader_gui import load_icon_image, get_icon_path
 from .utils.config import ConversionConfig
 from .utils.logger import setup_main_logger, LOG_DIR
 
 
 log = logging.getLogger("fb2_converter")
-icons_package = "fictionpub.resources.icons"
 
 
 def open_path(path: Path):
