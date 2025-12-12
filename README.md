@@ -36,9 +36,15 @@ Build package
     python -m build
     pip install dist/fictionpub-*.whl
 
-Install in editable mode
+Prerequisites
+- **MSVC** compiler (or switch to Mingw64 in build_exe.py)
+- **Make** for makefile scripts (optional)
+    
+    `winget install GnuWin32.Make`
 
-    pip install -e .
+Install in editable mode with dev dependencies
+    
+    pip install -e .[dev]
 
 **Compile .exe with Nuitka**
 
@@ -69,11 +75,9 @@ Run CLI
 Run `fictionpub --help` to see the list of possible **arguments**.
 
 ### Using compiled .exe
-Run GUI by launching `fictionpub.exe`
+Run GUI: `fictionpub.exe`
 
-Run CLI
-
-    fictionpub_cli.exe [input] [args]
+Run CLI: `fictionpub_cli.exe [input] [args]`
 
 
 # Credits

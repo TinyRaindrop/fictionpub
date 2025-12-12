@@ -13,18 +13,14 @@ local_scheme = "no-local-version"
 name = "fictionpub"
 description = "Convert FB2 eBooks to EPUB3."
 authors = [{ name = "TinyRaindrop" }]
+dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 keywords = ["fb2", "epub", "ebook", "converter"]
 
-[project.urls]
-Homepage = "https://github.com/TinyRaindrop/fictionpub"
-Issues = "https://github.com/TinyRaindrop/fictionpub/issues"
-
 classifiers = [
     "Programming Language :: Python :: 3.12",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
 
@@ -36,10 +32,29 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    # lxml support for Pylance
     "lxml-stubs>=0.5.0",
-    "setuptools_scm">="9.0.0",
-    "nuitka>=2.8.8"
+
+    # Formatting and linting
+    "ruff>=0.7.0",
+
+    # Type checking
+    "mypy>=1.11.0",
+
+    # Testing
+    # "pytest>=8.3.0",
+    # "pytest-cov>=5.0.0",
+
+    # Build / packaging validation
+    "nuitka>=2.8.8",
+    "setuptools_scm>=9.0.0",
+    "build>=1.2.2",
+    "twine>=5.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/TinyRaindrop/fictionpub"
+Issues = "https://github.com/TinyRaindrop/fictionpub/issues"
 
 # When a user types "fictionpub", it will run main() from fictionpub/main.py
 [project.scripts]

@@ -6,7 +6,7 @@
             "type": "shell",
             "command": "${workspaceFolder}/.buildenv/Scripts/python.exe",
             "args": [
-                "build.py"
+                "build_exe.py"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
