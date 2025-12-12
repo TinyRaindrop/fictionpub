@@ -49,16 +49,12 @@ build_options = [
 ]
 
 PLUGIN_EXCLUDES = [
-    "PIL.BmpImagePlugin",
+    # "PIL.BmpImagePlugin",
     "PIL.DdsImagePlugin",
     "PIL.PcxImagePlugin",
     "PIL.PpmImagePlugin",
-    # "PIL.PngImagePlugin",
     "PIL.GifImagePlugin",
-    # "PIL.JpegImagePlugin",
-    "PIL.TiffImagePlugin",
     "PIL.PsdImagePlugin",
-    # "PIL.IcoImagePlugin",
     "PIL.MpoImagePlugin",
     "PIL.PdfImagePlugin",
     "PIL.PdfParser",
