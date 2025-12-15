@@ -52,6 +52,9 @@ packages = ["fictionpub"]
 version_scheme = "post-release"
 local_scheme = "no-local-version"
 
+[tool.ruff]
+exclude = ["dist", "build", ".venv", ".*"]
+
 [tool.mypy]
 exclude = '(dist|build)/'
 

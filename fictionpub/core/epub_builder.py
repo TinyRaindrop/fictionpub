@@ -736,7 +736,7 @@ class EpubBuilder:
         """Adds a return link to the end of each footnote."""
         for doc in self.doc_list:
             if not doc.is_note: continue
-            for backlink in doc.html.iterfind(f'.//a[@class="backlink"]'):
+            for backlink in doc.html.iterfind('.//a[@class="backlink"]'):
                 back_href = backlink.get('href')
 
                 if not back_href:

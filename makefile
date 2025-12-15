@@ -7,6 +7,7 @@ install:
 .PHONY: format
 format:
 	ruff check --fix .
+	ruff check --fix fictionpub/
 	ruff format .
 
 .PHONY: lint

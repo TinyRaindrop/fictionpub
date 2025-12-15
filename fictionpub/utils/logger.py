@@ -81,7 +81,7 @@ def setup_main_logger(console_level=logging.ERROR):
             logging.getLevelName(console_level),
             new_log_path,
         )
-    except Exception as e:
+    except Exception:
         logger.error("CRITICAL: Failed to set up file logging.", exc_info=True)
 
 

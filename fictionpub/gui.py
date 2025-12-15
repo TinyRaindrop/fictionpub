@@ -116,7 +116,8 @@ class SettingsDialog(tk.Toplevel):
         file = filedialog.askopenfilename(
             filetypes=[("CSS Files", "*.css"), ("All Files", "*.*")]
         )
-        if file: self.stylesheet_var.set(file)
+        if file: 
+            self.stylesheet_var.set(file)
 
     def on_ok(self):
         try:
@@ -273,7 +274,8 @@ class ConverterApp:
 
     def on_select_all(self, event=None):
         children = self.tree.get_children()
-        if not children: return
+        if not children: 
+            return
         selection = []
         for child in children:
             selection.append(child)
@@ -292,7 +294,8 @@ class ConverterApp:
 
     def on_space_toggle(self, event=None):
         selected_items = self.tree.selection()
-        if not selected_items: return
+        if not selected_items: 
+            return
         
         first = selected_items[0]
         curr_img = self.tree.item(first, "image")
@@ -305,17 +308,21 @@ class ConverterApp:
         region = self.tree.identify_region(event.x, event.y)
         if region == "tree" or region == "image":
             item_id = self.tree.identify_row(event.y)
-            if not item_id: return
-            if self.conversion_thread and self.conversion_thread.is_alive(): return
+            if not item_id: 
+                return
+            if self.conversion_thread and self.conversion_thread.is_alive(): 
+                return
 
             curr_img = self.tree.item(item_id, "image")
             is_currently_unselected = str(self.icon_unselected) in str(curr_img)
             self._set_item_state(item_id, is_currently_unselected)
 
     def on_header_click(self):
-        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        if self.conversion_thread and self.conversion_thread.is_alive(): 
+            return
         children = self.tree.get_children()
-        if not children: return
+        if not children: 
+            return
         
         first_img = self.tree.item(children[0], "image")
         target_selected = str(self.icon_unselected) in str(first_img)
@@ -324,16 +331,19 @@ class ConverterApp:
             self._set_item_state(item, target_selected)
 
     def on_remove_click(self):
-        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        if self.conversion_thread and self.conversion_thread.is_alive(): 
+            return
         selected = self.tree.selection()
-        if not selected: return
+        if not selected: 
+            return
         
         for item_id in selected:
             if item_id in self.folder_nodes.values():
                 for child in self.tree.get_children(item_id):
                     self._remove_from_map(child)
                 key = next((k for k, v in self.folder_nodes.items() if v == item_id), None)
-                if key: del self.folder_nodes[key]
+                if key: 
+                    del self.folder_nodes[key]
             else:
                 self._remove_from_map(item_id)
             self.tree.delete(item_id)
@@ -341,7 +351,8 @@ class ConverterApp:
         self.status_label.config(text="Items removed.")
 
     def on_remove_all_click(self):
-        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        if self.conversion_thread and self.conversion_thread.is_alive(): 
+            return
         self.tree.delete(*self.tree.get_children())
         self.file_map.clear()
         self.folder_nodes.clear()
@@ -349,7 +360,8 @@ class ConverterApp:
 
     def _remove_from_map(self, item_id):
         path_to_remove = next((k for k, v in self.file_map.items() if v == item_id), None)
-        if path_to_remove: del self.file_map[path_to_remove]
+        if path_to_remove: 
+            del self.file_map[path_to_remove]
 
     # --- Async File Adding ---
 
@@ -373,7 +385,8 @@ class ConverterApp:
 
     def on_drop(self, event):
         data = event.data
-        if not data: return
+        if not data: 
+            return
         try:
             paths_list = self.root.tk.splitlist(data)
         except Exception:
@@ -408,7 +421,8 @@ class ConverterApp:
         added_count = 0
         for path in files:
             s_path = str(path)
-            if s_path in self.file_map: continue
+            if s_path in self.file_map: 
+                continue
             
             parent = path.parent
             s_parent = str(parent)
@@ -438,11 +452,13 @@ class ConverterApp:
     # --- Conversion ---
 
     def on_convert_click(self):
-        if self.conversion_thread and self.conversion_thread.is_alive(): return
+        if self.conversion_thread and self.conversion_thread.is_alive(): 
+            return
 
         files_to_convert = []
         for s_path, item_id in self.file_map.items():
-            if not self.tree.exists(item_id): continue
+            if not self.tree.exists(item_id): 
+                continue
             if str(self.icon_selected) in str(self.tree.item(item_id, "image")):
                 files_to_convert.append(Path(s_path))
         
@@ -504,7 +520,8 @@ class ConverterApp:
                     continue
 
                 # Handle item-specific tasks
-                if item_id and not self.tree.exists(item_id): continue
+                if item_id and not self.tree.exists(item_id): 
+                    continue
 
                 match task:
                     case "parse_ok":

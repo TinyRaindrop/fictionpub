@@ -109,7 +109,7 @@ class PostProcessor():
         for empty_line in self.body.iterfind(".//empty-line"):
             parent = empty_line.getparent()
             if parent is None: 
-                log.debug(f"<empty-line> has no parent. Skipping.")
+                log.debug("<empty-line> has no parent. Skipping.")
                 continue
 
             # 1. Inside titles - convert to <br/> or remove

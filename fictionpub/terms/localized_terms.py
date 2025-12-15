@@ -74,7 +74,7 @@ class LocalizedTerms:
         self.default_lang = default_lang    # used as a fallback in getters
 
         if not self.__class__._GENRES or not self.__class__._HEADINGS:
-            log.debug(f"[LocalizedTerms] Missing terms. Loading from file.")
+            log.debug("[LocalizedTerms] Missing terms. Loading from file.")
             self.__class__.load_terms()
 
 
