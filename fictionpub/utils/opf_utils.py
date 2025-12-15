@@ -23,28 +23,19 @@ def _add_meta_property(parent: etree._Element, property: str, value: str, id: st
     # Ensure the required attributes have values before creating the tag
     if not all([property, value]) or not any([id, refines]):
         return
-
-    attrs = {}
-    if refines:
-        attrs["refines"] = f"#{refines}"
-    if property:
-        attrs["property"] = property
-    if id:
-        attrs["id"] = id
-    if scheme:
-        attrs["scheme"] = scheme
         
-    # create dict using comprehension
     attrs = {
+        key: value
+        for key, value in {
+            "refines": f"#{refines}" if refines else None,
+            "property": property,
+            "id": id,
+            "scheme": scheme,
+        }.items()
+        if value is not None
     }
 
-
-    """
-    for attr in [refines, property, id, scheme]:
-        if attr:
-            attrs[str(attr)] = attr
-    """
-    meta_tag = etree.SubElement(parent, "meta", **attrs)
+    meta_tag = etree.SubElement(parent, "meta", attrib=attrs)
     meta_tag.text = str(value)
 
 

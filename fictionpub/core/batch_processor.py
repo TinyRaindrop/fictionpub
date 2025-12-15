@@ -3,6 +3,7 @@ Handles the parallel processing of a batch of files.
 This class contains the ThreadPoolExecutor and is used by both the CLI and GUI.
 """
 import logging
+import time
 import os
 import concurrent.futures
 from pathlib import Path
@@ -76,7 +77,9 @@ class BatchProcessor:
 
     def __init__(self, config: ConversionConfig):
         self.config = config
-        
+        import pickle
+        pickle.dumps(self.config)
+
 
     def run(self, files: list[Path], progress_callback: Callable | None = None):
         """
@@ -134,7 +137,11 @@ class BatchProcessor:
                     err_msg = f"CRITICAL FAILURE: {e}\n"
                     ordered_results[idx] = (path, err_msg, e)
 
-            # --- All processing is done ---
+            # Short delay for process shutdown
+            time.sleep(0.05)
+
+
+        # --- All processing is done ---
         log.info("Batch processing complete. Writing ordered logs...")
 
         # Find the main file handler to write the buffered logs

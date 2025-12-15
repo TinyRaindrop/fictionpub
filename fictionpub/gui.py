@@ -16,7 +16,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD
+    from tkinterdnd2 import DND_FILES, TkinterDnD   # type: ignore[import-untyped]
 except ImportError:
     TkinterDnD = None
 
@@ -50,15 +50,15 @@ class SettingsDialog(tk.Toplevel):
         self.withdraw() # Start hidden
         self.transient(parent)
         self.title("Conversion Settings")
-        self.config: ConversionConfig = config
+        self.conv_config: ConversionConfig = config
         self.result: ConversionConfig | None = None
 
-        self.toc_depth_var = tk.IntVar(value=self.config.toc_depth)
-        self.split_level_var = tk.IntVar(value=self.config.split_level)
-        self.split_size_var = tk.IntVar(value=self.config.split_size_kb)
-        self.stylesheet_var = tk.StringVar(value=str(self.config.custom_stylesheet or ""))
-        self.threads_var = tk.IntVar(value=self.config.num_threads)
-        self.typography_var = tk.BooleanVar(value=self.config.improve_typography)
+        self.toc_depth_var = tk.IntVar(value=self.conv_config.toc_depth)
+        self.split_level_var = tk.IntVar(value=self.conv_config.split_level)
+        self.split_size_var = tk.IntVar(value=self.conv_config.split_size_kb)
+        self.stylesheet_var = tk.StringVar(value=str(self.conv_config.custom_stylesheet or ""))
+        self.threads_var = tk.IntVar(value=self.conv_config.num_threads)
+        self.typography_var = tk.BooleanVar(value=self.conv_config.improve_typography)
 
         body = ttk.Frame(self, padding="10")
         body.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
@@ -122,7 +122,7 @@ class SettingsDialog(tk.Toplevel):
         try:
             css = self.stylesheet_var.get()
             self.result = dataclasses.replace(
-                self.config,
+                self.conv_config,
                 toc_depth=self.toc_depth_var.get(),
                 split_level=self.split_level_var.get(),
                 split_size_kb=self.split_size_var.get(),

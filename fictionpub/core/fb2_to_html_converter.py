@@ -325,7 +325,7 @@ class FB2ToHTMLConverter:
     def _handle_style(self, element: etree._Element) -> etree._Element | None:
         name = element.get('name')
         if not name:
-            return
+            return None
         span = etree.Element('span', attrib={'class': name})
         return span
 

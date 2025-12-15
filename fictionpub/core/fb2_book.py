@@ -32,7 +32,7 @@ class FB2Book:
         # Extracted data
         self.metadata: dict[str, str | dict ] = {}
         self.binaries: dict[str, BinaryInfo] = {}
-        self.referenced_ids = set()
+        self.referenced_ids: set[str] = set()
         self.id_map: dict[str, str] = {}
         self.cover_img: tuple[str, int, int] | None = None
         self.main_bodies: list[etree._Element] = []
@@ -250,7 +250,7 @@ class FB2Book:
             binary_id = binary.get('id')
             
             # Skip binaries that are never referenced
-            # ? Better be moved to builder / post-convert cleanup
+            # TODO: Better be moved to builder / post-convert cleanup
             if binary_id not in self.referenced_ids:
                 continue
             

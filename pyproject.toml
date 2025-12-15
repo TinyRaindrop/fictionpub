@@ -2,13 +2,6 @@
 requires = ["setuptools>=68", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["fictionpub"]
-
-[tool.setuptools_scm]
-version_scheme = "post-release"
-local_scheme = "no-local-version"
-
 [project]
 name = "fictionpub"
 description = "Convert FB2 eBooks to EPUB3."
@@ -51,6 +44,16 @@ dev = [
     "build>=1.2.2",
     # "twine>=5.0.0",
 ]
+
+[tool.setuptools]
+packages = ["fictionpub"]
+
+[tool.setuptools_scm]
+version_scheme = "post-release"
+local_scheme = "no-local-version"
+
+[tool.mypy]
+exclude = '(dist|build)/'
 
 [project.urls]
 Homepage = "https://github.com/TinyRaindrop/fictionpub"

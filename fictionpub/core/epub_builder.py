@@ -376,12 +376,13 @@ class EpubBuilder:
         log.info(f"Generated TOC with {len(self.toc_items)} entries from XHTML files.")
 
 
-    def _create_nav(self) -> FileInfo | None:
+    def _create_nav(self):
         """Creates the EPUB3 nav.xhtml file with proper nesting."""
         fileid = "nav"
         if fileid not in EPUB_TYPES_MAP:
             log.warning("missing EPUB:type for NAV. Skipping.")
-            return None
+            return
+        
         epub_type = EPUB_TYPES_MAP[fileid].epub_type
 
         local_title = self.local_terms.get_heading('toc', "Table of Contents")
@@ -560,7 +561,7 @@ class EpubBuilder:
         self._write_html(container, container_path, doctype=False)
 
 
-    def _create_stylesheet(self):
+    def _create_stylesheet(self) -> None:
         """Copies the default or custom CSS file to the Styles directory."""
         source: Path | None = None
         destination: Path = self.paths.styles / FN.CSS
