@@ -109,7 +109,7 @@ class PostProcessor():
         for empty_line in self.body.iterfind(".//empty-line"):
             parent = empty_line.getparent()
             if parent is None: 
-                log.debug("<empty-line> has no parent. Skipping.")
+                log.warning("<empty-line> has no parent. Skipping.")
                 continue
 
             # 1. Inside titles - convert to <br/> or remove
@@ -167,8 +167,9 @@ class PostProcessor():
 
 
     def _remove_empty_elements(self):
-        """Removes empty `p, div, span` elements."""
-        for tag in ['p', 'div', 'span']:
+        """Removes empty elements."""
+        for tag in ['p', 'div', 'span', 'em', 'strong']:
+            # TODO: verify that xpath matches all empty elements without text
             for el in self.body.xpath(f".//{tag}[not(node())]"):  # type: ignore
                 parent = el.getparent()
                 if parent is not None:
@@ -177,7 +178,7 @@ class PostProcessor():
 
 
     @staticmethod
-    def remove_sup_from_noteref(a: etree._Element):
+    def remove_sup_from_noteref(a: etree._Element): # TODO: remove?
         """
         Removes `sup` from a note reference link (from `sup > a` and `a > sup`).
         Noterefs are styled via CSS and don't need a `sup` tag.

@@ -2,7 +2,12 @@
 /* ==== FB2 => Epub converter ==== */
 
 /* Reset */
-body, div, p { margin: 0; padding: 0; }
+body,
+div,
+p {
+    margin: 0;
+    padding: 0;
+}
 
 /* ==== BASIC ELEMENTS ==== */
 
@@ -10,13 +15,19 @@ body {
     margin: 12px;
 }
 
-h1, h2, h3, h4, h5, h6, p.subtitle {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p.subtitle {
     margin-left: 1.25rem;
     margin-right: 1.25rem;
     text-align: center;
     text-indent: 0;
-	/* wrap is unsupported by many readers */
-	/* text-wrap: balance; */  
+    /* wrap is unsupported by many readers */
+    /* text-wrap: balance; */
     font-weight: bold;
     font-family: serif;
     hyphens: none;
@@ -71,8 +82,8 @@ p {
 }
 
 /* Last paragraph in a file (before a page break) */
-body > p:last-child,
-section > p:last-child  {
+body>p:last-child,
+section>p:last-child {
     /* top of the page */
     widows: 2;
 }
@@ -101,16 +112,18 @@ div.stanza {
     margin-bottom: 1em;
 }
 
-.stanza + .stanza {
+.stanza+.stanza {
     margin-top: 1em;
 }
 
 p.v {
     /*margin-left: 1.25em;
     text-indent: -1.25em;   */
-    text-indent: 1.25 hanging;  /* some readers might not support hanging indent */
+    text-indent: 1.25 hanging;
+    /* some readers might not support hanging indent */
     text-align: left;
-    text-align-last: -cr-right-if-not-first;    /* crengine/KOReader specific */
+    /* crengine/KOReader specific */
+    text-align-last: -cr-right-if-not-first;
     hyphens: none;
     -epub-hyphens: none;
 }
@@ -141,7 +154,7 @@ blockquote p {
 }
 
 .epigraph p {
-    margin: 0.5em 0;    
+    margin: 0.5em 0;
 }
 
 /* We don't actually use <cite> during conversion */
@@ -156,29 +169,39 @@ blockquote p {
 }
 
 figure {
-  margin: 0.75em auto;
-  padding: 0;
-  width: 100%;
-  text-align: center;
-  break-inside: avoid;
-  page-break-inside: avoid;
+    margin: 0.75em auto;
+    padding: 0;
+    width: 100%;
+    text-align: center;
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 
-figure > img {
-  object-fit: contain;
-  margin: 0 auto;
-  height: auto;
-  max-width: 100%;
-  break-inside: avoid;
-  page-break-inside: avoid;
+figure>img {
+    display: block;
+    margin: 0 auto;
+    height: auto;
+    object-fit: contain;
+    max-width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+figure>img[data-orientation=tall] {
+    max-height: 98%;
+    max-height: 98vh;
+}
+
+figure>img[data-orientation=wide] {
+    max-width: 100%;
 }
 
 /*
-figure > img[data-orientation=tall] { }
-
-figure > img[data-orientation=wide] { }
-
-figure > img[data-orientation=square] { }
+figure > img[data-orientation=square] {
+    max-height: 98%;
+    max-height: 98vh;
+    max-width: 100%;
+}
 */
 
 img {
@@ -193,15 +216,15 @@ img {
 
 /* Captions should be place inside the <figure> */
 figcaption {
-  margin: 0.5rem 1.25rem 0;
-  text-indent: 0;
-  text-align: justify;
-  text-align-last: center;
-  font-variant: small-caps;
-  font-size: 0.85em;
-  color: #131313;
-  break-before: avoid;
-  page-break-before: avoid;
+    margin: 0.5rem 1.25rem 0;
+    text-indent: 0;
+    text-align: justify;
+    text-align-last: center;
+    font-variant: small-caps;
+    font-size: 0.85em;
+    color: #131313;
+    break-before: avoid;
+    page-break-before: avoid;
 }
 
 
@@ -209,7 +232,7 @@ figcaption {
 /* ==== FOOTNOTES & COMMENTS ==== */
 
 .footnote {
-  font-size: 0.9em;
+    font-size: 0.9em;
 }
 
 /* regular internal links */
@@ -229,7 +252,8 @@ a.noteref {
 }
 
 /* fallback in case some <sup> tags were not removed */
-a.noteref > sup, sup > a.noteref {
+a.noteref>sup,
+sup>a.noteref {
     vertical-align: normal;
 }
 
@@ -245,15 +269,17 @@ a.backlink {
 
 /* Title page */
 .titlepage-body {
-  margin: 30% 1rem 0;
-  text-align: center;
-  hyphens: none;
-  -epub-hyphens: none;
+    margin: 30% 1rem 0;
+    text-align: center;
+    hyphens: none;
+    -epub-hyphens: none;
 }
 
 .book-author {
     margin-bottom: 1.5em;
     font-size: 1.25em;
+    text-align: center;
+    text-indent: 0;
     break-after: avoid;
     page-break-after: avoid;
 }
@@ -264,30 +290,41 @@ a.backlink {
 
 /* Copyright page */
 .copyright-body {
-  font-size: 0.9em;
-  hyphens: none;
-  -epub-hyphens: none;
+    font-size: 0.9em;
+    hyphens: none;
+    -epub-hyphens: none;
 }
 
 
 /* ==== TYPOGRAPHY, FIXES ==== */
 
 .em {
-  font-style: italic;
+    font-style: italic;
 }
 
 .bold {
-  font-weight: bold;
+    font-weight: bold;
 }
 
-.left 	{ text-align: left; }
-.center { text-align: center; }
-.right 	{ text-align: right; }
+.left {
+    text-align: left;
+}
 
-p.left, .left p,
-p.center, .center p,
-p.right, .right p {
-  text-indent: 0;
+.center {
+    text-align: center;
+}
+
+.right {
+    text-align: right;
+}
+
+p.left,
+.left p,
+p.center,
+.center p,
+p.right,
+.right p {
+    text-indent: 0;
 }
 
 /* <empty-line/> is converted to this class */
@@ -295,10 +332,11 @@ p.right, .right p {
     margin-bottom: 1rem;
 }
 
-.space-after + p {
-	/* don't leave an orphan line at bottom of the page 
+.space-after+p {
+    /* don't leave an orphan line at bottom of the page 
 		after a spacer */
-	orphans: 2;		/* CONTROVERSIAL! */
+    orphans: 2;
+    /* CONTROVERSIAL! */
 }
 
 .space-before {
@@ -306,10 +344,12 @@ p.right, .right p {
 }
 
 /* Words inside <span>.nowrap will not be hyphenated */
-.nowrap { white-space: nowrap; }  
+.nowrap {
+    white-space: nowrap;
+}
 
-*[hidden] {    
-    /* SumatraPDF displays hidden elements, 
-	thus we must explicitly hide them */
+*[hidden] {
+    /* SumatraPDF displays [hidden] elements, 
+	thus we must explicitly remove them from view */
     display: none;
 }
