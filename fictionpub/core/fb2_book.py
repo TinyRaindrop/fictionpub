@@ -158,7 +158,7 @@ class FB2Book:
         """Extracts detailed metadata from the <description> tag."""
         meta = {}
         genres = set()
-        generated_id = str(uuid.uuid4())
+        generated_id = f"urn:uuid:{uuid.uuid4()}"
         default_lang = "uk"
 
         desc = xu.elem_find(self.tree, './/fb:description')

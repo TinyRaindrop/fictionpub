@@ -490,7 +490,7 @@ class EpubBuilder:
         """Creates the content.opf file."""
         opf_path = self.paths.oebps / FN.OPF
         root = etree.Element("package", version="3.0", nsmap=NS.OPF_MAP)
-        root.set("unique-identifier", self.metadata['id'])
+        root.set("unique-identifier", "BookId")
 
         # Metadata
         meta = etree.SubElement(root, "metadata")
