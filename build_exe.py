@@ -53,11 +53,9 @@ build_options = [
 ]
 
 PLUGIN_EXCLUDES = [
-    # "PIL.BmpImagePlugin",
     "PIL.DdsImagePlugin",
     "PIL.PcxImagePlugin",
     "PIL.PpmImagePlugin",
-    "PIL.GifImagePlugin",
     "PIL.PsdImagePlugin",
     "PIL.MpoImagePlugin",
     "PIL.PdfImagePlugin",
@@ -69,7 +67,6 @@ PLUGIN_EXCLUDES = [
     "PIL.WebpImagePlugin",
     "PIL.ImageFilter",
     "PIL.ImageEnhance",
-    "PIL.ImageOps",
     "PIL.ImageDraw",
     "PIL.ImageFont",
 ]
