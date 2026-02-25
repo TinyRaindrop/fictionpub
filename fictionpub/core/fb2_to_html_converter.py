@@ -54,7 +54,7 @@ class FB2ToHTMLConverter:
             'subtitle': Tag('p', {'class': 'subtitle'}),
             'text-author': Tag('p', {'class': 'text-author'}),
             'strong': Tag('strong'), 'b': Tag('strong'),
-            'em': Tag('em'), 'emphasis': Tag('em'),
+            'em': Tag('em'), 'emphasis': Tag('em'), 'i': Tag('em'),
             'strikethrough': Tag('s'), 's': Tag('s'),
             'cite': Tag('blockquote', {'class': 'q'}),
             'v': Tag('p', {'class': 'v'}),
@@ -84,7 +84,7 @@ class FB2ToHTMLConverter:
 
     def convert_body(self, fb2_body: etree._Element, mode: ConversionMode) -> list[ConvertedBody]:
         """
-        Converts a full FB2 <body> element and runs post-processing.
+        Converts a full FB2 `body` element and runs post-processing.
         For MAIN mode, this can return multiple documents if splitting occurs.
         """        
         self.mode = mode
@@ -192,6 +192,7 @@ class FB2ToHTMLConverter:
 
     def _handle_section(self, element: etree._Element) -> etree._Element | None:
         element_id = element.get('id')
+        # TODO: consider splitting this method
         """if mode == ConversionMode.NOTE and element_id:
             return self._handle_note_section(element)
         else: # no ID ConversionMode.MAIN
@@ -238,9 +239,7 @@ class FB2ToHTMLConverter:
 
     def _handle_title(self, element: etree._Element) -> etree._Element | None:
         """
-        Handles <title> tags. Improved logic for <p> tags inside titles:
-        - If one <p>, its content is unwrapped directly into the heading.
-        - If multiple <p>s, they become <span>s separated by <br/>.
+        Converts `title` tag to h1..h6 based on nesting level.
         """
         parent = element.getparent()
         if parent is None:
@@ -270,23 +269,32 @@ class FB2ToHTMLConverter:
     
 
     def _handle_image(self, element: etree._Element) -> etree._Element | None:
+        """
+        Converts `image` tag to `figure`.
+        Saves dimensions as attributes.
+        """
         # TODO: handle p>img as inline?, section>img as fullscreen?
         img_id = element.get(f'{{{NS.XLINK}}}href', '').lstrip('#')
         if not img_id or img_id not in self.binary_map:
             return None
         
         binary = self.binary_map[img_id]
-        attrib = {'src': f'../{FN.IMAGES}/{binary.filename}'}
+
+        fig_attrib = {'class': 'image'}
+        img_attrib = {'src': f'../{FN.IMAGES}/{binary.filename}'}
+
         dimensions = binary.dimensions
         if dimensions is not None:
-            attrib.update({
+            img_attrib.update({
                 'data-width': str(dimensions[0]), 
                 'data-height': str(dimensions[1]),
                 'data-orientation': binary.orientation
             })
+            
+            fig_attrib['class'] += f" {binary.orientation}".strip()
         
-        figure = etree.Element('figure', {'class': 'image'})
-        img = etree.SubElement(figure, 'img', attrib)
+        figure = etree.Element('figure', fig_attrib)
+        img = etree.SubElement(figure, 'img', img_attrib)
         xu.copy_id(element, img)
         return figure
 
@@ -323,6 +331,7 @@ class FB2ToHTMLConverter:
 
 
     def _handle_style(self, element: etree._Element) -> etree._Element | None:
+        """Converts `style` tag to `span` with class=name."""
         name = element.get('name')
         if not name:
             return None
@@ -357,7 +366,7 @@ class FB2ToHTMLConverter:
     
 
     def _get_heading_level(self, element: etree._Element) -> int:
-        """Determines heading level by counting the number of <section> ancestors. """
+        """Determines heading level by counting the number of `<section>` ancestors. """
         # The tag must be in the Clark notation {namespace}tag
         section_tag = f"{{{NS.FB2}}}section"
         depth = sum(1 for _ in element.iterancestors(section_tag))

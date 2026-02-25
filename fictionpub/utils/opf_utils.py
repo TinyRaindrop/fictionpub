@@ -21,18 +21,18 @@ def _add_meta_property(parent: etree._Element, property: str, value: str, id: st
     Id: this <meta> tag's id. Refines: id of an element which is refined.
     """
     # Ensure the required attributes have values before creating the tag
-    if not all([property, value]) or not any([id, refines]):
+    if not all([property, value]):
         return
         
     attrs = {
         key: value
         for key, value in {
-            "refines": f"#{refines}" if refines else None,
+            "refines": f"#{refines}" if refines else '',
             "property": property,
             "id": id,
             "scheme": scheme,
         }.items()
-        if value is not None
+        if value != ''
     }
 
     meta_tag = etree.SubElement(parent, "meta", attrib=attrs)
@@ -74,7 +74,7 @@ def fill_opf_metadata(meta_element, metadata):
 
     book_id = metadata.get('id')
     if book_id:
-        _add_dc_element(meta_element, "identifier", f"urn:uuid:{book_id}")
+        _add_dc_element(meta_element, "identifier", book_id, element_id="BookId")
 
     isbn = metadata.get("publish-info", {}).get("isbn")
     if isbn:
