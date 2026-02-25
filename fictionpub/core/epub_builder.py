@@ -524,7 +524,7 @@ class EpubBuilder:
                 item.set('properties', doc.prop)
 
             # Spine
-            if doc.is_note:     # ? make 'cover' non-linear as well ?
+            if doc.is_note or doc.id == "cover":     # ? make 'cover' non-linear as well ?
                 # Footnote bodies are non-linear
                 spine.append(etree.Element("itemref", idref=doc.id, linear="no"))
             else:
@@ -727,7 +727,7 @@ class EpubBuilder:
 
                 else:
                     log.warning(f"Broken internal link found for id: {target_id}")
-                    a.set('broken', 'true')
+                    a.set('class', 'broken-link')
                     # a.tag = 'span'    # turn into <span>
                     # del a.attrib['href']
 
