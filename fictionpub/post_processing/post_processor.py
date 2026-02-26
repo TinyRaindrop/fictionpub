@@ -72,8 +72,9 @@ class PostProcessor():
             # 1. Strip bold/italic tags. // Leave italics intact?
             etree.strip_tags(heading, 'em', 'strong', 'b', 'i')
             
+            h_length = len(heading)
             # 2. Single <p>: unwrap directly
-            if len(heading) == 1:
+            if h_length == 1:
                 if xu.get_tag_name(heading[0]) == 'p':
                     etree.strip_tags(heading, 'p')
                     heading.text = heading.text.strip()
@@ -82,9 +83,10 @@ class PostProcessor():
                     log.debug(f"Heading contains single non-<p> element: <{xu.get_tag_name(heading[0])}>")
 
             # 3. Multiple children: unwrap each <p> into <span> with <br/>
-            elif len(heading) > 1:
+            elif h_length > 1:
                 # strip leading whitespace
-                heading.text = heading.text.lstrip() 
+                if heading.text:
+                    heading.text = heading.text.lstrip()
 
                 for child in heading:
                     if xu.get_tag_name(child) == 'p':
@@ -97,7 +99,8 @@ class PostProcessor():
                         log.debug(f"Heading contains non-<p> element: <{xu.get_tag_name(child)}>")
                 
                 # strip trailing whitespace from the last child
-                heading[len(heading)-1].tail = heading[len(heading)-1].tail.rstrip()
+                if heading[-1].tail:
+                    heading[-1].tail = heading[-1].tail.rstrip()
 
 
     def _handle_empty_line(self):
