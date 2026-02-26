@@ -71,12 +71,12 @@ class EpubStructureItem(NamedTuple):
 _RAW_EPUB_TYPES = {
     # key: (epub_type, guide_type)
     "cover": ("cover", "cover"),
-    "titlepage": ("titlepage", "titlepage"),
+    "titlepage": ("titlepage", "title-page"),
     "copyright": ("copyright-page", "copyright-page"),
     "annotation": ("frontmatter", "other.frontmatter"),
-    "maintext": ("bodymatter", "text"),
+    "part_1": ("bodymatter", "text"),
     "nav": ("toc", "toc"),
-    "notes": ("footnotes", "other.footnotes"),
+    "notes": ("footnotes", "notes"),
     "comments": ("endnotes", "other.footnotes"),
 }
 
