@@ -33,5 +33,10 @@
         "uk": "Зміст",
         "ru": "Содержание",
         "en": "Table of Contents"
+    },
+    "part_1": {
+        "uk": "Початок",
+        "ru": "Начало",
+        "en": "Start here"
     }
 }

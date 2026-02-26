@@ -90,6 +90,7 @@ class FB2ToHTMLConverter:
         self.mode = mode
         self._converted_bodies: list[ConvertedBody] = []
         self._level_counters = [0] * 6
+        # TODO: current_title should be set based on the first title in the body
         self._current_title = "Content"
         
         # Create self._current_body and add
@@ -254,7 +255,12 @@ class FB2ToHTMLConverter:
         if self.mode == ConversionMode.NOTE: level = 1
         h = f'h{level}'
         title_text = " ".join(element.itertext()).strip() # type: ignore
-
+        
+        # Drop titles that are empty or contain only whitespace
+        if not title_text:
+            log.debug("Found empty <title>. Skipping.")
+            return None
+        
         parent_level = self._get_heading_level(parent)
         # TODO: investigate usage of _current_title
         if parent_level == self.split_level - 1:

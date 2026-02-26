@@ -75,12 +75,17 @@ class PostProcessor():
             # 2. Single <p>: unwrap directly
             if len(heading) == 1:
                 if xu.get_tag_name(heading[0]) == 'p':
-                    xu.unwrap_element(heading[0], heading)
+                    etree.strip_tags(heading, 'p')
+                    heading.text = heading.text.strip()
+                    # xu.unwrap_element(heading[0], heading)
                 else:
                     log.debug(f"Heading contains single non-<p> element: <{xu.get_tag_name(heading[0])}>")
 
             # 3. Multiple children: unwrap each <p> into <span> with <br/>
             elif len(heading) > 1:
+                # strip leading whitespace
+                heading.text = heading.text.lstrip() 
+
                 for child in heading:
                     if xu.get_tag_name(child) == 'p':
                         span = xu.replace_tag(child, 'span')
@@ -90,6 +95,9 @@ class PostProcessor():
                             heading.insert(heading.index(span) + 1, br)
                     else:
                         log.debug(f"Heading contains non-<p> element: <{xu.get_tag_name(child)}>")
+                
+                # strip trailing whitespace from the last child
+                heading[len(heading)-1].tail = heading[len(heading)-1].tail.rstrip()
 
 
     def _handle_empty_line(self):

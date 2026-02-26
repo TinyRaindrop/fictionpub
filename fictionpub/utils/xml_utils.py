@@ -62,6 +62,7 @@ def get_attrib_dict(element: etree._Element) -> dict[str, str]:
 
 def unwrap_element(element: etree._Element, parent: etree._Element):
     """Unwraps an element by moving its content to the parent and removing it."""
+    # TODO: deprecated by strip_tags(), remove this function
     # Move text
     parent.text = (parent.text or '') + (element.text or '')
     # Move children
