@@ -541,7 +541,7 @@ class EpubBuilder:
             href = f"{FN.IMAGES}/{img.filename}"
             # using img.filename as ID
             item = etree.SubElement(
-                manifest, "item", id=img.filename, href=href, attrib={"media-type": img.type})
+                manifest, "item", id=img.filename, href=href, attrib={"media-type": img.media_type})
             if img.prop:
                 item.set('properties', img.prop)
 

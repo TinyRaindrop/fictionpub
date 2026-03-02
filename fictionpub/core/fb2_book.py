@@ -5,8 +5,10 @@ import base64
 import logging
 import uuid
 import zipfile
-from pathlib import Path
+from io import BytesIO
 from lxml import etree
+from pathlib import Path
+from PIL import Image
 
 from ..utils.namespaces import Namespaces as NS
 from ..utils.structures import BinaryInfo
@@ -251,28 +253,51 @@ class FB2Book:
             
             # Skip binaries that are never referenced
             # TODO: Better be moved to builder / post-convert cleanup
+            if not binary_id:
+                log.warning("Invalid binary: without id. Skipping.")
+                continue
             if binary_id not in self.referenced_ids:
+                log.warning(f"Binary {binary_id} is never referenced. Skipping.")
                 continue
-            
-            content_type = binary.get('content-type')
-            if not (binary_id and binary.text and content_type):
-                log.warning(f"Invalid binary {binary_id} {content_type}. Skipping.")
+            if not (binary.text):
+                log.warning(f"Invalid binary {binary_id}: empty content. Skipping.")
                 continue
-            
-            ext = content_type.split('/')[-1]
-            if ext == 'jpeg': ext = 'jpg'
-            filename = self._normalize_binary_name(binary_id, ext)
 
-            try:
-                # {binary_id}" was used in FB2, {filename} will be used in EPUB
-                self.binaries[binary_id] = BinaryInfo(filename, content_type, base64.b64decode(binary.text))
-            except (ValueError, TypeError) as e:
-                log.warning(f"Could not decode binary with id '{binary_id}'. Error: {e}")
+            content_type = binary.get('content-type')
+            fb_ext = content_type.split("/")[-1].lower() if content_type else None
+            if fb_ext == "jpeg": fb_ext = "jpg"
             
+            raw_data = base64.b64decode(binary.text)
+            img_format = None
+
+            # Read image and check its format
+            try:
+                with Image.open(BytesIO(raw_data)) as img:
+                    # Validate that it's an image format that Pillow can work with
+                    if img.format is None:
+                        raise ValueError("Unsupported or invalid image format")
+                    
+                    # Force a verify to check for corruption
+                    img.verify()
+                    
+                    img_format = img.format.lower()
+                    ext = 'jpg' if img_format == 'jpeg' else img_format
+                    
+            except (IOError, ValueError, SyntaxError) as e:
+                log.warning(f"Invalid or corrupt image for binary {binary_id}. Error: {e}")
+                continue
+            
+            if ext != fb_ext:
+                log.info(f"Fixed content-type mismatch: {binary_id}.{fb_ext} => {ext}.")
+            
+            # {binary_id}" was used in FB2, {filename} will be used in EPUB
+            filename = self._normalize_binary_name(binary_id, ext)
+            self.binaries[binary_id] = BinaryInfo(filename, f"image/{ext}", raw_data)
+
 
     def _normalize_binary_name(self, id: str, ext: str) -> str:
         """Conform the filename to id.ext and avoid name collisions."""
-        base_name = id.lower()
+        base_name = id
         if not base_name.endswith(f".{ext}"):
             base_name = f"{id}.{ext}"
         

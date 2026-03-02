@@ -119,7 +119,7 @@ class FileInfo():
 class BinaryInfo():
     """Container for binary file content, metadata, and manipulation methods."""
     filename: str
-    type: str
+    media_type: str
     data: bytes
     prop: str = ''   # e.g. "cover-image"
     orientation: str = ''      # "v" (vertical) or "h" (horizontal)
