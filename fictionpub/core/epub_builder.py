@@ -15,7 +15,7 @@ from lxml import etree
 
 from ..resources.loader import get_css_path
 from ..terms.localized_terms import LocalizedTerms
-from ..utils.config import ConversionConfig
+from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
 from ..utils.structures import ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN

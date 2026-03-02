@@ -106,8 +106,9 @@ dmypy.json
 
 books/
 *epub_temp/
-{*}/
-
+{F}
+{FB2}
+{EPUB}
 _notes/
 _FB2*/
 bak/
