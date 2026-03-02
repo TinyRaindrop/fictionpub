@@ -703,33 +703,42 @@ class EpubBuilder:
                 target_id = href.lstrip('#')
                 target_doc_id = self.id_to_doc_map.get(target_id)
             
-                if target_doc_id in self.doc_map:
-                    target_doc = self.doc_map[target_doc_id]
-                    # Update the link to point to the correct file
-                    a.set('href', f"{target_doc.filename}#{target_id}")
-
-                    # If target doc is notes/comments
-                    if target_doc.is_note:
-                        cls = 'noteref'
-                        link_type = a.get('link-type')
-                        if link_type:
-                            if link_type != 'note':
-                                log.debug(f"Noteref id='{a.get('id')}', invalid link-type")
-                            a.attrib.pop('link-type')
-                        else:
-                            cls += ' comment'
-                        a.attrib.update({
-                            'class': cls,
-                            f'{{{NS.EPUB}}}type': 'noteref',
-                        })
-
-                        # PostProcessor.remove_sup_from_noteref(a)
-
-                else:
+                if target_doc_id not in self.doc_map:
                     log.warning(f"Broken internal link found for id: {target_id}")
                     a.set('class', 'broken-link')
                     # a.tag = 'span'    # turn into <span>
                     # del a.attrib['href']
+                    continue
+
+                target_doc = self.doc_map[target_doc_id]
+                # Update the link to point to the correct file
+                a.set('href', f"{target_doc.filename}#{target_id}")
+
+                # If target doc is notes/comments
+                if target_doc.is_note:
+                    cls = "noteref"
+                    
+                    # get and remove link-type from the <a> element
+                    link_type = a.get('link-type')
+                    if link_type:
+                        a.attrib.pop('link-type')
+
+                    match link_type:
+                        case None | "comment":
+                            # Comments typically don't have a type
+                            cls += " comment"
+                        case "note":
+                            # Notes should always have a type
+                            pass
+                        case _:
+                            log.debug(f"Noteref id='{a.get('id')}', invalid link-type: '{link_type}'")
+                    
+                    a.attrib.update({
+                        'class': cls,
+                        f'{{{NS.EPUB}}}type': 'noteref',
+                    })
+
+                    # PostProcessor.remove_sup_from_noteref(a)
 
 
     def _insert_backlink_hrefs(self):
