@@ -1,5 +1,11 @@
-/* ===== Default stylesheet  ===== */
-/* ==== FB2 => Epub converter ==== */
+/* ===== [ FICTIONPUB ] =========== */
+/* ===== FB2 => Epub converter ==== */
+/* ===== Default stylesheet  ====== */
+
+/* Guidelines: 
+    HTML and CSS Tags Supported in Kindle Format 8
+    https://kdp.amazon.com/en_US/help/topic/GG5R7N649LECKP7U
+*/
 
 /* Reset */
 body,
@@ -77,8 +83,10 @@ p {
     margin: 0;
     text-align: justify;
     text-indent: 1.25em;
-    /*widows: 1;
-    orphans: 1;*/
+    /* We should not hardcode widow/orphan values
+    for all books. Use only in specific cases! */
+    /* widows: 1;
+    orphans: 1; */
 }
 
 /* Last paragraph in a file (before a page break) */
@@ -117,15 +125,21 @@ div.stanza {
 }
 
 p.v {
-    /*margin-left: 1.25em;
-    text-indent: -1.25em;   */
-    text-indent: 1.25 hanging;
+    padding-left: 1.25em;
+    text-indent: -1.25em;
     /* some readers might not support hanging indent */
+    /* text-indent: 1.25em hanging; */
     text-align: left;
-    /* crengine/KOReader specific */
-    text-align-last: -cr-right-if-not-first;
     hyphens: none;
     -epub-hyphens: none;
+}
+
+/*! Experimental !*/
+@supports (text-align-last: justify) {
+    p.v {
+        /* crengine/KOReader specific */
+        text-align-last: -cr-right-if-not-first;
+    }
 }
 
 blockquote {
@@ -171,9 +185,9 @@ blockquote p {
 figure {
     margin: 0.75em auto;
     padding: 0;
-    width: 100%;
+    /*! width=100% might not be necessary !*/
+    /* width: 100%; */
     text-align: center;
-    break-inside: avoid;
     page-break-inside: avoid;
 }
 
@@ -183,10 +197,12 @@ figure>img {
     height: auto;
     object-fit: contain;
     max-width: 100%;
-    break-inside: avoid;
     page-break-inside: avoid;
 }
 
+/* Special scaling based on image orientation.
+   Uncomment when needed. */
+/*
 figure>img[data-orientation=tall] {
     max-height: 98%;
     max-height: 98vh;
@@ -196,7 +212,6 @@ figure>img[data-orientation=wide] {
     max-width: 100%;
 }
 
-/*
 figure > img[data-orientation=square] {
     max-height: 98%;
     max-height: 98vh;
@@ -210,8 +225,7 @@ img {
     max-width: 100%;
     max-height: 98%;
     /* some readers ignore VH/VW units */
-    max-height: 98vh;
-    height: auto;
+    /* max-height: 98vh; */
 }
 
 /* Captions should be place inside the <figure> */
@@ -226,7 +240,6 @@ figcaption {
     break-before: avoid;
     page-break-before: avoid;
 }
-
 
 
 /* ==== FOOTNOTES & COMMENTS ==== */
@@ -245,10 +258,10 @@ a {
 a.noteref {
     font-size: 0.7em;
     /* avoid oldstyle numbers */
-    /*font-variant-numeric: lining-nums;*/
+    font-variant-numeric: lining-nums;
     vertical-align: super;
     text-decoration: none;
-    color: inherit;
+    /* color: inherit; */
 }
 
 /* fallback in case some <sup> tags were not removed */
@@ -261,7 +274,7 @@ sup>a.noteref {
 a.backlink {
     font-weight: bold;
     text-decoration: none;
-    color: inherit;
+    /* color: inherit; */
 }
 
 
@@ -348,7 +361,12 @@ p.right,
     white-space: nowrap;
 }
 
-*[hidden] {
+h1[hidden],
+h2[hidden],
+h3[hidden],
+h4[hidden],
+h5[hidden],
+h6[hidden] {
     /* SumatraPDF displays [hidden] elements, 
 	thus we must explicitly remove them from view */
     display: none;
