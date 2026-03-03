@@ -220,9 +220,11 @@ class FB2ToHTMLConverter:
                     f'{{{NS.EPUB}}}type': 'backlink',
                 }
                 backlink = etree.Element('a', attrib)
-                backlink.text = f"{title_text}.\u00A0"  # dot + NBSP
+                backlink.text = f"{title_text}."  # dot
                 # insert as the 1st child, will be adjusted in post-processing
-                aside.insert(0, backlink) 
+                aside.insert(0, backlink)
+                tail = backlink.tail or ""
+                backlink.tail = "\u00A0" + tail # add NBSP
                 element.remove(title_el)
             return aside
         

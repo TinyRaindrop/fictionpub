@@ -277,6 +277,11 @@ a.backlink {
     /* color: inherit; */
 }
 
+a.broken-link {
+    text-decoration: none;
+    /* For debug purpose only */
+    /* color: red; */
+}
 
 /* ==== CUSTOM ELEMENTS ==== */
 
