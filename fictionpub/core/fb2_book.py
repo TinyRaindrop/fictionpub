@@ -47,9 +47,6 @@ class FB2Book:
         This is the main entry point for this class.
         """
         self._parse_xml_tree()
-        if self.tree is None: 
-            # TODO: Throw exception, abort current thread (book)
-            return
         self._extract_metadata()
         self._create_referenced_ids_set()
         self._extract_binaries()
@@ -145,7 +142,7 @@ class FB2Book:
                 # Find the .fb2 file inside the archive
                 fb2_files = [name for name in zf.namelist() if name.endswith('.fb2')]
                 if not fb2_files:
-                    raise FileNotFoundError("No .fb2 file found inside the zip archive.")
+                    raise FileNotFoundError(f"No .fb2 file found inside {self.filepath.name}.")
                 
                 # Open the first .fb2 file found as a stream and parse it
                 with zf.open(fb2_files[0]) as fb2_file:
@@ -277,7 +274,7 @@ class FB2Book:
                     if img.format is None:
                         raise ValueError("Unsupported or invalid image format")
                     
-                    # Force a verify to check for corruption
+                    # Force verify to check for corruption
                     img.verify()
                     
                     img_format = img.format.lower()
@@ -292,7 +289,7 @@ class FB2Book:
             
             # {binary_id}" was used in FB2, {filename} will be used in EPUB
             filename = self._normalize_binary_name(binary_id, ext)
-            self.binaries[binary_id] = BinaryInfo(filename, f"image/{ext}", raw_data)
+            self.binaries[binary_id] = BinaryInfo(filename, f"image/{img_format}", raw_data)
 
 
     def _normalize_binary_name(self, id: str, ext: str) -> str:
