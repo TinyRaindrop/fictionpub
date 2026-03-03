@@ -64,7 +64,7 @@ class PostProcessor():
         Strips `<p>`, unwraps its content. Multiple `<p>`s become `<span>`s with `<br/>`.
         """
         # h1..h6, p.subtitle
-        heading_tags = [f'h{i}' for i in range(1, 6)]
+        heading_tags = [f'h{i}' for i in range(1, 7)]
         heading_tags.append('p[@class="subtitle"]')
         heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
         
@@ -112,7 +112,7 @@ class PostProcessor():
         target_tags = ('p', 'div')
     
         # h1..h6, p.subtitle
-        heading_tags = [f'h{i}' for i in range(1, 6)]
+        heading_tags = [f'h{i}' for i in range(1, 7)]
         heading_tags.append('p[@class="subtitle"]') # TODO: this will not match 'if in' check
         excl_tags = ['figure']
         excl_tags.extend(heading_tags)

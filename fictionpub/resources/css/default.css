@@ -219,15 +219,6 @@ figure > img[data-orientation=square] {
 }
 */
 
-img {
-    /*display: block; 
-    margin: 1em auto;*/
-    max-width: 100%;
-    max-height: 98%;
-    /* some readers ignore VH/VW units */
-    /* max-height: 98vh; */
-}
-
 /* Captions should be place inside the <figure> */
 figcaption {
     margin: 0.5rem 1.25rem 0;
@@ -239,6 +230,20 @@ figcaption {
     color: #131313;
     break-before: avoid;
     page-break-before: avoid;
+}
+
+/* Inline images */
+p img {
+    display: inline;
+    /* display: inline-block; */
+    vertical-align: middle;
+}
+
+img {
+    max-width: 100%;
+    max-height: 98%;
+    /* some readers ignore VH/VW units */
+    /* max-height: 98vh; */
 }
 
 

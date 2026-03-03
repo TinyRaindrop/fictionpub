@@ -223,8 +223,8 @@ class FB2ToHTMLConverter:
                 backlink.text = f"{title_text}."  # dot
                 # insert as the 1st child, will be adjusted in post-processing
                 aside.insert(0, backlink)
-                tail = backlink.tail or ""
-                backlink.tail = "\u00A0" + tail # add NBSP
+                tail = backlink.tail or ""  
+                backlink.tail = "\u00A0" + tail # add NBSP # TODO: FIX! this doesnt work
                 element.remove(title_el)
             return aside
         
@@ -288,8 +288,8 @@ class FB2ToHTMLConverter:
         
         binary = self.binary_map[img_id]
 
-        fig_attrib = {'class': 'image'}
         img_attrib = {'src': f'../{FN.IMAGES}/{binary.filename}'}
+        fig_attrib = {'class': 'image'}
 
         dimensions = binary.dimensions
         if dimensions is not None:
@@ -301,10 +301,18 @@ class FB2ToHTMLConverter:
             
             fig_attrib['class'] += f" {binary.orientation}".strip()
         
-        figure = etree.Element('figure', fig_attrib)
-        img = etree.SubElement(figure, 'img', img_attrib)
+        img = etree.Element('img', img_attrib)
         xu.copy_id(element, img)
-        return figure
+        
+        parent = element.getparent()
+        if parent is not None and xu.get_tag_name(parent) == 'p':
+            # Inline <img> inside a paragraph.
+            return img
+        else:
+            # Otherwise, wrap it in a <figure>.
+            figure = etree.Element('figure', fig_attrib)
+            figure.append(img)
+            return figure
 
     
     def _handle_link(self, element: etree._Element) -> etree._Element | None:
@@ -318,12 +326,8 @@ class FB2ToHTMLConverter:
             prefix = "" if is_external else "#"
             href = href.lstrip("#")
 
-            a_id = element.get('id')
-            if (a_id):
-                log.warning(f"Overwriting existing <a> id: {a_id}")
             attrib = {
-                'href': f'{prefix}{href}',
-                'id': f'{href}-ref'
+                'href': f'{prefix}{href}'
             }
             # TODO: remove? link-type isn't very useful. 
             # Instead, use a dict of <aside> IDs to identify noterefs
@@ -335,6 +339,7 @@ class FB2ToHTMLConverter:
             attrib={'class': 'empty'}
         
         link = etree.Element('a', attrib)
+        xu.copy_id(element, link)
         return link
 
 

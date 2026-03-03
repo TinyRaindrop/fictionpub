@@ -700,6 +700,11 @@ class EpubBuilder:
                     log.debug("External link found, skipping.")
                     continue
 
+                # get and remove link-type from the <a> element
+                link_type = a.get('link-type')
+                if link_type:
+                    a.attrib.pop('link-type')
+
                 target_id = href.lstrip('#')
                 target_doc_id = self.id_to_doc_map.get(target_id)
             
@@ -717,11 +722,6 @@ class EpubBuilder:
                 # If target doc is notes/comments
                 if target_doc.is_note:
                     cls = "noteref"
-                    
-                    # get and remove link-type from the <a> element
-                    link_type = a.get('link-type')
-                    if link_type:
-                        a.attrib.pop('link-type')
 
                     match link_type:
                         case None | "comment":
