@@ -72,7 +72,7 @@ def run_cli():
     files_to_process = []
     for path in args.input_paths:
         if not path.exists():
-            log.warning(f"Input path does not exist, skipping: {path}")
+            log.error(f"Input path does not exist, skipping: {path}")
             continue
         if path.is_dir():
             for ext in ("**/*.fb2", "**/*.fb2.zip"):
@@ -83,7 +83,7 @@ def run_cli():
                 files_to_process.append(path)
 
     if not files_to_process:
-        log.warning("No .fb2 or .fb2.zip files found to process.")
+        log.error("No .fb2 or .fb2.zip files found to process.")
         return
 
     # Create configuration and run batch processor

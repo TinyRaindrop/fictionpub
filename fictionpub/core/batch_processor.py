@@ -146,15 +146,14 @@ class BatchProcessor:
                     result_obj = future.result()
                     ordered_results[idx] = result_obj
 
-                    # Call progress callback *as items complete*
+                    # Call progress callback as items complete
                     if progress_callback:
                         progress_callback(result_obj)
 
                 except Exception as e:
-                    # This catches a critical failure *in the worker itself*
+                    # This catches a critical failure in the worker itself
                     # (e.g., the process died)
                     log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
-                    err_msg = f"CRITICAL FAILURE: {e}\n"
                     ordered_results[idx] = ConversionResult(
                         path=path, 
                         status=ConversionStatus.FAILURE, 
@@ -164,7 +163,6 @@ class BatchProcessor:
 
             # Short delay for process shutdown
             time.sleep(0.05)
-
 
         # --- All processing is done ---
         log.info("Batch processing complete. Writing logs...")
@@ -191,6 +189,3 @@ class BatchProcessor:
                     log.error(f"Failed to write buffered log for {result.path.name}: {e}")
 
         log.info("Log writing complete.")
-
-
-
