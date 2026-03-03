@@ -5,7 +5,7 @@ import logging
 
 from lxml import etree
 
-from ..utils.config import ConversionConfig, ConversionMode
+from ..utils.models import ConversionConfig, ConversionMode
 from ..utils import xml_utils as xu
 
 # Post processing plugins. Must work on xhtml_body

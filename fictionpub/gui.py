@@ -16,15 +16,15 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 try:
-    from tkinterdnd2 import DND_FILES, TkinterDnD   # type: ignore[import-untyped]
+    from tkinterdnd2 import DND_FILES, TkinterDnD
 except ImportError:
     TkinterDnD = None
 
 from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
 from .resources.loader_gui import load_icon_image, get_icon_path
-from .utils.config import ConversionConfig
 from .utils.logger import setup_main_logger, LOG_DIR
+from .utils.models import ConversionConfig, ConversionStatus, ConversionResult
 
 
 log = logging.getLogger("fb2_converter")
@@ -169,6 +169,7 @@ class ConverterApp:
         self.icon_unselected = load_icon_image("mark_unselected.png", LI_SIZE)
         self.icon_selected = load_icon_image("mark_selected.png", LI_SIZE)
         self.icon_success = load_icon_image("mark_success.png", LI_SIZE)
+        # self.icon_warning = load_icon_image("mark_warning.png", LI_SIZE)
         self.icon_failure = load_icon_image("mark_error.png", LI_SIZE)
         
         # Tkinter requires a real .ico file.
@@ -492,13 +493,15 @@ class ConverterApp:
         self.conversion_thread = threading.Thread(target=run_batch, daemon=True)
         self.conversion_thread.start()
 
-    def _progress_callback(self, path: Path, result: Path | None, exc: Exception | None):
-        item_id = self.file_map.get(str(path))
-        if item_id:
-            if exc:
-                self.queue.put(("convert_fail", item_id, str(exc)))
-            else:
+    def _progress_callback(self, result: ConversionResult):
+        item_id = self.file_map.get(str(result.path))
+        match result.status:
+            case ConversionStatus.SUCCESS:
                 self.queue.put(("convert_ok", item_id, None))
+            case ConversionStatus.WARNING:
+                self.queue.put(("convert_warn", item_id, None))
+            case ConversionStatus.FAILURE:
+                self.queue.put(("convert_fail", item_id, str(result.error)))
 
     def _process_queue(self):
         try:
@@ -531,6 +534,11 @@ class ConverterApp:
                     case "convert_ok":
                         self.tree.item(item_id, image=self.icon_success, tags=("success",))
                         self.tree.tag_configure("success", foreground="green")
+                    case "convert_warn":
+                        # TODO: add warning icon
+                        self.tree.item(item_id, image=self.icon_success, tags=("warning",))
+                        self.tree.tag_configure("warning", foreground="orange")
+                        pass
                     case "convert_fail":
                         self.tree.item(item_id, image=self.icon_failure, tags=("failure",))
                         self.tree.tag_configure("failure", foreground="red")

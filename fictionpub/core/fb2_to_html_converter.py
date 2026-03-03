@@ -8,7 +8,7 @@ from lxml import etree
 
 from ..post_processing.post_processor import PostProcessor
 from ..utils import xml_utils as xu
-from ..utils.config import ConversionConfig, ConversionMode
+from ..utils.models import ConversionConfig, ConversionMode
 from ..utils.namespaces import Namespaces as NS
 from ..utils.structures import BinaryInfo, ConvertedBody, FNames as FN
 

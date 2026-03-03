@@ -32,4 +32,17 @@ class ConversionMode(Enum):
     MAIN = auto()   # main content bodies
     NOTE = auto()   # note / comment bodies
     ELEMENT = auto()
-    
+
+
+class ConversionStatus(Enum):
+    SUCCESS = auto()
+    WARNING = auto()
+    FAILURE = auto()
+
+
+@dataclass
+class ConversionResult:
+    path: Path
+    status: ConversionStatus
+    log_output: str = ""
+    error: Exception | None = None

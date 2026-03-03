@@ -11,12 +11,23 @@ from typing import Callable
 
 from .pipeline import ConversionPipeline
 from ..terms.localized_terms import LocalizedTerms
-from ..utils.config import ConversionConfig
 from ..utils.logger import setup_worker_logger
+from ..utils.models import ConversionConfig, ConversionStatus, ConversionResult
 
-# The main logger is configured by the entry point (CLI/GUI)
-# We just get it here to write high-level status updates from the main process
+
 log = logging.getLogger("fb2_converter")
+
+
+class WarningTracker(logging.Filter):
+    """A custom filter that tracks if any warnings were emitted."""
+    def __init__(self):
+        super().__init__()
+        self.has_warnings = False
+
+    def filter(self, record):
+        if record.levelno == logging.WARNING:
+            self.has_warnings = True
+        return True
 
 
 def _init_worker(genres, headings):
@@ -27,7 +38,7 @@ def _init_worker(genres, headings):
     LocalizedTerms.inject_terms((genres, headings))
 
 
-def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, str, Exception | None]:
+def _convert_single_file(path: Path, config: ConversionConfig) -> ConversionResult:
     """
     A standalone function to be the target for the executor.
     It runs the full conversion pipeline on a single file and
@@ -43,6 +54,10 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, st
     log_stream, log_handler = setup_worker_logger()
     worker_log = logging.getLogger("fb2_converter")
 
+    # Attach the warning tracker
+    tracker = WarningTracker()
+    log_handler.addFilter(tracker)
+
     try:
         worker_log.info(f"Converting: {path.name}")
         
@@ -50,8 +65,11 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, st
         pipeline = ConversionPipeline(config)
         pipeline.convert(path)
         
-        worker_log.info(f"Successfully finished conversion for: {path.name}")
-        return path, log_stream.getvalue(), None
+        status = ConversionStatus.WARNING if tracker.has_warnings else ConversionStatus.SUCCESS
+        warn_status_msg = " (with warnings!)" if tracker.has_warnings else ""
+        worker_log.info(f"Successfully finished{warn_status_msg} conversion for: {path.name}")
+
+        return ConversionResult(path, status, log_stream.getvalue())
 
     except Exception as e:
         # 1. Log the full traceback locally to the worker's buffer. 
@@ -64,7 +82,12 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> tuple[Path, st
         safe_error_msg = f"{type(e).__name__}: {str(e)}"
         safe_exc = RuntimeError(safe_error_msg)
         
-        return path, log_stream.getvalue(), safe_exc
+        return ConversionResult(
+            path=path, 
+            status=ConversionStatus.FAILURE, 
+            log_output=log_stream.getvalue(), 
+            error=safe_exc
+        )
     
     finally:
         # Clean up handlers and close the stream
@@ -100,7 +123,7 @@ class BatchProcessor:
         
         # This list will store results in the original file order
         # Each item will be: (path, log_string, exception)
-        ordered_results: list[tuple[Path, str, Exception | None] | None] = [None] * len(files)
+        ordered_results: list[ConversionResult | None] = [None] * len(files)
 
         with concurrent.futures.ProcessPoolExecutor(
             max_workers,
@@ -120,29 +143,31 @@ class BatchProcessor:
 
                 try:
                     # Get the worker's result: (path, log_string, exception)
-                    p, log_string, exc = future.result()
-                    ordered_results[idx] = (p, log_string, exc)
+                    result_obj = future.result()
+                    ordered_results[idx] = result_obj
 
                     # Call progress callback *as items complete*
                     if progress_callback:
-                        if exc:
-                            progress_callback(path, None, exc)
-                        else:
-                            progress_callback(path, path, None)
+                        progress_callback(result_obj)
 
                 except Exception as e:
                     # This catches a critical failure *in the worker itself*
                     # (e.g., the process died)
                     log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
                     err_msg = f"CRITICAL FAILURE: {e}\n"
-                    ordered_results[idx] = (path, err_msg, e)
+                    ordered_results[idx] = ConversionResult(
+                        path=path, 
+                        status=ConversionStatus.FAILURE, 
+                        log_output=f"CRITICAL FAILURE: {e}\n", 
+                        error=e
+                    )
 
             # Short delay for process shutdown
             time.sleep(0.05)
 
 
         # --- All processing is done ---
-        log.info("Batch processing complete. Writing ordered logs...")
+        log.info("Batch processing complete. Writing logs...")
 
         # Find the main file handler to write the buffered logs
         file_handler = next(
@@ -153,21 +178,19 @@ class BatchProcessor:
         for result in ordered_results:
             if result is None:
                 # This should not happen if logic is correct
-                log.error("Missing result in ordered list.")
+                log.error("Missing result in the list.")
                 continue
 
-            path, log_string, exc = result
-
             # Write the buffered log from the worker to the main log file
-            if file_handler and log_string:
+            if file_handler and result.log_output:
                 try:
-                    file_handler.stream.write(f"\n--- Log for {path.name} ---\n")
-                    file_handler.stream.write(log_string)
-                    file_handler.stream.write(f"--- End log for {path.name} ---\n")
+                    file_handler.stream.write(f"\n--- Log for {result.path.name} ---\n")
+                    file_handler.stream.write(result.log_output)
+                    file_handler.stream.write(f"--- End log for {result.path.name} ---\n")
                 except Exception as e:
-                    log.error(f"Failed to write buffered log for {path.name}: {e}")
+                    log.error(f"Failed to write buffered log for {result.path.name}: {e}")
 
-        log.info("Ordered log writing complete.")
+        log.info("Log writing complete.")
 
 
 
