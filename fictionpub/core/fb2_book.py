@@ -264,11 +264,11 @@ class FB2Book:
             fb_ext = content_type.split("/")[-1].lower() if content_type else None
             if fb_ext == "jpeg": fb_ext = "jpg"
             
-            raw_data = base64.b64decode(binary.text)
             img_format = None
 
             # Read image and check its format
             try:
+                raw_data = base64.b64decode(binary.text)
                 with Image.open(BytesIO(raw_data)) as img:
                     # Validate that it's an image format that Pillow can work with
                     if img.format is None:
