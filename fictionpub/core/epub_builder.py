@@ -19,6 +19,7 @@ from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
 from ..utils.structures import ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
+from ..utils import xml_utils as xu
 
 
 log = logging.getLogger("fb2_converter")
@@ -111,16 +112,25 @@ class EpubBuilder:
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
         """Accepts converted note bodies and adds them to the list."""
         for doc in converted_docs:
-            title = self.local_terms.get_heading(doc.file_id)
-            html, body = self._create_html(doc.file_id, title)
+            if len(doc.body) == 0:
+                log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
+                continue
+
+            local_title = self.local_terms.get_heading(doc.file_id)
+            html, body = self._create_html(doc.file_id, local_title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
-            # current_heading = body[0] if len(body) > 0 else None
+
             # TODO: replace the existing heading with a proper one
-            heading = etree.Element("h1")
-            heading.text = title
-            body.insert(0, heading)
-            file_info = FileInfo(doc.file_id, title, html, is_note=True)
+            # this is very crude because h1 may be custom or nested in a deeper <section>
+            first_child = body[0]
+            if xu.get_tag_name(first_child) == "h1":
+                first_child.text = local_title
+
+            # heading = etree.Element("h1")
+            # heading.text = local_title
+            # body.insert(0, heading)
+            file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
             self.doc_list.append(file_info)
 
 
@@ -200,7 +210,7 @@ class EpubBuilder:
         fileid = "cover"
         local_title = self.local_terms.get_heading(fileid) or "Cover"
         html, body = self._create_html(fileid, local_title)
-        etree.SubElement(body, "h1", attrib={'hidden': ''}).text = local_title
+        etree.SubElement(body, "h1", attrib={'class': 'hidden', 'title': local_title}).text = ""
 
         if cover_img.dimensions is None:
             log.warning(f"Could not determine dimensions of cover image '{img_filename}'.")
@@ -258,7 +268,11 @@ class EpubBuilder:
             "Document Info": self.metadata.get('doc', {}),
             # 'title-info' doesn't exist, its keys are top level
             # TODO: move corresponding keys to 'title-info'
-            "Book Info": self.metadata.get('title-info', {})
+            "Book Info": self.metadata.get('title-info', {}),
+            "Converter": {
+                "Program used": "fictionpub",
+                # TODO: Use pyproject.toml for info, add version number and/or git commit hash
+            }
         }
 
         has_metadata = any(info_sections.values())
@@ -269,13 +283,13 @@ class EpubBuilder:
         fileid = "copyright"
         local_title = self.local_terms.get_heading(fileid) or "Copyright"
         html, body = self._create_html(fileid, local_title)
-        # create a subtitle instead of h1?
         etree.SubElement(body, "h1").text = local_title
-        etree.SubElement(body, "p", attrib={'class': 'subtitle'}).text = local_title
+        # TODO: remove subtitle
+        # etree.SubElement(body, "p", attrib={'class': 'subtitle'}).text = local_title
 
         for section_title, data in info_sections.items():
             if data:
-                etree.SubElement(body, "h2").text = section_title
+                etree.SubElement(body, "p", attrib={'class': 'subtitle'}).text = section_title
                 dl = etree.SubElement(body, "dl") # Definition list for semantics
                 for key, value in data.items():
                     # Skip adding annotation to copyright page
@@ -306,7 +320,7 @@ class EpubBuilder:
         fileid = "annotation"
         local_title = self.local_terms.get_heading(fileid) or "Annotation"
         html, body = self._create_html(fileid, title=local_title)
-        etree.SubElement(body, "h1", attrib={'hidden': ''}).text = local_title
+        etree.SubElement(body, "h1", attrib={'class': 'hidden', 'title': local_title}).text = ""
 
         body.append(self.annotation_el)
 
@@ -350,20 +364,25 @@ class EpubBuilder:
                     heading.set('id', heading_id)
                     id_counter += 1
 
-                toc_text = ""
-                # Create a copy for modification
-                heading_clone = copy.deepcopy(heading)
+                # First, try the 'title' attribute
+                title = heading.get('title')
+                if title is not None and title.strip():
+                    toc_text =  title
+                else:
+                    toc_text = ""
+                    # Create a copy for modification
+                    heading_clone = copy.deepcopy(heading)
 
-                # Remove <a>.noteref and <br> elements
-                for el in heading_clone.xpath('.//a[@class="noteref"] | .//br'):
-                    parent = el.getparent()
-                    if parent is not None:
-                        parent.remove(el)
+                    # Remove <a>.noteref and <br> elements
+                    for el in heading_clone.xpath('.//a[@class="noteref"] | .//br'):
+                        parent = el.getparent()
+                        if parent is not None:
+                            parent.remove(el)
 
-                # Join text, remove newlines and collapse multiple spaces
-                toc_text = "".join(heading_clone.itertext())
-                toc_text = re.sub(r'\s+', ' ', toc_text).strip()
-
+                    # Join text, remove newlines and collapse multiple spaces
+                    toc_text = "".join(heading_clone.itertext())
+                    toc_text = re.sub(r'\s+', ' ', toc_text).strip()
+                
                 level = int(heading.tag[-1])
 
                 self.toc_items.append(TOCItem(
