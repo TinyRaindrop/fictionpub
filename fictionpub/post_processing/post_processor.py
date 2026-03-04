@@ -51,11 +51,15 @@ class PostProcessor():
         for backlink in self.body.iterfind(".//a[@class='backlink']"):
             next_el = backlink.getnext()
             if next_el is not None and xu.get_tag_name(next_el) in ['p', 'div']:
-                next_text = next_el.text
+                next_text = next_el.text or ""
                 # move <p/div> text to backlink's tail
                 next_el.text = None
                 next_el.insert(0, backlink)
-                backlink.tail = next_text
+                backlink.tail = "\u00A0" + next_text     # add NBSP
+            else:
+                parent = backlink.getparent()
+                parent_id = parent.get('id') if parent is not None else None
+                log.info(f"Backlink could not be placed into <aside> id={parent_id}")
 
 
     def _strip_heading_formatting(self):

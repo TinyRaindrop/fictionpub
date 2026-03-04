@@ -223,8 +223,6 @@ class FB2ToHTMLConverter:
                 backlink.text = f"{title_text}."  # dot
                 # insert as the 1st child, will be adjusted in post-processing
                 aside.insert(0, backlink)
-                tail = backlink.tail or ""  
-                backlink.tail = "\u00A0" + tail # add NBSP # TODO: FIX! this doesnt work
                 element.remove(title_el)
             return aside
         
