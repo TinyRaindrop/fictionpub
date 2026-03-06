@@ -60,20 +60,6 @@ def get_attrib_dict(element: etree._Element) -> dict[str, str]:
     return {str(k): str(v) for k, v in element.attrib.items()} 
 
 
-def unwrap_element(element: etree._Element, parent: etree._Element):
-    """Unwraps an element by moving its content to the parent and removing it."""
-    # TODO: deprecated by strip_tags(), remove this function
-    # Move text
-    parent.text = (parent.text or '') + (element.text or '')
-    # Move children
-    # TODO: test this function! It probably appends children to the end
-    for child in list(element):
-        parent.append(child)
-    # Move tail
-    parent.tail = (parent.tail or '') + (element.tail or '')
-    parent.remove(element)
-
-
 def replace_tag(element: etree._Element, new_tag: str) -> etree._Element:
     """Replaces an element with a new tag, preserving attributes and children."""
     parent = element.getparent()
@@ -90,3 +76,11 @@ def replace_tag(element: etree._Element, new_tag: str) -> etree._Element:
 
     parent.replace(element, new_element)
     return new_element
+
+
+def add_class(el: etree._Element, cls: str):
+    """Adds a class to an element, ensuring no duplicates."""
+    existing_classes = set(el.get("class", "").split())
+    if cls not in existing_classes:
+        existing_classes.add(cls)
+        el.set("class", " ".join(existing_classes))
