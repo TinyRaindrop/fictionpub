@@ -90,13 +90,17 @@ class FB2ToHTMLConverter:
         self.mode = mode
         self._converted_bodies: list[ConvertedBody] = []
         self._level_counters = [0] * 6
-        # TODO: current_title should be set based on the first title in the body
-        self._current_title = "Content"
         
-        # Create self._current_body and add
+        # Initialize the base document count before hitting the first section
+        if self.mode == ConversionMode.MAIN:
+            self._level_counters[0] = 1
+
+        self._current_title = "Content"
+
         self._start_new_body(fb2_body, level=1)
         
         # Convert while splitting
+        # TODO: convert first, insert split markers, split later?
         for child in fb2_body:
             self._recursive_convert(child, self._current_body)
 
@@ -116,7 +120,7 @@ class FB2ToHTMLConverter:
             PostProcessor(self.config, self.mode).run(result)
         return result
 
-  
+    
     def _generate_part_name(self, fb2_body: etree._Element, level: int) -> str:
         """Generates filename, file ID, and title for a body."""
         if self.mode == ConversionMode.NOTE:
@@ -126,14 +130,10 @@ class FB2ToHTMLConverter:
                 log.warning("Note body without name attribute found; using 'notes'.")
             return body_name.lower()
 
-        # Hierarchical naming for main content
-        level_index = level - 1
-        if level_index < 0: level_index = 0
-        self._level_counters[level_index] += 1
-        for i in range(level_index + 1, len(self._level_counters)):
-            self._level_counters[i] = 0
+        # Generate hierarchical name based on the counters
         name_parts = [str(c) for c in self._level_counters[:level] if c > 0]
-        if not name_parts: name_parts = [str(self._level_counters[0])]
+        if not name_parts: 
+            name_parts = [str(self._level_counters[0] or 1)]
         
         file_id = f"part_{'_'.join(name_parts)}"
         return file_id
@@ -159,15 +159,26 @@ class FB2ToHTMLConverter:
         tag = xu.get_tag_name(fb2_element)
 
         # --- Isolate Splitting Logic ---
-        # Check for the special split case before calling any handler.
         if tag == 'section' and self.mode == ConversionMode.MAIN:
             level = self._get_heading_level(fb2_element)
-            if level == self.split_level:
+            
+            # Update hierarchical counters as we traverse the tree
+            level_index = level - 1
+            if level_index < len(self._level_counters):
+                self._level_counters[level_index] += 1
+                for i in range(level_index + 1, len(self._level_counters)):
+                    self._level_counters[i] = 0
+
+            if level <= self.split_level:
                 self._start_new_body(fb2_element, level)
                 # This section's children get appended directly to the new body.
-                # The <section> tag itself is discarded.
                 for child in fb2_element:
                     self._recursive_convert(child, self._current_body)
+                return
+            else:
+                # UNWRAP: Process children into current parent without a <section> wrapper
+                for child in fb2_element:
+                    self._recursive_convert(child, xhtml_parent)
                 return
 
         # --- Standard Recursive Flow ---
@@ -226,14 +237,8 @@ class FB2ToHTMLConverter:
                 element.remove(title_el)
             return aside
         
-        # Default section handling
-        if self.mode == ConversionMode.NOTE:
-            tag = Tag('div', {'class': 'note-section'})
-        else:
-            # ConversionMode.MAIN or ELEMENT
-            # TODO: unwrap sections
-            tag = Tag('section')
-        section = etree.Element(tag.name, tag.attrib)
+        # Default section handling for nested note sections or ELEMENT mode
+        section = etree.Element('section')
         xu.copy_id(element, section)
         return section
     
@@ -244,7 +249,7 @@ class FB2ToHTMLConverter:
         """
         parent = element.getparent()
         if parent is None:
-            log.debug("Found <title> without a parent. Skipping.")
+            log.warning("Found <title> without a parent. Skipping.")
             return None
 
         # <poem> title => p.subtitle
@@ -252,7 +257,11 @@ class FB2ToHTMLConverter:
             return self._handle_default(element, convert_as='subtitle')
             
         level = self._get_heading_level(element)
-        if self.mode == ConversionMode.NOTE: level = 1
+    
+        # TODO: This is incorrect. Note body may have nested titles
+        # if self.mode == ConversionMode.NOTE: 
+        #     level = 1
+
         h = f'h{level}'
         title_text = " ".join(element.itertext()).strip() # type: ignore
         
@@ -262,8 +271,8 @@ class FB2ToHTMLConverter:
             return None
         
         parent_level = self._get_heading_level(parent)
-        # TODO: investigate usage of _current_title
-        if parent_level == self.split_level - 1:
+        # Assign this title to the current document if it matches the split threshold
+        if parent_level <= self.split_level:
             self._current_title = title_text
             if self._converted_bodies:
                 last_doc = self._converted_bodies[-1]
@@ -374,14 +383,20 @@ class FB2ToHTMLConverter:
 
         elem = etree.Element(html_tag, attrib)
         return elem
-    
+
 
     def _get_heading_level(self, element: etree._Element) -> int:
-        """Determines heading level by counting the number of `<section>` ancestors. """
-        # The tag must be in the Clark notation {namespace}tag
+        """Determines heading level by counting the number of `<section>` ancestors."""
         section_tag = f"{{{NS.FB2}}}section"
         depth = sum(1 for _ in element.iterancestors(section_tag))
-        return min(depth, 6) or 1   # Min depth is 1, max is 6     
-
+        
+        # If the element itself is a section, its level is depth + 1.
+        if xu.get_tag_name(element) == 'section':
+            level = depth + 1
+        else:
+            # For children inside a section (like <title>), level is just the depth.
+            level = depth
+            
+        return min(level, 6) or 1
 
     # --- END of ElementConverter ---

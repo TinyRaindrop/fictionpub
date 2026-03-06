@@ -284,8 +284,6 @@ class EpubBuilder:
         local_title = self.local_terms.get_heading(fileid) or "Copyright"
         html, body = self._create_html(fileid, local_title)
         etree.SubElement(body, "h1").text = local_title
-        # TODO: remove subtitle
-        # etree.SubElement(body, "p", attrib={'class': 'subtitle'}).text = local_title
 
         for section_title, data in info_sections.items():
             if data:

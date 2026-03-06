@@ -81,8 +81,6 @@ class FB2Book:
 
         try:
             # Handle ZIP files
-            # TODO: support all zips indiscriminately?
-            # filepath.suffix.lower() == '.zip'
             if str(filepath).lower().endswith('.fb2.zip'):
                 opened_zip = zipfile.ZipFile(filepath, 'r')
                 # Find first .fb2 file in zip
@@ -249,7 +247,6 @@ class FB2Book:
             binary_id = binary.get('id')
             
             # Skip binaries that are never referenced
-            # TODO: Better be moved to builder / post-convert cleanup
             if not binary_id:
                 log.warning("Invalid binary: without id. Skipping.")
                 continue
@@ -345,7 +342,10 @@ class FB2Book:
 
 
     def _create_referenced_ids_set(self):
-        """Creates a set of all `href` links."""
+        """
+        Creates a set of all ids that are referenced at least once
+        (have an href pointing at them).
+        """
         for element in self.tree.iterfind('.//*[@l:href]', namespaces=NS.FB2_MAP):
             id = element.get(f'{{{NS.XLINK}}}href')
             if id:
