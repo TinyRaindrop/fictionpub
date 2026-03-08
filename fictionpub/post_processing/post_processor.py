@@ -31,10 +31,7 @@ class PostProcessor():
         self.body = xhtml_body
 
         if self.mode == ConversionMode.NOTE:
-            # unwrap any <section> elements – notes don't need structural
-            # containers once conversion is complete.  doing this early prevents
-            # unnecessary nesting during later cleanup.
-            self._unwrap_sections()
+            # sections are now unwrapped during conversion, no need to unwrap here
             self._fix_note_backlinks()
 
         self._strip_heading_formatting()

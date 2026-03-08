@@ -227,6 +227,19 @@ class FB2ToHTMLConverter:
                     self._recursive_convert(child, xhtml_parent)
                 return
 
+        # TODO: crude hack, REWRITE this!
+        if tag == 'section' and self.mode == ConversionMode.NOTE:
+            element_id = fb2_element.get('id')
+            has_child_section = any(xu.get_tag_name(ch) == 'section' for ch in fb2_element)
+            if element_id and not has_child_section:
+                # footnote, handle normally
+                pass
+            else:
+                # unwrap grouping sections or sections without id
+                for child in fb2_element:
+                    self._recursive_convert(child, xhtml_parent)
+                return
+
         # --- Standard Recursive Flow ---
         handler = self._handler_map.get(tag, self._handle_default)
         new_xhtml_element = handler(fb2_element)
