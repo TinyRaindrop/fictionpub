@@ -110,12 +110,9 @@ class EpubBuilder:
 
 
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
-        """Accepts converted note bodies and adds them to the list.
-
-        We try to preserve any heading that was produced during conversion –
-        usually the first element is an ``<h1>`` containing the word "Notes",
-        "Comments" or similar.  That heading becomes the page title so the UI
-        doesn't have to blindly substitute a localized label.
+        """
+        Accepts converted note bodies and adds them to the list.
+        Each note body is wrapped in a new HTML structure with a generated H1 title.
         """
         for doc in converted_docs:
             if len(doc.body) == 0:
@@ -124,45 +121,36 @@ class EpubBuilder:
 
             # start with the converter-supplied title if available,
             # otherwise fall back to a localized heading based on the body name
-            local_title = doc.title or self.local_terms.get_heading(doc.file_id)
+            local_title = self.local_terms.get_heading(doc.file_id)
             html, body = self._create_html(doc.file_id, local_title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
 
-            # see if the converted body already begins with a heading;
-            # if so, adopt it as the page title (unless it's empty)
-            first_child = body[0]
-            if xu.get_tag_name(first_child).startswith('h'):
-                existing = (first_child.text or '').strip()
-                if existing:
-                    if existing != local_title:
-                        local_title = existing
-                    else:
-                        first_child.text = local_title
-                else:
-                    first_child.text = local_title
+            h1 = etree.Element(f'{{{NS.XHTML}}}h1')
+            h1.text = local_title
+
+            # Look for the internal title (body > div.fb2title)
+            matches = body.xpath('.//*[local-name()="div" and @class="fb2title"]')
+            fb2title = matches[0] if matches else None
+            
+            if fb2title is not None:
+                extracted_text = " ".join(fb2title.itertext()).strip()  # type: ignore
+                if extracted_text:
+                    h1.text = extracted_text
+
+                parent = fb2title.getparent()
+                if parent is not None:
+                    parent.replace(fb2title, h1)
+
+                # Ensure the H1 is at the very top of the body
+                if h1.getparent() == body and body.index(h1) != 0:
+                    body.remove(h1)
+                    body.insert(0, h1)
+                    log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
+
             else:
-                # maybe the heading lives inside a wrapper <section> or <div>
-                nested_heading = None
-                for level in range(1, 7):
-                    nested_heading = first_child.find(f'.//h{level}')
-                    if nested_heading is not None:
-                        break
-                if nested_heading is not None:
-                    nested_text = (nested_heading.text or "").strip()
-                    if nested_text:
-                        # adopt the nested heading text; leave it in place
-                        local_title = nested_text
-                    else:
-                        # heading exists but is empty; fall through and insert one
-                        heading = etree.Element('h1')
-                        heading.text = local_title
-                        body.insert(0, heading)
-                else:
-                    # no heading anywhere – insert a new one at the top
-                    heading = etree.Element('h1')
-                    heading.text = local_title
-                    body.insert(0, heading)
+                # No original title existed, so inject a new H1 at the very top
+                body.insert(0, h1)
 
             file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
             self.doc_list.append(file_info)

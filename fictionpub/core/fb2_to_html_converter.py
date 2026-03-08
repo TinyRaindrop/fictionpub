@@ -313,20 +313,33 @@ class FB2ToHTMLConverter:
     def _handle_title(self, element: etree._Element) -> etree._Element | None:
         """
         Converts `title` tag to h1..h6 based on nesting level.
+
         """
         parent = element.getparent()
         if parent is None:
             log.warning("Found <title> without a parent. Skipping.")
             return None
 
+        # Check if this is a top-level body title
+        if xu.get_tag_name(parent) == 'body':
+            attrib = {'class': 'fb2title'}
+            
+            # Preserve the ID if the title has one
+            element_id = element.get('id')
+            if element_id:
+                attrib['id'] = element_id
+                
+            div_title = etree.Element('div', attrib)
+
+            return div_title
+
         # <poem> title => p.subtitle
-        if xu.get_tag_name(parent) == "poem":
+        elif xu.get_tag_name(parent) == "poem":
             return self._handle_default(element, convert_as='subtitle')
             
         level = self._get_heading_level(element)
-    
-
         h = f'h{level}'
+
         title_text = " ".join(element.itertext()).strip() # type: ignore
         
         # Drop titles that are empty or contain only whitespace
