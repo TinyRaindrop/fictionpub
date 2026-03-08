@@ -204,41 +204,58 @@ class FB2ToHTMLConverter:
         """Core recursive engine for converting FB2 elements to XHTML."""
         tag = xu.get_tag_name(fb2_element)
 
-        # --- Isolate Splitting Logic ---
-        if tag == 'section' and self.mode == ConversionMode.MAIN:
-            level = self._get_heading_level(fb2_element)
-            
-            # Update hierarchical counters as we traverse the tree
-            level_index = level - 1
-            if level_index < len(self._level_counters):
-                self._level_counters[level_index] += 1
-                for i in range(level_index + 1, len(self._level_counters)):
-                    self._level_counters[i] = 0
-
-            if level <= self.split_level:
-                self._start_new_body(fb2_element, level)
-                # This section's children get appended directly to the new body.
-                for child in fb2_element:
-                    self._recursive_convert(child, self._current_body)
-                return
-            else:
-                # UNWRAP: Process children into current parent without a <section> wrapper
-                for child in fb2_element:
-                    self._recursive_convert(child, xhtml_parent)
-                return
-
-        # TODO: crude hack, REWRITE this!
-        if tag == 'section' and self.mode == ConversionMode.NOTE:
+        # --- Structural Section Unwrapping & ID Preservation ---
+        if tag == 'section':
             element_id = fb2_element.get('id')
-            has_child_section = any(xu.get_tag_name(ch) == 'section' for ch in fb2_element)
-            if element_id and not has_child_section:
-                # footnote, handle normally
-                pass
-            else:
-                # unwrap grouping sections or sections without id
+
+            if self.mode == ConversionMode.MAIN:
+                level = self._get_heading_level(fb2_element)
+                
+                if level <= self.split_level:
+                    # ONLY split if the current document actually has content.
+                    if self._has_actual_content():
+                        level_index = level - 1
+                        if level_index < len(self._level_counters):
+                            self._level_counters[level_index] += 1
+                            # Reset sub-level counters
+                            for i in range(level_index + 1, len(self._level_counters)):
+                                self._level_counters[i] = 0
+                                
+                        self._start_new_body(fb2_element, level)
+                    else:
+                        # Adopt the empty document to avoid blank pages.
+                        level_index = level - 1
+                        if level_index < len(self._level_counters) and self._level_counters[level_index] == 0:
+                            self._level_counters[level_index] = 1
+                            
+                        # Update the file ID of the adopted document to match the correct hierarchy
+                        new_file_id = self._generate_part_name(fb2_element, level)
+                        self._converted_bodies[-1] = self._converted_bodies[-1]._replace(file_id=new_file_id)
+
+                    target_parent = self._current_body
+                else:
+                    target_parent = xhtml_parent
+                
+                # Preserve section ID before unwrapping
+                if element_id:
+                    target_parent.append(etree.Element('div', {'id': element_id, 'class': 'section-anchor'}))
+
                 for child in fb2_element:
-                    self._recursive_convert(child, xhtml_parent)
+                    self._recursive_convert(child, target_parent)
                 return
+
+            elif self.mode == ConversionMode.NOTE:
+                has_child_section = any(xu.get_tag_name(ch) == 'section' for ch in fb2_element)
+                
+                # If it's a structural/grouping section (has children or lacks an ID), unwrap it.
+                if not element_id or has_child_section:
+                    # Preserve section ID before unwrapping
+                    if element_id:
+                        xhtml_parent.append(etree.Element('div', {'id': element_id, 'class': 'section-anchor'}))
+                    
+                    for child in fb2_element:
+                        self._recursive_convert(child, xhtml_parent)
+                    return
 
         # --- Standard Recursive Flow ---
         handler = self._handler_map.get(tag, self._handle_default)
@@ -262,52 +279,35 @@ class FB2ToHTMLConverter:
     # --- SECTION AND TITLE HANDLERS ---
 
     def _handle_section(self, element: etree._Element) -> etree._Element | None:
+        """
+        Converts atomic footnote sections into `<aside>` elements.
+        Note: Structural sections are unwrapped upstream in `_recursive_convert`.
+        """
         element_id = element.get('id')
-        # in NOTE mode only sections that _cannot_ be subdivided are treated
-        # as standalone footnotes.  this preserves grouping sections with ids
-        # (e.g. "Notes for Chapter 1") while still recognising the atomic
-        # notes that follow.
-        if self.mode == ConversionMode.NOTE and element_id:
-            # look for direct child sections in the FB2 namespace
-            has_child_section = any(
-                xu.get_tag_name(ch) == 'section'
-                for ch in element
-            )
-            if not has_child_section:
-                attrib = {
-                    'class': 'footnote',
-                    'id': element_id,
-                    f'{{{NS.EPUB}}}type': 'footnote',
-                    'role': 'doc-footnote',
-                }
-                aside = etree.Element('aside', attrib)
-
-                title_el = element.find(f'{{{NS.FB2}}}title')
-                if title_el is not None:
-                    title_text = " ".join(title_el.itertext()).strip()  # type: ignore
-                    link_attrib = {
-                        'href': f'#{element_id}-ref',   # point to the note reference
-                        'class': 'backlink',
-                        'id': f'{element_id}-back',
-                        f'{{{NS.EPUB}}}type': 'backlink',
-                    }
-                    backlink = etree.Element('a', link_attrib)
-                    backlink.text = f"{title_text}."  # append a dot
-                    aside.insert(0, backlink)
-                    element.remove(title_el)
-                return aside
         
-        # fall back to normal section conversion (used by MAIN mode and by
-        # grouping/structural sections in NOTE mode)
-        section = etree.Element('section')
-        xu.copy_id(element, section)
-        return section
+        attrib = {
+            'class': 'footnote',
+            'id': element_id,
+            f'{{{NS.EPUB}}}type': 'footnote',
+            'role': 'doc-footnote',
+        }
+        aside = etree.Element('aside', attrib)
 
-        # fall back to normal section conversion (used by MAIN mode and by
-        # grouping/structural sections in NOTE mode)
-        section = etree.Element('section')
-        xu.copy_id(element, section)
-        return section
+        title_el = element.find(f'{{{NS.FB2}}}title')
+        if title_el is not None:
+            title_text = " ".join(title_el.itertext()).strip()  # type: ignore
+            link_attrib = {
+                'href': f'#{element_id}-ref',   # point to the note reference
+                'class': 'backlink',
+                'id': f'{element_id}-back',
+                f'{{{NS.EPUB}}}type': 'backlink',
+            }
+            backlink = etree.Element('a', link_attrib)
+            backlink.text = f"{title_text}."  # append a dot
+            aside.insert(0, backlink)
+            element.remove(title_el)
+            
+        return aside
     
 
     def _handle_title(self, element: etree._Element) -> etree._Element | None:
@@ -376,7 +376,7 @@ class FB2ToHTMLConverter:
         xu.copy_id(element, img)
         
         parent = element.getparent()
-        if parent is not None and xu.get_tag_name(parent) == 'p':
+        if parent is not None and xu.get_tag_name(parent) in ['p', 'subtitle']:
             # Inline <img> inside a paragraph.
             return img
         else:
@@ -394,7 +394,7 @@ class FB2ToHTMLConverter:
         later uses that attribute to apply the correct ``noteref`` class and
         distinguish between footnotes and endnotes/comments.
         """
-        log.debug(f"_handle_link invoked on element: {xu.get_tag_name(element)}, attrs={element.attrib}")
+        # log.debug(f"_handle_link invoked on element: {xu.get_tag_name(element)}, attrs={element.attrib}")
         href = element.get(f'{{{NS.XLINK}}}href') or element.get('href')
         attrib = {}
         # defaults so we can refer to them later even if href is None
@@ -419,7 +419,7 @@ class FB2ToHTMLConverter:
             # automatic detection using id_map
             if not is_external and target_id:
                 body_name = self.id_map.get(target_id)
-                log.debug(f"_handle_link: target_id={target_id}, body_name={body_name}")
+                # log.debug(f"_handle_link: target_id={target_id}, body_name={body_name}")
                 if body_name and body_name.lower() not in ('main', ''):
                     # any non-main body is assumed to be notes/comments
                     # mark the link unambiguously as a note reference
@@ -444,7 +444,7 @@ class FB2ToHTMLConverter:
                     else:
                         new_id = f"{target_id}-ref-{count}"
                     link.set('id', new_id)
-                    log.debug(f"internal link id assigned: {new_id} (target {target_id})")
+                    # log.debug(f"internal link id assigned: {new_id} (target {target_id})")
         return link
 
 
@@ -495,5 +495,23 @@ class FB2ToHTMLConverter:
         # always treat the body/first section as level‑1 and increment for each ancestor
         level = depth + 1
         return min(level, 6) or 1
+
+
+    def _has_actual_content(self) -> bool:
+        """Checks if the current document has substantial content, ignoring invisible anchors."""
+        if self._current_body.text and self._current_body.text.strip():
+            return True
+        
+        for child in self._current_body:
+            # If we find anything other than our invisible ID anchors, it has content
+            if child.get('class') != 'section-anchor':
+                return True
+            # Even if it's an anchor, check if it somehow has text attached
+            if child.text and child.text.strip():
+                return True
+            if child.tail and child.tail.strip():
+                return True
+        
+        return False
 
     # --- END of ElementConverter ---

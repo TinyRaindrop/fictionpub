@@ -209,7 +209,8 @@ class PostProcessor():
         """Removes empty elements."""
         for tag in ['p', 'div', 'span', 'em', 'strong']:
             # TODO: verify that xpath matches all empty elements without text
-            for el in self.body.xpath(f".//{tag}[not(node())]"):  # type: ignore
+            # Added 'not(@id)' to protect anchor elements
+            for el in self.body.xpath(f".//{tag}[not(node()) and not(@id)]"):  # type: ignore
                 parent = el.getparent()
                 if parent is not None:
                     parent.remove(el)
