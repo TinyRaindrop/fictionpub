@@ -769,9 +769,10 @@ class EpubBuilder:
             
                 if target_doc_id not in self.doc_map:
                     log.warning(f"Broken internal link found for id: {target_id}")
-                    a.set('class', 'broken-link')
-                    # a.tag = 'span'    # turn into <span>
-                    # del a.attrib['href']
+                    current_class = a.get('class', '')
+                    a.set('class', f"{current_class} broken-link".strip())
+                    if 'backlink' in current_class and a.attrib.get('href') is not None:
+                        a.attrib.pop('href')   # Remove href from broken backlinks
                     continue
 
                 target_doc = self.doc_map[target_doc_id]
