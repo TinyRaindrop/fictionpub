@@ -31,23 +31,43 @@ class FB2ToHTMLConverter:
     Transforms lxml Elements from the FB2 namespace to the XHTML namespace.
 
     This class uses a handler-based approach, dispatching element conversion
-    to specific methods based on the FB2 tag name. This avoids large if-elif
-    blocks and makes the converter easily extensible.
-    """
+    to specific methods based on the FB2 tag name. 
+    It also manages the splitting of content into multiple documents based on section levels.
 
+    When operating in **NOTE** mode we must take extra care:
+    * preserve the top‑level heading if present and surface it as the
+      document title instead of silently overwriting it later.
+    * distinguish between true footnote sections (usually have an `id`)
+      and grouping/container sections so that nested structures are retained.
+    * use the passed `id_map` to recognize links that point into the note
+      bodies and mark them as `link-type="note"` so the builder can style
+      them properly.
+    """
+    
     def __init__(self, binary_map: dict, id_map: dict, config: ConversionConfig):
         """
         Initializes the converter with contextual data and sets up the
         dispatch maps for tag conversion.
+
+        Args:
+            binary_map: mapping of FB2 image IDs to BinaryInfo objects.
+            id_map: mapping of every FB2 element id to the name of the body
+                where it was defined.  This is used for automatic
+                noteref/link-type detection during conversion.
+            config: user-supplied conversion configuration.
         """
         self.binary_map: dict[str, BinaryInfo] = binary_map
-        self.id_map = id_map    # TODO: consider using it for noteref identification
+        # keep the original id_map for noteref detection
+        self.id_map = id_map
+        # store configuration for later use
         self.split_level = config.split_level
         self.split_size = config.split_size_kb
         self.config = config
+        # counters for generating unique IDs on repeated note references
+        self.note_ref_counters: dict[str,int] = {}
 
-        # Map for direct tag-to-tag conversions. 
-        # FB2 tags are mapped to strings of 'tag' or tuples of (tag, attributes)
+        # map of straightforward FB2 tag → XHTML tag/attributes tuples;
+        # anything not listed here falls back to `div.class=fb2tag`
         self.tag_map: dict[str, Tag] = {
             'body': Tag('body'),
             'p': Tag('p'),
@@ -86,6 +106,12 @@ class FB2ToHTMLConverter:
         """
         Converts a full FB2 `body` element and runs post-processing.
         For MAIN mode, this can return multiple documents if splitting occurs.
+
+        In **NOTE** mode the returned ``ConvertedBody.title`` will be
+        adjusted after conversion to match the first heading found within
+        the body (typically the "Notes"/"Footnotes" label) so that the
+        builder can display an appropriate page title without having to
+        override it later.
         """        
         self.mode = mode
         self._converted_bodies: list[ConvertedBody] = []
@@ -107,6 +133,26 @@ class FB2ToHTMLConverter:
         # Post-process all converted bodies
         for body_obj in self._converted_bodies:
             PostProcessor(self.config, self.mode).run(body_obj.body)
+
+        # NOTE mode tweaks -------------------------------------------------
+        if self.mode == ConversionMode.NOTE:
+            adjusted: list[ConvertedBody] = []
+            for body_obj in self._converted_bodies:
+                title = body_obj.title
+                # look for the first heading element inside the body
+                first_heading = None
+                for el in body_obj.body:
+                    tag = xu.get_tag_name(el)
+                    if tag.startswith('h') and len(tag) == 2 and tag[1].isdigit():
+                        first_heading = el
+                        break
+                if first_heading is not None and first_heading.text:
+                    # use the heading text if it is not trivial
+                    text = first_heading.text.strip()
+                    if text and text != title:
+                        title = text
+                adjusted.append(body_obj._replace(title=title))
+            self._converted_bodies = adjusted
 
         return self._converted_bodies
 
@@ -204,40 +250,48 @@ class FB2ToHTMLConverter:
 
     def _handle_section(self, element: etree._Element) -> etree._Element | None:
         element_id = element.get('id')
-        # TODO: consider splitting this method
-        """if mode == ConversionMode.NOTE and element_id:
-            return self._handle_note_section(element)
-        else: # no ID ConversionMode.MAIN
-            return self._handle_main_section(element)
-        """
-        # sections with id are footnote wrappers in notes mode
-        # TODO: improve wrapper detection (must have title, referenced by link)
+        # in NOTE mode only sections that _cannot_ be subdivided are treated
+        # as standalone footnotes.  this preserves grouping sections with ids
+        # (e.g. "Notes for Chapter 1") while still recognising the atomic
+        # notes that follow.
         if self.mode == ConversionMode.NOTE and element_id:
-            attrib = {
-                'class': 'footnote',
-                'id': element_id,
-                f'{{{NS.EPUB}}}type': 'footnote',
-                'role': 'doc-footnote',
-            }
-            aside = etree.Element('aside', attrib)
-
-            title_el = element.find(f'{{{NS.FB2}}}title')
-            if title_el is not None:
-                title_text = " ".join(title_el.itertext()).strip()  # type: ignore
+            # look for direct child sections in the FB2 namespace
+            has_child_section = any(
+                xu.get_tag_name(ch) == 'section'
+                for ch in element
+            )
+            if not has_child_section:
                 attrib = {
-                    'href': f'#{element_id}-ref',   # point to the note reference
-                    'class': 'backlink',
-                    'id': f'{element_id}-back',
-                    f'{{{NS.EPUB}}}type': 'backlink',
+                    'class': 'footnote',
+                    'id': element_id,
+                    f'{{{NS.EPUB}}}type': 'footnote',
+                    'role': 'doc-footnote',
                 }
-                backlink = etree.Element('a', attrib)
-                backlink.text = f"{title_text}."  # dot
-                # insert as the 1st child, will be adjusted in post-processing
-                aside.insert(0, backlink)
-                element.remove(title_el)
-            return aside
+                aside = etree.Element('aside', attrib)
+
+                title_el = element.find(f'{{{NS.FB2}}}title')
+                if title_el is not None:
+                    title_text = " ".join(title_el.itertext()).strip()  # type: ignore
+                    link_attrib = {
+                        'href': f'#{element_id}-ref',   # point to the note reference
+                        'class': 'backlink',
+                        'id': f'{element_id}-back',
+                        f'{{{NS.EPUB}}}type': 'backlink',
+                    }
+                    backlink = etree.Element('a', link_attrib)
+                    backlink.text = f"{title_text}."  # append a dot
+                    aside.insert(0, backlink)
+                    element.remove(title_el)
+                return aside
         
-        # Default section handling for nested note sections or ELEMENT mode
+        # fall back to normal section conversion (used by MAIN mode and by
+        # grouping/structural sections in NOTE mode)
+        section = etree.Element('section')
+        xu.copy_id(element, section)
+        return section
+
+        # fall back to normal section conversion (used by MAIN mode and by
+        # grouping/structural sections in NOTE mode)
         section = etree.Element('section')
         xu.copy_id(element, section)
         return section
@@ -258,9 +312,6 @@ class FB2ToHTMLConverter:
             
         level = self._get_heading_level(element)
     
-        # TODO: This is incorrect. Note body may have nested titles
-        # if self.mode == ConversionMode.NOTE: 
-        #     level = 1
 
         h = f'h{level}'
         title_text = " ".join(element.itertext()).strip() # type: ignore
@@ -323,30 +374,64 @@ class FB2ToHTMLConverter:
 
     
     def _handle_link(self, element: etree._Element) -> etree._Element | None:
-        """Creates `a` and copies over href."""
-        href = element.get(f'{{{NS.XLINK}}}href')
+        """Creates `a` and copies over href.
+
+        When the target of an internal link lives inside a note/comment body
+        we automatically tag it with ``link-type="note"``.  The builder
+        later uses that attribute to apply the correct ``noteref`` class and
+        distinguish between footnotes and endnotes/comments.
+        """
+        log.debug(f"_handle_link invoked on element: {xu.get_tag_name(element)}, attrs={element.attrib}")
+        href = element.get(f'{{{NS.XLINK}}}href') or element.get('href')
         attrib = {}
+        # defaults so we can refer to them later even if href is None
+        is_external = False
+        target_id: str = ''
         
         if href:
             is_external = not href.startswith("#")
             # Save prefix and clear it from href
             prefix = "" if is_external else "#"
-            href = href.lstrip("#")
+            target_id = href.lstrip("#")
 
             attrib = {
-                'href': f'{prefix}{href}'
+                'href': f'{prefix}{target_id}'
             }
-            # TODO: remove? link-type isn't very useful. 
-            # Instead, use a dict of <aside> IDs to identify noterefs
+
+            # propagate FB2 type attribute if present
             link_type = element.get('type')
             if link_type:
                 attrib['link-type'] = link_type
+
+            # automatic detection using id_map
+            if not is_external and target_id:
+                body_name = self.id_map.get(target_id)
+                log.debug(f"_handle_link: target_id={target_id}, body_name={body_name}")
+                if body_name and body_name.lower() not in ('main', ''):
+                    # any non-main body is assumed to be notes/comments
+                    # mark the link unambiguously as a note reference
+                    attrib['link-type'] = 'note'
 
         else:
             attrib={'class': 'empty'}
         
         link = etree.Element('a', attrib)
         xu.copy_id(element, link)
+
+        # if this is an internal link pointing into a notes/comments body,
+        # make sure the reference has an ID so that backlinks from the note
+        # known as <a class="backlink" href="#...-ref"> can resolve.
+        if not is_external and target_id:
+            # always generate an ID for internal links, even for repeated references
+            if link.get('id') is None:
+                    count = self.note_ref_counters.get(target_id, 0) + 1
+                    self.note_ref_counters[target_id] = count
+                    if count == 1:
+                        new_id = f"{target_id}-ref"
+                    else:
+                        new_id = f"{target_id}-ref-{count}"
+                    link.set('id', new_id)
+                    log.debug(f"internal link id assigned: {new_id} (target {target_id})")
         return link
 
 
@@ -386,17 +471,16 @@ class FB2ToHTMLConverter:
 
 
     def _get_heading_level(self, element: etree._Element) -> int:
-        """Determines heading level by counting the number of `<section>` ancestors."""
+        """Determines heading level by counting the number of `<section>` ancestors.
+
+        The returned value is clamped to the range 1–6.  Previously note mode
+        forced every heading to level 1; we now honour the original nesting so
+        that authors can create sub‑sections inside a notes body if they wish.
+        """
         section_tag = f"{{{NS.FB2}}}section"
         depth = sum(1 for _ in element.iterancestors(section_tag))
-        
-        # If the element itself is a section, its level is depth + 1.
-        if xu.get_tag_name(element) == 'section':
-            level = depth + 1
-        else:
-            # For children inside a section (like <title>), level is just the depth.
-            level = depth
-            
+        # always treat the body/first section as level‑1 and increment for each ancestor
+        level = depth + 1
         return min(level, 6) or 1
 
     # --- END of ElementConverter ---

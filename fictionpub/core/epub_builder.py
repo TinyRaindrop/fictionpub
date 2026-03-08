@@ -110,26 +110,60 @@ class EpubBuilder:
 
 
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
-        """Accepts converted note bodies and adds them to the list."""
+        """Accepts converted note bodies and adds them to the list.
+
+        We try to preserve any heading that was produced during conversion –
+        usually the first element is an ``<h1>`` containing the word "Notes",
+        "Comments" or similar.  That heading becomes the page title so the UI
+        doesn't have to blindly substitute a localized label.
+        """
         for doc in converted_docs:
             if len(doc.body) == 0:
                 log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
                 continue
 
-            local_title = self.local_terms.get_heading(doc.file_id)
+            # start with the converter-supplied title if available,
+            # otherwise fall back to a localized heading based on the body name
+            local_title = doc.title or self.local_terms.get_heading(doc.file_id)
             html, body = self._create_html(doc.file_id, local_title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
 
-            # TODO: replace the existing heading with a proper one
-            # this is very crude because h1 may be custom or nested in a deeper <section>
+            # see if the converted body already begins with a heading;
+            # if so, adopt it as the page title (unless it's empty)
             first_child = body[0]
-            if xu.get_tag_name(first_child) == "h1":
-                first_child.text = local_title
+            if xu.get_tag_name(first_child).startswith('h'):
+                existing = (first_child.text or '').strip()
+                if existing:
+                    if existing != local_title:
+                        local_title = existing
+                    else:
+                        first_child.text = local_title
+                else:
+                    first_child.text = local_title
+            else:
+                # maybe the heading lives inside a wrapper <section> or <div>
+                nested_heading = None
+                for level in range(1, 7):
+                    nested_heading = first_child.find(f'.//h{level}')
+                    if nested_heading is not None:
+                        break
+                if nested_heading is not None:
+                    nested_text = (nested_heading.text or "").strip()
+                    if nested_text:
+                        # adopt the nested heading text; leave it in place
+                        local_title = nested_text
+                    else:
+                        # heading exists but is empty; fall through and insert one
+                        heading = etree.Element('h1')
+                        heading.text = local_title
+                        body.insert(0, heading)
+                else:
+                    # no heading anywhere – insert a new one at the top
+                    heading = etree.Element('h1')
+                    heading.text = local_title
+                    body.insert(0, heading)
 
-            # heading = etree.Element("h1")
-            # heading.text = local_title
-            # body.insert(0, heading)
             file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
             self.doc_list.append(file_info)
 
@@ -345,10 +379,18 @@ class EpubBuilder:
         id_counter = 1
 
         # h1..h[depth]
-        heading_tags = [f'h{i}' for i in range(1, self.config.toc_depth + 1)]
-        heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
-
         for doc in self.doc_list:
+            # limit TOC depth for note documents to at most 2 levels
+            max_depth = self.config.toc_depth
+            if doc.is_note:
+                max_depth = min(max_depth, 2)
+
+            heading_tags = [f'h{i}' for i in range(1, max_depth + 1)]
+            heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
+
+            if not isinstance(doc.html, etree._Element):
+                log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
+                continue
             if not isinstance(doc.html, etree._Element):
                 log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
                 continue

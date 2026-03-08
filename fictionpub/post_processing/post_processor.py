@@ -31,6 +31,10 @@ class PostProcessor():
         self.body = xhtml_body
 
         if self.mode == ConversionMode.NOTE:
+            # unwrap any <section> elements – notes don't need structural
+            # containers once conversion is complete.  doing this early prevents
+            # unnecessary nesting during later cleanup.
+            self._unwrap_sections()
             self._fix_note_backlinks()
 
         self._strip_heading_formatting()
@@ -182,6 +186,26 @@ class PostProcessor():
                 a = sup[0]
                 a.tail = sup.tail
                 parent.replace(sup, a)
+
+    def _unwrap_sections(self):
+        """Replaces `<section>` elements with their children.
+
+        This is only run in NOTE mode; the converter needs `<section>` nodes
+        during splitting but they are not required (and in fact are harmful)
+        in the final XHTML.  After unwrapping the headings still reflect the
+        original hierarchy since they were generated before this step.
+        """
+        # find all sections, process from bottom up to avoid re-wrapping
+        for section in list(self.body.iterfind('.//section')):
+            parent = section.getparent()
+            if parent is None:
+                continue
+            index = parent.index(section)
+            # move children out
+            for child in list(section):
+                parent.insert(index, child)
+                index += 1
+            parent.remove(section)
 
 
     def _remove_empty_elements(self):
