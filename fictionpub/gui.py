@@ -50,15 +50,15 @@ class SettingsDialog(tk.Toplevel):
         self.withdraw() # Start hidden
         self.transient(parent)
         self.title("Conversion Settings")
-        self.conv_config: ConversionConfig = config
+        self.config: ConversionConfig = config
         self.result: ConversionConfig | None = None
 
-        self.toc_depth_var = tk.IntVar(value=self.conv_config.toc_depth)
-        self.split_level_var = tk.IntVar(value=self.conv_config.split_level)
-        self.split_size_var = tk.IntVar(value=self.conv_config.split_size_kb)
-        self.stylesheet_var = tk.StringVar(value=str(self.conv_config.custom_stylesheet or ""))
-        self.threads_var = tk.IntVar(value=self.conv_config.num_threads)
-        self.typography_var = tk.BooleanVar(value=self.conv_config.improve_typography)
+        self.toc_depth_var = tk.IntVar(value=self.config.toc_depth)
+        self.split_level_var = tk.IntVar(value=self.config.split_level)
+        self.split_size_var = tk.IntVar(value=self.config.split_size_kb)
+        self.stylesheet_var = tk.StringVar(value=str(self.config.custom_stylesheet or ""))
+        self.threads_var = tk.IntVar(value=self.config.num_threads)
+        self.typography_var = tk.BooleanVar(value=self.config.improve_typography)
 
         body = ttk.Frame(self, padding="10")
         body.pack(padx=5, pady=5, fill=tk.BOTH, expand=True)
@@ -123,7 +123,7 @@ class SettingsDialog(tk.Toplevel):
         try:
             css = self.stylesheet_var.get()
             self.result = dataclasses.replace(
-                self.conv_config,
+                self.config,
                 toc_depth=self.toc_depth_var.get(),
                 split_level=self.split_level_var.get(),
                 split_size_kb=self.split_size_var.get(),
@@ -142,13 +142,14 @@ class SettingsDialog(tk.Toplevel):
 
 class ConverterApp:
     def __init__(self, root):
+        self.config = ConversionConfig()
+        
         self.root = root
-        self.root.title("FB2 to EPUB Converter")
+        self.root.title(f"{self.config.app_name} {self.config.app_version}")
         self.root.geometry("950x600")
 
         setup_main_logger(logging.INFO)
 
-        self.conversion_config = ConversionConfig()
         self.queue = queue.Queue()
         self.conversion_thread: threading.Thread | None = None
         
@@ -266,9 +267,9 @@ class ConverterApp:
             messagebox.showinfo("Logs", "Log directory does not exist yet.")
 
     def on_settings_click(self):
-        dialog = SettingsDialog(self.root, self.conversion_config)
+        dialog = SettingsDialog(self.root, self.config)
         if dialog.result:
-            self.conversion_config = dialog.result
+            self.config = dialog.result
             self.status_label.config(text="Settings saved.")
 
     # --- Selection Logic ---
@@ -484,7 +485,7 @@ class ConverterApp:
         
         def run_batch():
             try:
-                proc = BatchProcessor(self.conversion_config)
+                proc = BatchProcessor(self.config)
                 proc.run(files, self._progress_callback)
                 self.queue.put(("batch_done", None, None))
             except Exception as e:

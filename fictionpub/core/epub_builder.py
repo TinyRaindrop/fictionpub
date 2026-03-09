@@ -270,8 +270,7 @@ class EpubBuilder:
             # TODO: move corresponding keys to 'title-info'
             "Book Info": self.metadata.get('title-info', {}),
             "Converter": {
-                "Program used": "fictionpub",
-                # TODO: Use pyproject.toml for info, add version number and/or git commit hash
+                "Program used": f"{self.config.app_name} {self.config.app_version}",
             }
         }
 

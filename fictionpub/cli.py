@@ -100,6 +100,8 @@ def run_cli():
     )
     processor = BatchProcessor(config)
 
+    log.info(f"{config.app_name} {config.app_version}")
+
     num_files = len(files_to_process)
     log.info(f"Found {len(files_to_process)} files. Starting conversion...")
     
