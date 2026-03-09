@@ -117,7 +117,8 @@ p.subtitle {
 
 div.poem {
     margin: 1em 0.5em 1em 10%;
-    /* Ideally, poems should use fit-content, but some readers don't support it */
+    /* Ideally, standalone poems should use fit-content to be centered,
+        but some readers don't support it */
     /* width: fit-content; */
 }
 
@@ -145,6 +146,16 @@ p.v {
         /* crengine/KOReader specific */
         text-align-last: -cr-right-if-not-first;
     }
+}
+
+/* Poetry line numbers */
+p.v code {
+    /* Float might cause clipping */
+    /*float: left;
+    margin-left: -2.5rem;
+    padding-top: 0.25rem;*/
+    font-size: 0.75em;
+    vertical-align: middle;
 }
 
 blockquote {
