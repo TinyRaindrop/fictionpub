@@ -10,7 +10,7 @@ from ..post_processing.post_processor import PostProcessor
 from ..utils import xml_utils as xu
 from ..utils.models import ConversionConfig, ConversionMode
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, ConvertedBody, FNames as FN
+from ..utils.structures import BinaryInfo, ConvertedBody
 
 
 log = logging.getLogger("fb2_converter")
@@ -94,7 +94,6 @@ class FB2ToHTMLConverter:
 
         # Dispatch map for tags that require special handling.
         self._handler_map = {
-            'section': self._handle_section,
             'title': self._handle_title,
             'a': self._handle_link,
             'image': self._handle_image,
@@ -134,26 +133,6 @@ class FB2ToHTMLConverter:
         for body_obj in self._converted_bodies:
             PostProcessor(self.config, self.mode).run(body_obj.body)
 
-        # NOTE mode tweaks -------------------------------------------------
-        if self.mode == ConversionMode.NOTE:
-            adjusted: list[ConvertedBody] = []
-            for body_obj in self._converted_bodies:
-                title = body_obj.title
-                # look for the first heading element inside the body
-                first_heading = None
-                for el in body_obj.body:
-                    tag = xu.get_tag_name(el)
-                    if tag.startswith('h') and len(tag) == 2 and tag[1].isdigit():
-                        first_heading = el
-                        break
-                if first_heading is not None and first_heading.text:
-                    # use the heading text if it is not trivial
-                    text = first_heading.text.strip()
-                    if text and text != title:
-                        title = text
-                adjusted.append(body_obj._replace(title=title))
-            self._converted_bodies = adjusted
-
         return self._converted_bodies
 
 
@@ -163,7 +142,7 @@ class FB2ToHTMLConverter:
         self._recursive_convert(element, tmp_parent)   
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
         if result is not None:
-            PostProcessor(self.config, self.mode).run(result)
+            PostProcessor(self.config, self.mode).run(result)            
         return result
 
     
@@ -247,6 +226,9 @@ class FB2ToHTMLConverter:
             elif self.mode == ConversionMode.NOTE:
                 has_child_section = any(xu.get_tag_name(ch) == 'section' for ch in fb2_element)
                 
+                if element_id and not has_child_section:
+                    new_el = self._make_footnote_aside(fb2_element)
+
                 # If it's a structural/grouping section (has children or lacks an ID), unwrap it.
                 if not element_id or has_child_section:
                     # Preserve section ID before unwrapping
@@ -278,7 +260,7 @@ class FB2ToHTMLConverter:
 
     # --- SECTION AND TITLE HANDLERS ---
 
-    def _handle_section(self, element: etree._Element) -> etree._Element | None:
+    def _make_footnote_aside(self, element: etree._Element) -> etree._Element | None:
         """
         Converts atomic footnote sections into `<aside>` elements.
         Note: Structural sections are unwrapped upstream in `_recursive_convert`.
@@ -322,15 +304,9 @@ class FB2ToHTMLConverter:
 
         # Check if this is a top-level body title
         if xu.get_tag_name(parent) == 'body':
-            attrib = {'class': 'fb2title'}
-            
-            # Preserve the ID if the title has one
-            element_id = element.get('id')
-            if element_id:
-                attrib['id'] = element_id
-                
+            attrib = {'class': 'fb2title'}            
             div_title = etree.Element('div', attrib)
-
+            xu.copy_id(element, div_title)
             return div_title
 
         # <poem> title => p.subtitle
@@ -369,11 +345,12 @@ class FB2ToHTMLConverter:
         # TODO: handle p>img as inline?, section>img as fullscreen?
         img_id = element.get(f'{{{NS.XLINK}}}href', '').lstrip('#')
         if not img_id or img_id not in self.binary_map:
+            log.warning(f"Image does not exist. Id={img_id}. Skipping.")
             return None
         
         binary = self.binary_map[img_id]
 
-        img_attrib = {'src': f'../{FN.IMAGES}/{binary.filename}'}
+        img_attrib = {'data-img-id': img_id}
         fig_attrib = {'class': 'image'}
 
         dimensions = binary.dimensions

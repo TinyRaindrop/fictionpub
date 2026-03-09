@@ -122,20 +122,21 @@ class EpubBuilder:
             # start with the converter-supplied title if available,
             # otherwise fall back to a localized heading based on the body name
             local_title = self.local_terms.get_heading(doc.file_id)
+            all_local_titles = self.local_terms.get_all_headings(doc.file_id)
             html, body = self._create_html(doc.file_id, local_title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
 
-            h1 = etree.Element(f'{{{NS.XHTML}}}h1')
+            h1 = etree.Element("h1")
             h1.text = local_title
 
             # Look for the internal title (body > div.fb2title)
-            matches = body.xpath('.//*[local-name()="div" and @class="fb2title"]')
+            matches = body.xpath('.//*[local-name()="div" and contains(@class,"fb2title")]')
             fb2title = matches[0] if matches else None
             
             if fb2title is not None:
                 extracted_text = " ".join(fb2title.itertext()).strip()  # type: ignore
-                if extracted_text:
+                if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
 
                 parent = fb2title.getparent()
@@ -197,18 +198,18 @@ class EpubBuilder:
             self._cleanup_workspace()
 
 
-    def _cleanup_workspace(self):
-        """Removes the temporary directory."""
-        if self.paths.root.exists():
-            shutil.rmtree(self.paths.root)
-
-
     def _setup_workspace(self):
         """Creates a clean temporary directory for EPUB contents."""
         self._cleanup_workspace()
 
         for p in self.paths:
             p.mkdir(parents=True, exist_ok=True)
+
+
+    def _cleanup_workspace(self):
+        """Removes the temporary directory."""
+        if self.paths.root.exists():
+            shutil.rmtree(self.paths.root)
 
 
     def _create_cover_page(self, use_svg = True):
@@ -376,9 +377,6 @@ class EpubBuilder:
             heading_tags = [f'h{i}' for i in range(1, max_depth + 1)]
             heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
 
-            if not isinstance(doc.html, etree._Element):
-                log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
-                continue
             if not isinstance(doc.html, etree._Element):
                 log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
                 continue
@@ -809,19 +807,21 @@ class EpubBuilder:
 
 
     def _resolve_image_paths(self):
-        """Changes <img> placeholders to point to actual image files."""
+        """Constructs full image paths and inserts src attr. for every <img> element."""
         for doc in self.doc_list:
-            for img in doc.html.iterfind('.//img[@data-fb2-id]'):
-                fb2_id = img.get('data-fb2-id')
-                if not fb2_id: continue
-                image_info = self.binaries.get(fb2_id)
-                if image_info:
-                    src = f"..{FN.IMAGES}/{image_info.filename}"
-                    del img.attrib['data-fb2-id']   # Clean up temporary attribute
+            for img in doc.html.iterfind('.//img[@data-img-id]'):
+                img_id = img.get('data-img-id')
+                if not img_id: continue
+
+                binary = self.binaries.get(img_id)
+                if binary:
+                    src = f"../{FN.IMAGES}/{binary.filename}"
+                    del img.attrib['data-img-id']   # Clean up temporary attribute
                 else:
                     src = "#"   # Fallback for missing images
-                    log.warning(f"Image source for ID '{fb2_id}' not found.")
+                    log.warning(f"Image source for ID '{img_id}' not found.")
                 img.set('src', src)
+
 
 def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
     """Returns a pretty-printed XML string of the element/tree."""
