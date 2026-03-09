@@ -338,7 +338,8 @@ class FB2ToHTMLConverter:
             return self._handle_default(element, convert_as='subtitle')
             
         level = self._get_heading_level(element)
-        h = f'h{level}'
+        adjusted_level = max(1, level-1)
+        h = f'h{adjusted_level}'
 
         title_text = " ".join(element.itertext()).strip() # type: ignore
         
