@@ -51,6 +51,7 @@ packages = ["fictionpub"]
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "no-local-version"
+version_file = "fictionpub/_version.py"
 
 [tool.ruff]
 exclude = ["dist", "build", ".venv", ".*"]
