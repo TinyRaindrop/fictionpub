@@ -16,7 +16,7 @@ class ConversionConfig:
     # but we're specifying sane defaults here as well
     output_path: Path | None = None
     toc_depth: int = 4  
-    split_level: int = 1
+    split_level: int = 2    # split at each h1..h6
     split_size_kb: int = 0  # 0 means no splitting  # TODO: implement splitting by size
     improve_typography: bool = False
     # word length range [min, max] to qualify for typography processing

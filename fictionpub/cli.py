@@ -50,7 +50,7 @@ def run_cli():
                         help="Output folder or filename (for single input). If omitted, each output is placed next to the input file.")
     parser.add_argument("-t", "--toc-depth", type=int_in_range(1, 6), default=4,
                         help="Maximum heading level to include in TOC [1..6] (e.g., 4 to include h1-h4).")
-    parser.add_argument("-s", "--split-level", type=int_in_range(1, 6), default=1, 
+    parser.add_argument("-s", "--split-level", type=int_in_range(1, 6), default=2, 
                         help="Heading level to split chapters into separate files [1..6] (e.g. 2 to split at every h2).")
     parser.add_argument("-z", "--split-size", type=int, default="0", 
                         help="Increment split-level if XHTML files exceed this size in KB. 0 to disable.")
