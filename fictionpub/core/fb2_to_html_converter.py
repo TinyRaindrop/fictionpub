@@ -114,18 +114,13 @@ class FB2ToHTMLConverter:
         """        
         self.mode = mode
         self._converted_bodies: list[ConvertedBody] = []
-        self._level_counters = [0] * 6
+        self._level_counters = [1] + [0] * 5
         
-        # Initialize the base document count before hitting the first section
-        if self.mode == ConversionMode.MAIN:
-            self._level_counters[0] = 1
-
         self._current_title = "Content"
 
         self._start_new_body(fb2_body, level=1)
         
         # Convert while splitting
-        # TODO: convert first, insert split markers, split later?
         for child in fb2_body:
             self._recursive_convert(child, self._current_body)
 
@@ -157,8 +152,6 @@ class FB2ToHTMLConverter:
 
         # Generate hierarchical name based on the counters
         name_parts = [str(c) for c in self._level_counters[:level] if c > 0]
-        if not name_parts: 
-            name_parts = [str(self._level_counters[0] or 1)]
         
         file_id = f"part_{'_'.join(name_parts)}"
         return file_id
