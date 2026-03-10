@@ -3,7 +3,6 @@ Contains the logic for parsing and representing an FB2 file.
 """
 import base64
 import logging
-import uuid
 import zipfile
 from io import BytesIO
 from lxml import etree
@@ -155,15 +154,13 @@ class FB2Book:
         """Extracts detailed metadata from the <description> tag."""
         meta = {}
         genres = set()
-        generated_id = f"urn:uuid:{uuid.uuid4()}"
         default_lang = "uk"
 
         desc = xu.elem_find(self.tree, './/fb:description')
         if desc is None:
             # Set defaults and return
             self.metadata = {'title': 'Untitled', 
-                             'author': 'Unknown author', 
-                             'id': generated_id }
+                             'author': 'Unknown author'}
             # Not setting 'lang': default_lang. Keeping it undefined.
             return
 
@@ -220,10 +217,6 @@ class FB2Book:
             doc_info_tags = ['program-used', 'date', 'id', 'version']
             meta['doc'] = xu.get_metadata_tags(doc_info, doc_info_tags)                   
             meta['doc']['author'] = xu.get_person_name(xu.elem_find(doc_info, 'fb:author'))
-
-        # Ensure id, date are set
-        meta['id'] = meta.get('doc', {}).get('id', generated_id)
-        meta['date'] = meta.get('doc', {}).get('date', '')
 
         # --- Publish Info ---
         pub_info = xu.elem_find(desc, 'fb:publish-info')

@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import shutil
+import uuid
 import zipfile
 from pathlib import Path
 from typing import NamedTuple
@@ -75,6 +76,12 @@ class EpubBuilder:
         Initializes LocalizedTerms with the book's language.
         """
         self.metadata = metadata
+
+        # Generate new file ID
+        self.metadata['id'] = f"urn:uuid:{uuid.uuid4()}"
+        self.metadata['app_name'] = self.config.app_name
+        self.metadata['app_version'] = self.config.app_version
+
         # Lang could be undefined.
         # Let methods be aware of this and decide whether a fallback is necessary.
         self.lang: str = metadata.get('lang', '')
@@ -89,9 +96,21 @@ class EpubBuilder:
 
     def set_annotation(self, converted_annotation: etree._Element | None):
         """Sets the converted <annotation> element in metadata."""
+        def fb2_annotation_to_description(annotation):
+            if annotation is None:
+                return None
+
+            paragraphs = [
+                "".join(p.itertext()).strip()
+                for p in annotation.findall(".//p")
+            ]
+
+            return "\n\n".join(p for p in paragraphs if p)
+        
         if isinstance(converted_annotation, etree._Element):
             self.annotation_el = converted_annotation
-
+            self.metadata['description'] = fb2_annotation_to_description(converted_annotation)
+        
 
     def set_binaries(self, binaries: dict[str, BinaryInfo]):
         self.binaries = binaries
