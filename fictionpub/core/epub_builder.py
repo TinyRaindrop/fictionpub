@@ -446,10 +446,15 @@ class EpubBuilder:
 
             # If we need to go deeper, create a new <ol> and add it to the list
             if item.level > len(level_parents):
-                # Get the last <li> in the current parent <ol>
-                # TODO: add range checks to avoid going out of bounds
-                last_li = level_parents[-1][-1]
-                ol = etree.SubElement(last_li, "ol")
+                parent_ol = level_parents[-1]
+                if len(parent_ol) == 0:
+                    # Heading jumped more than one level. Attach to root
+                    log.warning(f"TOC: heading jumped from level {len(level_parents)} to {item.level}. Flattening.")
+                    ol = parent_ol
+                else:
+                    # Get the last <li> in the current parent <ol>
+                    last_li = parent_ol[-1]
+                    ol = etree.SubElement(last_li, "ol")
                 level_parents.append(ol)
             else:
                 # Go up in levels
