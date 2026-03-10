@@ -300,7 +300,7 @@ class FB2Book:
 
 
     def _find_cover_image(self):
-        """Finds the cover image and its dimensions."""
+        """Finds the cover image."""
         cover_el = xu.elem_find(self.tree.getroot(), './/fb:coverpage//fb:image')
         if cover_el is not None:
             cover_id = cover_el.get(f"{{{NS.XLINK}}}href", "").lstrip('#')

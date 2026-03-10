@@ -105,7 +105,7 @@ class EpubBuilder:
                 for p in annotation.findall(".//p")
             ]
 
-            return "\n\n".join(p for p in paragraphs if p)
+            return "\n".join(p for p in paragraphs if p)
         
         if isinstance(converted_annotation, etree._Element):
             self.annotation_el = converted_annotation
@@ -529,12 +529,7 @@ class EpubBuilder:
 
         # Metadata
         meta = etree.SubElement(root, "metadata")
-        fill_opf_metadata(meta, self.metadata)
-
-        # Set a cover image in metadata
-        cover_image_id = self.metadata.get('cover-image')
-        if cover_image_id:
-            etree.SubElement(meta, "meta", name="cover", content=cover_image_id)
+        fill_opf_metadata(meta, self.metadata)         
 
         # Manifest, Spine, Guide
         manifest = etree.SubElement(root, "manifest")
@@ -559,7 +554,7 @@ class EpubBuilder:
                 item.set('properties', doc.prop)
 
             # Spine
-            if doc.is_note or doc.id == "cover":     # ? make 'cover' non-linear as well ?
+            if doc.is_note or doc.id == "nav":     # ? make 'cover' non-linear as well ?
                 # Footnote bodies are non-linear
                 spine.append(etree.Element("itemref", idref=doc.id, linear="no"))
             else:
