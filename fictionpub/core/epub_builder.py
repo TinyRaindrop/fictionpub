@@ -129,26 +129,49 @@ class EpubBuilder:
 
 
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
-        """Accepts converted note bodies and adds them to the list."""
+        """
+        Accepts converted note bodies and adds them to the list.
+        Each note body is wrapped in a new HTML structure with a generated H1 title.
+        """
         for doc in converted_docs:
             if len(doc.body) == 0:
                 log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
                 continue
 
+            # start with the converter-supplied title if available,
+            # otherwise fall back to a localized heading based on the body name
             local_title = self.local_terms.get_heading(doc.file_id)
+            all_local_titles = self.local_terms.get_all_headings(doc.file_id)
             html, body = self._create_html(doc.file_id, local_title)
             # Move all children from converted body to new html
             body.extend(list(doc.body))
 
-            # TODO: replace the existing heading with a proper one
-            # this is very crude because h1 may be custom or nested in a deeper <section>
-            first_child = body[0]
-            if xu.get_tag_name(first_child) == "h1":
-                first_child.text = local_title
+            h1 = etree.Element("h1")
+            h1.text = local_title
 
-            # heading = etree.Element("h1")
-            # heading.text = local_title
-            # body.insert(0, heading)
+            # Look for the internal title (body > div.fb2title)
+            matches = body.xpath('.//*[local-name()="div" and contains(@class,"fb2title")]')
+            fb2title = matches[0] if matches else None
+            
+            if fb2title is not None:
+                extracted_text = " ".join(fb2title.itertext()).strip()  # type: ignore
+                if extracted_text and extracted_text not in all_local_titles:
+                    h1.text = extracted_text
+
+                parent = fb2title.getparent()
+                if parent is not None:
+                    parent.replace(fb2title, h1)
+
+                # Ensure the H1 is at the very top of the body
+                if h1.getparent() == body and body.index(h1) != 0:
+                    body.remove(h1)
+                    body.insert(0, h1)
+                    log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
+
+            else:
+                # No original title existed, so inject a new H1 at the very top
+                body.insert(0, h1)
+
             file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
             self.doc_list.append(file_info)
 
@@ -194,18 +217,18 @@ class EpubBuilder:
             self._cleanup_workspace()
 
 
-    def _cleanup_workspace(self):
-        """Removes the temporary directory."""
-        if self.paths.root.exists():
-            shutil.rmtree(self.paths.root)
-
-
     def _setup_workspace(self):
         """Creates a clean temporary directory for EPUB contents."""
         self._cleanup_workspace()
 
         for p in self.paths:
             p.mkdir(parents=True, exist_ok=True)
+
+
+    def _cleanup_workspace(self):
+        """Removes the temporary directory."""
+        if self.paths.root.exists():
+            shutil.rmtree(self.paths.root)
 
 
     def _create_cover_page(self, use_svg = True):
@@ -363,10 +386,15 @@ class EpubBuilder:
         id_counter = 1
 
         # h1..h[depth]
-        heading_tags = [f'h{i}' for i in range(1, self.config.toc_depth + 1)]
-        heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
-
         for doc in self.doc_list:
+            # limit TOC depth for note documents to at most 2 levels
+            max_depth = self.config.toc_depth
+            if doc.is_note:
+                max_depth = min(max_depth, 2)
+
+            heading_tags = [f'h{i}' for i in range(1, max_depth + 1)]
+            heading_query = " | ".join([f".//{tag}" for tag in heading_tags])
+
             if not isinstance(doc.html, etree._Element):
                 log.warning(f"[build_toc]: No HTML found for {doc.filename} file. Skipping.")
                 continue
@@ -436,10 +464,15 @@ class EpubBuilder:
 
             # If we need to go deeper, create a new <ol> and add it to the list
             if item.level > len(level_parents):
-                # Get the last <li> in the current parent <ol>
-                # TODO: add range checks to avoid going out of bounds
-                last_li = level_parents[-1][-1]
-                ol = etree.SubElement(last_li, "ol")
+                parent_ol = level_parents[-1]
+                if len(parent_ol) == 0:
+                    # Heading jumped more than one level. Attach to root
+                    log.warning(f"TOC: heading jumped from level {len(level_parents)} to {item.level}. Flattening.")
+                    ol = parent_ol
+                else:
+                    # Get the last <li> in the current parent <ol>
+                    last_li = parent_ol[-1]
+                    ol = etree.SubElement(last_li, "ol")
                 level_parents.append(ol)
             else:
                 # Go up in levels
@@ -740,9 +773,10 @@ class EpubBuilder:
             
                 if target_doc_id not in self.doc_map:
                     log.warning(f"Broken internal link found for id: {target_id}")
-                    a.set('class', 'broken-link')
-                    # a.tag = 'span'    # turn into <span>
-                    # del a.attrib['href']
+                    current_class = a.get('class', '')
+                    a.set('class', f"{current_class} broken-link".strip())
+                    if 'backlink' in current_class and a.attrib.get('href') is not None:
+                        a.attrib.pop('href')   # Remove href from broken backlinks
                     continue
 
                 target_doc = self.doc_map[target_doc_id]
@@ -791,19 +825,21 @@ class EpubBuilder:
 
 
     def _resolve_image_paths(self):
-        """Changes <img> placeholders to point to actual image files."""
+        """Constructs full image paths and inserts src attr. for every <img> element."""
         for doc in self.doc_list:
-            for img in doc.html.iterfind('.//img[@data-fb2-id]'):
-                fb2_id = img.get('data-fb2-id')
-                if not fb2_id: continue
-                image_info = self.binaries.get(fb2_id)
-                if image_info:
-                    src = f"..{FN.IMAGES}/{image_info.filename}"
-                    del img.attrib['data-fb2-id']   # Clean up temporary attribute
+            for img in doc.html.iterfind('.//img[@data-img-id]'):
+                img_id = img.get('data-img-id')
+                if not img_id: continue
+
+                binary = self.binaries.get(img_id)
+                if binary:
+                    src = f"../{FN.IMAGES}/{binary.filename}"
+                    del img.attrib['data-img-id']   # Clean up temporary attribute
                 else:
                     src = "#"   # Fallback for missing images
-                    log.warning(f"Image source for ID '{fb2_id}' not found.")
+                    log.warning(f"Image source for ID '{img_id}' not found.")
                 img.set('src', src)
+
 
 def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
     """Returns a pretty-printed XML string of the element/tree."""

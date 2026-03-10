@@ -57,25 +57,10 @@ class ConversionPipeline:
         if fb2_book.annotation_el is not None:
             converted_annotation = converter.convert_element(fb2_book.annotation_el)
             builder.set_annotation(converted_annotation)
-
-        """
-        main_docs = [
-            converter.convert_body(body, ConversionMode.MAIN)
-            for body in fb2_book.main_bodies
-        ]
-        note_docs = [
-            converter.convert_body(body, ConversionMode.NOTE)
-            for body in fb2_book.note_bodies
-        ]
-        
-        builder.process_main_bodies(main_docs)
-        builder.process_note_bodies(note_docs)
-        """
         
         # 4. ASSEMBLE: Pass the fragments to the builder to create final documents.
         builder.add_main_docs(main_doc_fragments)
         builder.add_note_docs(note_doc_fragments)
 
-        # 7. Build the final EPUB file (adds CSS, creates toc list, NAV, NCX, OPF, writes all docs to disk, zips the package)
+        # 5. Build the final EPUB file (adds CSS, creates toc list, NAV, NCX, OPF, writes all docs to disk, zips the package)
         builder.build()
-
