@@ -84,3 +84,11 @@ def add_class(el: etree._Element, cls: str):
     if cls not in existing_classes:
         existing_classes.add(cls)
         el.set("class", " ".join(existing_classes))
+
+
+# --- Debug utils ---
+
+def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
+    """Returns a pretty-printed XML string of the element/tree."""
+    # return etree.tostring(element, pretty_print=True, encoding='utf-8').decode('utf-8')
+    return etree.tostring(element, pretty_print=True, encoding='unicode')

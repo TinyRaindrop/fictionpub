@@ -44,16 +44,13 @@ class FB2ToHTMLConverter:
     `xhtml_parent`. It is kept small and clearly labelled.
     """
 
-    def __init__(self, binary_map: dict, id_map: dict, config: ConversionConfig):
+    def __init__(self, binary_map: dict, config: ConversionConfig):
         """
         Args:
             binary_map: FB2 image IDs → BinaryInfo objects.
-            id_map:     Every FB2 element id → name of its containing body.
-                        Used for automatic noteref / link-type detection.
             config:     User-supplied conversion configuration.
         """
         self.binary_map: dict[str, BinaryInfo] = binary_map
-        self.id_map = id_map
         self.split_level = config.split_level
         self.split_size = config.split_size_kb
         self.config = config
@@ -407,11 +404,6 @@ class FB2ToHTMLConverter:
         link_type = element.get('type')
         if link_type:
             attrib['data-link-type'] = link_type
-
-        if not is_external and target_id:
-            body_name = self.id_map.get(target_id)
-            if body_name and body_name.lower() not in ('main', ''):
-                attrib['data-link-type'] = 'note'
 
         link = etree.Element('a', attrib)
         xu.copy_id(element, link)

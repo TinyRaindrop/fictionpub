@@ -19,8 +19,7 @@ from ..terms.localized_terms import LocalizedTerms
 from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
-from ..utils.structures import ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
-from ..utils import xml_utils as xu
+from ..utils.structures import BookMetadata, EpubMetadata, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
 
 
 log = logging.getLogger("fb2_converter")
@@ -47,6 +46,18 @@ class Paths(NamedTuple):
         )
 
 
+
+def _annotation_to_description(annotation: 'etree._Element | None') -> str | None:
+    """Extracts plain text from a converted annotation element."""
+    if annotation is None:
+        return None
+    paragraphs = [
+        ' '.join(p.itertext()).strip() # type: ignore
+        for p in annotation.findall('.//p')
+    ]
+    return '\n'.join(p for p in paragraphs if p) or None
+
+
 class EpubBuilder:
     """
     Constructs the EPUB package.
@@ -59,8 +70,8 @@ class EpubBuilder:
         self.paths: Paths = Paths.from_root(tmp)
         self.config = config
 
-        self.metadata: dict = {}
-        self.annotation_el: etree._Element | None = None
+        self.metadata: BookMetadata = BookMetadata()
+        self._epub_id: str = ''
         self.binaries: dict[str, BinaryInfo] = {}
         self.main_docs: list[FileInfo] = []
         self.note_docs: list[FileInfo] = []
@@ -70,46 +81,42 @@ class EpubBuilder:
         self.local_terms: LocalizedTerms
 
 
-    def set_metadata(self, metadata: dict):
+    def set_metadata(self, metadata: BookMetadata):
         """
-        Receives metadata from the FB2Book.
+        Receives BookMetadata from the FB2Book.
         Initializes LocalizedTerms with the book's language.
+        Generates EPUB package identifier and sreates EpubMetadata.
         """
         self.metadata = metadata
 
-        # Generate new file ID
-        self.metadata['id'] = f"urn:uuid:{uuid.uuid4()}"
-        self.metadata['app_name'] = self.config.app_name
-        self.metadata['app_version'] = self.config.app_version
-
         # Lang could be undefined.
         # Let methods be aware of this and decide whether a fallback is necessary.
-        self.lang: str = metadata.get('lang', '')
+        self.lang: str = metadata.lang
         self.local_terms = LocalizedTerms(self.lang)
 
         # With local_terms initialized, get translated genre names
-        self.metadata['genres'] = [
+        tr_genres = [
             self.local_terms.get_genre(g)
-            for g in metadata['genres']
+            for g in metadata.genres
         ]
+
+        self.epub_meta: EpubMetadata = EpubMetadata(
+            book=self.metadata,
+            epub_id=f"urn:uuid:{uuid.uuid4()}",
+            app_name=self.config.app_name,
+            app_version=self.config.app_version,
+            lang_genres=tr_genres,
+            description=None
+        )
 
 
     def set_annotation(self, converted_annotation: etree._Element | None):
         """Sets the converted <annotation> element in metadata."""
-        def fb2_annotation_to_description(annotation):
-            if annotation is None:
-                return None
-
-            paragraphs = [
-                "".join(p.itertext()).strip()
-                for p in annotation.findall(".//p")
-            ]
-
-            return "\n".join(p for p in paragraphs if p)
-        
         if isinstance(converted_annotation, etree._Element):
             self.annotation_el = converted_annotation
-            self.metadata['description'] = fb2_annotation_to_description(converted_annotation)
+            self.epub_meta.description = _annotation_to_description(converted_annotation)
+        else:
+            log.warning("Annotation element is invalid.")
         
 
     def set_binaries(self, binaries: dict[str, BinaryInfo]):
@@ -154,7 +161,7 @@ class EpubBuilder:
             fb2title = matches[0] if matches else None
             
             if fb2title is not None:
-                extracted_text = " ".join(fb2title.itertext()).strip()  # type: ignore
+                extracted_text: str = " ".join(fb2title.itertext()).strip().capitalize()  # type: ignore
                 if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
 
@@ -236,7 +243,7 @@ class EpubBuilder:
         Adds a cover image if it exists.
         Pass use_svg = False if <svg> causes issues.
         """
-        cover_id = self.metadata.get('cover-id')
+        cover_id = self.metadata.cover_id
         if cover_id is None:
             log.info("No cover image was found. Skipping coverpage creation.")
             return None
@@ -291,8 +298,8 @@ class EpubBuilder:
     def _create_title_page(self) -> FileInfo:
         """Creates Titlepage.xhtml"""
         fileid = "titlepage"
-        book_title = self.metadata.get('title') or "[Untitled]"
-        book_author = self.metadata.get('author')
+        book_title = self.metadata.title or "[Untitled]"
+        book_author = self.metadata.author
 
         html, body = self._create_html(fileid, book_title)
         if book_author:
@@ -305,12 +312,11 @@ class EpubBuilder:
     def _create_copyright_page(self) -> FileInfo | None:
         """Creates Copyright.xhtml"""
         info_sections = {
-            "Publication Info": self.metadata.get('pub', {}),
-            "Original Publication": self.metadata.get('src', {}),
-            "Document Info": self.metadata.get('doc', {}),
-            # 'title-info' doesn't exist, its keys are top level
-            # TODO: move corresponding keys to 'title-info'
-            "Book Info": self.metadata.get('title-info', {}),
+            "Publication Info": vars(self.metadata.pub),
+            "Original Publication": vars(self.metadata.src),
+            "Document Info": vars(self.metadata.doc),
+            # TODO: display 'title-info' values?
+            "Book Info": {},  # title-info keys are now top-level on BookMetadata
             "Converter": {
                 "Program used": f"{self.config.app_name} {self.config.app_version}",
             }
@@ -350,7 +356,6 @@ class EpubBuilder:
     def _create_annotation_page(self) -> FileInfo | None:
         """
         Creates Annotation.xhtml from an already converted <annotation>.
-        set_annotation() must be called first.
         """
         if self.annotation_el is None:
             log.info("Found no annotation. Skipping.")
@@ -516,15 +521,15 @@ class EpubBuilder:
         ncx_path = self.paths.oebps / FN.NCX
         ncx = etree.Element("ncx", version="2005-1", nsmap=NS.NCX_MAP)      # type: ignore
         head = etree.SubElement(ncx, "head")
-        etree.SubElement(head, "meta", name="dtb:uid", content=self.metadata['id'])
+        etree.SubElement(head, "meta", name="dtb:uid", content=self._epub_id)
         etree.SubElement(head, "meta", name="dtb:depth", content="1")
         etree.SubElement(head, "meta", name="dtb:totalPageCount", content="0")
         etree.SubElement(head, "meta", name="dtb:maxPageNumber", content="0")
 
         doc_title = etree.SubElement(ncx, "docTitle")
-        etree.SubElement(doc_title, "text").text = self.metadata['title']
+        etree.SubElement(doc_title, "text").text = self.metadata.title
         doc_author = etree.SubElement(ncx, "docAuthor")
-        etree.SubElement(doc_author, "text").text = self.metadata['author']
+        etree.SubElement(doc_author, "text").text = self.metadata.author
 
         nav_map = etree.SubElement(ncx, "navMap")
 
@@ -562,7 +567,7 @@ class EpubBuilder:
 
         # Metadata
         meta = etree.SubElement(root, "metadata")
-        fill_opf_metadata(meta, self.metadata)         
+        # fill_opf_metadata(meta, self.epub_meta)         
 
         # Manifest, Spine, Guide
         manifest = etree.SubElement(root, "manifest")
@@ -839,9 +844,3 @@ class EpubBuilder:
                     src = "#"   # Fallback for missing images
                     log.warning(f"Image source for ID '{img_id}' not found.")
                 img.set('src', src)
-
-
-def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
-    """Returns a pretty-printed XML string of the element/tree."""
-    # return etree.tostring(element, pretty_print=True, encoding='utf-8').decode('utf-8')
-    return etree.tostring(element, pretty_print=True, encoding='unicode')

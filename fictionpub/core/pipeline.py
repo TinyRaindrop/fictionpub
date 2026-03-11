@@ -36,7 +36,6 @@ class ConversionPipeline:
         # 2. Initialize the XHTML converter with data from the parsed book
         converter = FB2ToHTMLConverter(
             binary_map=fb2_book.binaries,
-            id_map=fb2_book.id_map,
             config=self.config
         )
 
@@ -54,8 +53,8 @@ class ConversionPipeline:
         for body in fb2_book.note_bodies:
             note_doc_fragments.extend(converter.convert_body(body, ConversionMode.NOTE))
 
-        if fb2_book.annotation_el is not None:
-            converted_annotation = converter.convert_element(fb2_book.annotation_el)
+        if fb2_book.metadata.annotation_el is not None:
+            converted_annotation = converter.convert_element(fb2_book.metadata.annotation_el)
             builder.set_annotation(converted_annotation)
         
         # 4. ASSEMBLE: Pass the fragments to the builder to create final documents.
