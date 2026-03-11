@@ -90,3 +90,11 @@ def remove_attr(element: etree._Element, name: str):
     "Removes an argument if it exists."
     if name in element.attrib:
         del element.attrib[name]
+
+
+# --- Debug utils ---
+
+def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
+    """Returns a pretty-printed XML string of the element/tree."""
+    # return etree.tostring(element, pretty_print=True, encoding='utf-8').decode('utf-8')
+    return etree.tostring(element, pretty_print=True, encoding='unicode')

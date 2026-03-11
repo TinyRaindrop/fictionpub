@@ -1,58 +1,19 @@
 import logging
 
-from dataclasses import dataclass, fields
-from typing import NamedTuple, get_type_hints
+from dataclasses import dataclass
+from typing import NamedTuple
 from PIL import Image
 from io import BytesIO
 
 from lxml import etree
 
 __all__ = [
-    "ConvertedBody", "EpubStructureItem", "EPUB_TYPES_MAP", 
-    "FileInfo", "BinaryInfo", "TOCItem", "FNames"
+    "ConvertedBody", "EpubStructureItem", "EPUB_TYPES_MAP",
+    "FileInfo", "BinaryInfo", "TOCItem", "FNames",
+    "PublishInfo", "SourceInfo", "DocumentInfo", "BookMetadata",
 ]
 
 log = logging.getLogger("fb2_converter")
-
-
-# Not actually using these enforcer decorators (@enforce_xx_types)
-# Only enforces if the annotation is a real type object, like int, str, tuple.
-# Skips more complex cases like list[int], Optional[str], Union[int, str], int | None
-def enforce_dataclass_types(cls):
-    """Decorator that enforces type hints for dataclass fields at runtime."""
-    orig_init = cls.__init__
-
-    def __init__(self, *args, **kwargs):
-        orig_init(self, *args, **kwargs)
-        for f in fields(self):
-            val = getattr(self, f.name)
-            typ = f.type
-            if isinstance(typ, type) and not isinstance(val, typ):
-                raise TypeError(
-                    f"{cls.__name__}.{f.name} must be {typ.__name__}, got {type(val).__name__}"
-                )
-    cls.__init__ = __init__
-    return cls
-
-
-def enforce_namedtuple_types(cls):
-    """Decorator that enforces type hints for NamedTuple fields at runtime."""
-    orig_new = cls.__new__
-
-    def __new__(cls, *args, **kwargs):
-        self = orig_new(cls, *args, **kwargs)
-        hints = get_type_hints(cls)
-
-        for name, typ in hints.items():
-            val = getattr(self, name)
-            if isinstance(typ, type) and not isinstance(val, typ):
-                raise TypeError(
-                    f"{cls.__name__}.{name} must be {typ.__name__}, got {type(val).__name__}"
-                )
-        return self
-
-    cls.__new__ = __new__
-    return cls
 
 
 class ConvertedBody(NamedTuple):
@@ -187,3 +148,123 @@ class FNames:
     NCX: str = 'toc.ncx'
     OPF: str = 'content.opf'
     CONTAINER: str = 'container.xml'
+
+# ---------------------------------------------------------------------------
+# Metadata dataclasses
+# ---------------------------------------------------------------------------
+
+@dataclass
+class QuickMetadata:
+    """Metadata excerpt with only a few most important fields. Parsed without a full tree load."""
+    author: str = ''
+    title: str = ''
+    date: str = ''
+    lang: str = ''
+
+
+@dataclass
+class TitleInfo:
+    """Metadata block from FB2 `<title-info>`."""
+    from dataclasses import field as _field
+
+    title:           str             = 'Untitled'
+    authors:         list            = _field(default_factory=list)  # list[str]
+    translators:     list            = _field(default_factory=list)  # list[str]
+    lang:            str             = ''
+    genres:          list            = _field(default_factory=list)  # list[str]
+    keywords:        str             = ''
+    date:            str             = ''
+    sequence:        str             = ''
+    sequence_number: int | None      = None
+    annotation_el:   'etree._Element | None' = _field(default=None, repr=False)
+
+    @property
+    def author(self) -> str:
+        """First author name, or empty string."""
+        return self.authors[0] if self.authors else ''
+
+
+@dataclass
+class SourceInfo:
+    """Metadata block from FB2 `<src-title-info>`."""
+    title:    str = ''
+    author:   str = ''
+    src_lang: str = ''
+    date:     str = ''
+    # Ignoring <src-title-info> genres. They are usually set accidentally and are wrong.
+
+
+@dataclass
+class PublishInfo:
+    """Metadata block from FB2 `<publish-info>`."""
+    book_name:  str = ''
+    publisher:  str = ''
+    city:       str = ''
+    year:       str = ''
+    isbn:       str = ''
+
+
+@dataclass
+class DocumentInfo:
+    """Metadata block from FB2 `<document-info>`."""
+    program_used: str = ''
+    date:         str = ''
+    doc_id:       str = ''
+    version:      str = ''
+    author:       str = ''
+
+
+@dataclass
+class CustomInfo:
+    """A single `<custom-info>` entry from the FB2 description."""
+    info_type: str = ''
+    text:      str = ''
+
+
+@dataclass
+class BookMetadata:
+    """
+    Pure FB2 extraction result. Contains no EPUB-specific fields.
+
+    EPUB-layer values (epub id, app info, localized genres, description text)
+    are supplied separately at the point of use (EpubBuilder / OPF writer).
+    """
+    from dataclasses import field as _field
+
+    # nested info blocks (always present, defaulting to empty)
+    title_info: TitleInfo = _field(default_factory=TitleInfo)
+    src: SourceInfo      = _field(default_factory=SourceInfo)
+    doc: DocumentInfo    = _field(default_factory=DocumentInfo)
+    pub: PublishInfo     = _field(default_factory=PublishInfo)
+
+    # other assets
+    custom_info: list[CustomInfo] = _field(default_factory=list)
+    cover_id: str | None = None
+
+    # Convenience properties for most widely accessed fields.
+    # These are delegating to title_info.
+    @property
+    def title(self) -> str:        return self.title_info.title
+    @property
+    def author(self) -> str:       return self.title_info.author or 'Unknown Author'
+    @property
+    def authors(self) -> list:     return self.title_info.authors
+    @property
+    def lang(self) -> str:         return self.title_info.lang
+    @property
+    def genres(self) -> list:      return self.title_info.genres
+    @property
+    def annotation_el(self) -> 'etree._Element | None': return self.title_info.annotation_el
+    @annotation_el.setter
+    def annotation_el(self, e: 'etree._Element | None'): self.title_info.annotation_el = e
+
+
+@dataclass
+class EpubMetadata:
+    book:        BookMetadata
+    epub_id:     str
+    app_name:    str
+    app_version: str
+    lang_genres: list[str]
+    description: str | None = None
+   
