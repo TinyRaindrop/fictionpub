@@ -154,7 +154,7 @@ class EpubBuilder:
             fb2title = matches[0] if matches else None
             
             if fb2title is not None:
-                extracted_text = " ".join(fb2title.itertext()).strip()  # type: ignore
+                extracted_text: str = " ".join(fb2title.itertext()).strip().capitalize()  # type: ignore
                 if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
 
