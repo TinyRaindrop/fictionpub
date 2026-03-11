@@ -102,7 +102,7 @@ class FB2Book:
             if opened_zip:
                 opened_zip.close()
 
-    # -------------------------------------------------------------------------
+    # -------------------------------
     # Private: XML loading
 
     def _parse_xml_tree(self):
@@ -120,7 +120,7 @@ class FB2Book:
             self.tree = etree.parse(str(self.filepath))
 
 
-    # -------------------------------------------------------------------------
+    # -------------------------------
     # Private: metadata extraction
     #
     # Three-layer design:
@@ -191,7 +191,8 @@ class FB2Book:
     @staticmethod
     def _parse_title_info(el: etree._Element) -> TitleInfo:
         """Layer 1: <title-info> → TitleInfo."""
-        tags = xu.get_metadata_tags(el, ['book-title', 'keywords', 'lang', 'date'])
+        tags = xu.get_metadata_tags(el, 
+                                    ['book-title', 'keywords', 'lang', 'date'])
         ti = TitleInfo(
             title    = tags.get('book-title') or 'Untitled',
             keywords = tags.get('keywords', ''),
@@ -222,7 +223,8 @@ class FB2Book:
     @staticmethod
     def _parse_src_info(el: etree._Element) -> SourceInfo:
         """Layer 1: <src-title-info> → SourceInfo."""
-        tags = xu.get_metadata_tags(el, ['book-title', 'date', 'src-lang'])   
+        tags = xu.get_metadata_tags(el, 
+                                    ['book-title', 'date', 'src-lang'])   
         return SourceInfo(
             title    = tags.get('book-title', ''),
             date     = tags.get('date', ''),
@@ -234,7 +236,8 @@ class FB2Book:
     @staticmethod
     def _parse_doc_info(el: etree._Element) -> DocumentInfo:
         """Layer 1: <document-info> → DocumentInfo."""
-        tags = xu.get_metadata_tags(el, ['program-used', 'date', 'id', 'version'])
+        tags = xu.get_metadata_tags(el, 
+                                    ['program-used', 'date', 'id', 'version', 'src-ocr'])
         return DocumentInfo(
             program_used = tags.get('program-used', ''),
             date         = tags.get('date', ''),
@@ -247,7 +250,8 @@ class FB2Book:
     @staticmethod
     def _parse_pub_info(el: etree._Element) -> PublishInfo:
         """Layer 1: <publish-info> → PublishInfo."""
-        tags = xu.get_metadata_tags(el, ['book-name', 'publisher', 'city', 'year', 'isbn'])
+        tags = xu.get_metadata_tags(el, 
+                                    ['book-name', 'publisher', 'city', 'year', 'isbn'])
         return PublishInfo(
             book_name = tags.get('book-name', ''),
             publisher = tags.get('publisher', ''),
@@ -257,7 +261,7 @@ class FB2Book:
         )
 
 
-    # -------------------------------------------------------------------------
+    # -------------------------------
     # Private: binaries
 
     def _extract_binaries(self):
@@ -316,7 +320,7 @@ class FB2Book:
         return filename
 
 
-    # -------------------------------------------------------------------------
+    # -------------------------------
     # Private: bodies and ID map
 
     def _extract_bodies(self):

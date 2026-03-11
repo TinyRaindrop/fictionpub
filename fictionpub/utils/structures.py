@@ -212,6 +212,7 @@ class DocumentInfo:
     doc_id:       str = ''
     version:      str = ''
     author:       str = ''
+    src_ocr:      str = ''
 
 
 @dataclass
@@ -261,7 +262,7 @@ class BookMetadata:
 
 @dataclass
 class EpubMetadata:
-    book:        BookMetadata
+    book_meta:        BookMetadata
     epub_id:     str
     app_name:    str
     app_version: str

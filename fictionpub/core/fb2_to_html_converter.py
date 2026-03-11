@@ -377,6 +377,7 @@ class FB2ToHTMLConverter:
         data-link-type="note". This attribute is removed during
         link resolution in EpubBuilder._resolve_internal_links().
         """
+        # TODO: fix footnote anchors inside note/comment body
         href = element.get(f'{{{NS.XLINK}}}href') or element.get('href')
 
         if not href:

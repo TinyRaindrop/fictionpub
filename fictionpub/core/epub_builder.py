@@ -72,7 +72,6 @@ class EpubBuilder:
         self.config = config
 
         self.metadata: BookMetadata = BookMetadata()
-        self._epub_id: str = ''
         self.binaries: dict[str, BinaryInfo] = {}
         self.annotation_el: etree._Element | None = None
         self.main_docs: list[FileInfo] = []
@@ -102,7 +101,7 @@ class EpubBuilder:
         ]
 
         self.epub_meta: EpubMetadata = EpubMetadata(
-            book=self.metadata,
+            book_meta=self.metadata,
             epub_id=f"urn:uuid:{uuid.uuid4()}",
             app_name=self.config.app_name,
             app_version=self.config.app_version,
@@ -526,8 +525,8 @@ class EpubBuilder:
         ncx_path = self.paths.oebps / FN.NCX
         ncx = etree.Element("ncx", version="2005-1", nsmap=NS.NCX_MAP)      # type: ignore
         head = etree.SubElement(ncx, "head")
-        etree.SubElement(head, "meta", name="dtb:uid", content=self._epub_id)
-        etree.SubElement(head, "meta", name="dtb:depth", content="1")
+        etree.SubElement(head, "meta", name="dtb:uid", content=self.epub_meta.epub_id)
+        etree.SubElement(head, "meta", name="dtb:depth", content="1") # TODO: toc_level / current max level?
         etree.SubElement(head, "meta", name="dtb:totalPageCount", content="0")
         etree.SubElement(head, "meta", name="dtb:maxPageNumber", content="0")
 
@@ -572,7 +571,7 @@ class EpubBuilder:
 
         # Metadata
         meta = etree.SubElement(root, "metadata")
-        # fill_opf_metadata(meta, self.epub_meta)         
+        fill_opf_metadata(meta, self.epub_meta)
 
         # Manifest, Spine, Guide
         manifest = etree.SubElement(root, "manifest")

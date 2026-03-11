@@ -1,144 +1,137 @@
+"""
+Utilities for constructing the OPF metadata section.
+
+"""
 from datetime import datetime, timezone
 from lxml import etree
 
-from ..utils.namespaces import Namespaces as NS
+from .namespaces import Namespaces as NS
+from .structures import BookMetadata, EpubMetadata
 
 
-def _add_dc_element(parent: etree._Element, tag: str, text: str | None, element_id=None):
-    """Creates a Dublin Core element."""
-    # Ensure the required attributes have values before creating the tag
-    if not all([tag, text]):
+def _add_dc(parent: etree._Element, tag: str, text: str | None,
+            element_id: str = '') -> etree._Element | None:
+    """Creates a Dublin Core element. Returns None if tag or text is empty."""
+    if not tag or text in (None, ''):
         return None
-    
-    dc = etree.SubElement(parent, f"{{{NS.DC}}}{tag}")
-    dc.text = str(text)
+    el = etree.SubElement(parent, f"{{{NS.DC}}}{tag}")
+    el.text = str(text)
     if element_id:
-        dc.set("id", element_id)
-    return dc
+        el.set("id", element_id)
+    return el
 
 
-def _add_meta_element(parent: etree._Element, prop: str, value: str | None, 
-                       id: str = '', refines: str = '', scheme: str = ''):
+def _add_meta(parent: etree._Element, prop: str, value: str | int | None,
+              id: str = '', refines: str = '', scheme: str = '') -> etree._Element | None:
+
     """
-    Creates a <meta> element with attributes.
+    Creates a <meta> element. Returns None if prop or value is empty.
     
     Optional args:
         - id: ID for the <meta> element.
         - refines: ID of the element this <meta> refines.
         - scheme: scheme for the <meta> element.
     """
-    # Basic argument validation
-    if not all([prop, value]):
+    if not prop or value in (None, ''):
         return None
 
-    attrs = {
-        key: value
-        for key, value in {
-            "refines": f"#{refines}" if refines else '',
-            "property": prop,
-            "id": id,
-            "scheme": scheme,
-        }.items()
-        if value != ''
-    }
-
-    meta = etree.SubElement(parent, "meta", attrib=attrs)
-    meta.text = str(value)
-    return meta
+    attrs: dict[str, str] = {"property": prop}
+    if id:
+        attrs["id"] = id
+    if refines:
+        attrs["refines"] = f"#{refines}"
+    if scheme:
+        attrs["scheme"] = scheme
 
 
-def _add_meta_custom(parent: etree._Element, attrs: dict):
-    """Adds a <meta> element with custom attributes."""
+    el = etree.SubElement(parent, "meta", attrib=attrs)
+    el.text = str(value)
+    return el
+
+
+def _add_meta_custom(parent: etree._Element, **attrs: str) -> etree._Element:
+    """Creates a <meta> element with arbitrary attributes (key=value pairs)."""
     return etree.SubElement(parent, "meta", attrib=attrs)
 
 
-def fill_opf_metadata(meta_element: etree._Element, metadata: dict):
-    """Fills the OPF metadata section from a dictionary."""
+def fill_opf_metadata(
+    meta_element: etree._Element,
+    # metadata: BookMetadata,
+    epub_meta: EpubMetadata,
+) -> None:
+    """
+    Fills the OPF <metadata> element with information from
+	FB2's BookMetadata and newly created EpubMetadata.
+    """
+    m: etree._Element= meta_element    # local alias
+    metadata: BookMetadata = epub_meta.book_meta    # TODO: remove from EpubMetadata or keep?
+
     # Identifier
-    book_id = metadata.get('id')
-    _add_dc_element(meta_element, "identifier", book_id, element_id="BookId")
+    _add_dc(m, "identifier", epub_meta.epub_id, element_id="BookId")
 
-    # Title-info
-    title = metadata.get("title")
-    if title:
-        _add_dc_element(meta_element, "title", title, element_id="main-title")
-        _add_meta_element(meta_element, prop="title-type", value="main", refines="main-title")
+    # Title
+    if metadata.title:
+        _add_dc(m, "title", metadata.title, element_id="main-title")
+        _add_meta(m, "title-type", "main", refines="main-title")
 
-    author = metadata.get("author")
-    if author:
-        _add_dc_element(meta_element, "creator", author, element_id="author")
-        _add_meta_element(meta_element, prop="role", value="aut", refines="author", scheme="marc:relators") 
-        # 'aut' = Author
+    # Creator: author
+    if metadata.author:
+        _add_dc(m, "creator", metadata.author, element_id="author")
+        _add_meta(m, "role", "aut", refines="author", scheme="marc:relators") 
 
-    # TODO: remove
-    # metadata['producer'] is never set
-    producer_name = metadata.get("producer")    # EPUB producer
-    if producer_name:
-        _add_dc_element(meta_element, "contributor", producer_name, element_id="producer")
-        _add_meta_element(meta_element, prop="role", value="bkp", refines="producer", scheme="marc:relators")
-        # 'bkp' = Book Producer
+    # Creator: translators
+    for i, transl in enumerate(metadata.title_info.translators):
+        transl_id = f"translator{i}"
+        _add_dc(m, "creator", transl, element_id=transl_id)
+        _add_meta(m, "role", "trl", refines=transl_id, scheme="marc:relators")
 
-    # title_info = metadata.get('title-info')
-    title_info = metadata   # TODO: move keys into 'title-info' in _extract_metadata() 
-    if title_info:
-        # Translators
-        for i, transl in enumerate(title_info.get('translators', [])):
-            transl_id = f"translator{i}"
-            _add_dc_element(meta_element, "creator", transl, element_id=transl_id)
-            _add_meta_element(meta_element, prop="role", value="trl", refines=transl_id, scheme="marc:relators")
+    # Series
+    if metadata.title_info.sequence:
+        _add_meta(m, "belongs-to-collection", metadata.title_info.sequence, id="collection")
+        _add_meta(m, "group-position", metadata.title_info.sequence_number, refines="collection")
 
-        # Book series, #number
-        sequence = title_info.get('sequence')
-        _add_meta_element(meta_element, prop="belongs-to-collection", value=sequence, id="collection")
-        sequence_number = title_info.get('sequence-number')
-        _add_meta_element(meta_element, prop="group-position", value=sequence_number, refines="collection")
+    # Language
+    _add_dc(m, "language", metadata.lang)
 
-    _add_dc_element(meta_element, "language", metadata.get("lang"))
+    # Source-Title info
+    _add_meta_custom(m, name="original-title", content=metadata.src.title)
+    # TODO: duplicates title-info > src-lang. Pick one
+    _add_meta(m, "source-language", metadata.src.src_lang)
 
-    # Src-Title-info
-    src_info = metadata.get('src-title-info')
-    if src_info:
-        _add_meta_element(meta_element, prop="original-title", value=src_info.get('book-title'))
-
-        # TODO: duplicates title-info > src-lang. Pick one
-        _add_meta_element(meta_element, prop="source-language", value=src_info.get('src-lang'))
-        
-        _add_meta_element(meta_element, prop="ocr", value=src_info.get('src-ocr'))
-        
-        # original publication date # TODO: confirm syntax!
-        created_date = src_info.get('date')
-        _add_meta_element(meta_element, prop="dcterms:created", value=created_date)
+    # original publication date # TODO: confirm syntax!
+    created_date = metadata.src.date
+    _add_meta(m, "dcterms:created", created_date)
     
     # Publish-info
-    pub_info = metadata.get("pub")
-    if pub_info:
-        _add_dc_element(meta_element, "publisher", pub_info.get("publisher"))
-        # Publication date
-        _add_dc_element(meta_element, "date", pub_info.get("year"), element_id="pub-date")
-        _add_meta_element(meta_element, prop="dcterms:event", value="publication", refines="pub-date", scheme="marc:relators")
-        
-        isbn = pub_info.get("isbn")
-        if isbn:
-            _add_dc_element(meta_element, "identifier", f"urn:isbn:{isbn}")
+    pub = metadata.pub
+    _add_dc(m, "publisher", pub.publisher)
+    if pub.year:
+        _add_dc(m, "date", pub.year, element_id="pub-date")
+        _add_meta(m, "dcterms:event", "publication", refines="pub-date", scheme="marc:relators")
 
-    # Genres
-    for genre in metadata.get("genres", []):
-        _add_dc_element(meta_element, "subject", genre)
+    if pub.isbn:
+        _add_dc(m, "identifier", f"urn:isbn:{pub.isbn}")
+
+    # Document-info
+    if metadata.doc:
+        _add_meta(m, "ocr", metadata.doc.src_ocr)
+
+    # Subjects / genres (already localized)
+    for genre in epub_meta.lang_genres:
+        _add_dc(m, "subject", genre)
     
     # Cover image id
-    cover_id = metadata.get('cover-id')
-    if cover_id:
-        _add_meta_custom(meta_element, {'name': "cover", 'content': cover_id})
+    if metadata.cover_id:
+        _add_meta_custom(m, name="cover", content=metadata.cover_id)
 
-    # FB2 annotation as description
-    _add_dc_element(meta_element, "description", metadata.get('description'))
+    # Description
+    _add_dc(m, "description", epub_meta.description)
 
-    # Generator name+version
-    app_name = metadata.get('app_name')
-    if app_name:
-        gen_name = f"{app_name} {metadata.get('app_version', '')}".strip()
-        _add_meta_custom(meta_element, {'name': "generator", 'content': gen_name})
+    # Generator
+    if epub_meta.app_name:
+        gen_name = f"{epub_meta.app_name} {epub_meta.app_version}".strip()
+        _add_meta_custom(m, name="generator", content=gen_name)
 
-    # Timestamp
-    modified_date = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
-    _add_meta_element(meta_element, prop="dcterms:modified", value=modified_date)
+    # Modification timestamp
+    modified = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+    _add_meta(m, prop="dcterms:modified", value=modified)
