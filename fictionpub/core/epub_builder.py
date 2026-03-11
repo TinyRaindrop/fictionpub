@@ -16,6 +16,7 @@ from lxml import etree
 
 from ..resources.loader import get_css_path
 from ..terms.localized_terms import LocalizedTerms
+from ..utils.link_resolver import LinkResolver
 from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
@@ -66,7 +67,6 @@ class EpubBuilder:
         self.note_docs: list[FileInfo] = []
         self.doc_list: list[FileInfo] = []
         self.toc_items: list[TOCItem] = []
-        self.id_to_doc_map: dict[str, str] = {}
         self.local_terms: LocalizedTerms
 
 
@@ -118,7 +118,8 @@ class EpubBuilder:
 
     def add_main_docs(self, converted_docs: list[ConvertedBody]):
         """
-        Accepts split documents with pre-generated filenames and adds them to the list.
+        Receives a list of documents and adds them to doc_list.
+		Wraps each converted body in a full HTML document. 
         """
         for doc in converted_docs:
             html, body = self._create_html(doc.file_id, doc.title)
@@ -130,8 +131,12 @@ class EpubBuilder:
 
     def add_note_docs(self, converted_docs: list[ConvertedBody]):
         """
-        Accepts converted note bodies and adds them to the list.
-        Each note body is wrapped in a new HTML structure with a generated H1 title.
+        Wraps each converted note body in a full HTML document with an h1 title.
+
+        Title source priority:
+          1. Text extracted from div.fb2title (the FB2 body-level <title>),
+             unless it matches a generic localized label ("Notes").
+          2. Localized heading for the body's file id.
         """
         for doc in converted_docs:
             if len(doc.body) == 0:
@@ -149,21 +154,19 @@ class EpubBuilder:
             h1 = etree.Element("h1")
             h1.text = local_title
 
-            # Look for the internal title (body > div.fb2title)
-            matches = body.xpath('.//*[local-name()="div" and contains(@class,"fb2title")]')
-            fb2title = matches[0] if matches else None
-            
+            # div.fb2title is always a direct child of body (placed there by the converter)
+            fb2title: etree._Element | None = next(
+                (el for el in body if 'fb2title' in (el.get('class') or '')),
+                None
+            )
+
             if fb2title is not None:
                 extracted_text: str = " ".join(fb2title.itertext()).strip().capitalize()  # type: ignore
                 if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
-
-                parent = fb2title.getparent()
-                if parent is not None:
-                    parent.replace(fb2title, h1)
-
-                # Ensure the H1 is at the very top of the body
-                if h1.getparent() == body and body.index(h1) != 0:
+                body.replace(fb2title, h1)
+                # Ensure the H1 is the first child
+                if body.index(h1) != 0:
                     body.remove(h1)
                     body.insert(0, h1)
                     log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
@@ -192,9 +195,7 @@ class EpubBuilder:
             # Create an {id: doc} dictionary for faster lookup
             self.doc_map = {doc.id: doc for doc in self.doc_list}
 
-            self._build_id_map()
-            self._resolve_internal_links()
-            self._insert_backlink_hrefs()
+            LinkResolver(self.doc_list).resolve()
             self._resolve_image_paths()
 
             # Build nested list of headings to be used in NAV/NCX generation
@@ -737,91 +738,6 @@ class EpubBuilder:
         if notify:
             # log filename, not full path
             log.info(f"Created: {Path(filepath).name}")
-
-
-    def _build_id_map(self):
-        """Creates a map of all element IDs to their final host filename."""
-        for doc in self.doc_list:
-            if doc.html is None:
-                continue
-            for element in doc.html.iterfind(".//*[@id]"):
-                el_id = element.get('id')
-                if el_id:
-                    self.id_to_doc_map[el_id] = doc.id
-
-
-    def _resolve_internal_links(self):
-        """
-        Iterates through all documents and fixes hrefs for internal links.
-        """
-        for doc in self.doc_list:
-            if doc.html is None:
-                continue
-            for a in doc.html.iterfind(".//a[@href]"):
-                href = a.get('href', '')
-                if not href.startswith('#'):
-                    log.debug("External link found, skipping.")
-                    continue
-
-                # get and remove link-type from the <a> element
-                link_type = a.get('link-type')
-                if link_type:
-                    a.attrib.pop('link-type')
-
-                target_id = href.lstrip('#')
-                target_doc_id = self.id_to_doc_map.get(target_id)
-            
-                if target_doc_id not in self.doc_map:
-                    log.warning(f"Broken internal link found for id: {target_id}")
-                    current_class = a.get('class', '')
-                    a.set('class', f"{current_class} broken-link".strip())
-                    if 'backlink' in current_class and a.attrib.get('href') is not None:
-                        a.attrib.pop('href')   # Remove href from broken backlinks
-                    continue
-
-                target_doc = self.doc_map[target_doc_id]
-                # Update the link to point to the correct file
-                a.set('href', f"{target_doc.filename}#{target_id}")
-
-                # If target doc is notes/comments
-                if target_doc.is_note:
-                    cls = "noteref"
-
-                    match link_type:
-                        case None | "comment":
-                            # Comments typically don't have a type
-                            cls += " comment"
-                        case "note":
-                            # Notes should always have a type
-                            pass
-                        case _:
-                            log.debug(f"Noteref id='{a.get('id')}', invalid link-type: '{link_type}'")
-                    
-                    a.attrib.update({
-                        'class': cls,
-                        f'{{{NS.EPUB}}}type': 'noteref',
-                    })
-
-                    # PostProcessor.remove_sup_from_noteref(a)
-
-
-    def _insert_backlink_hrefs(self):
-        """Adds a return link to the end of each footnote."""
-        for doc in self.doc_list:
-            if not doc.is_note: continue
-            for backlink in doc.html.iterfind('.//a[@class="backlink"]'):
-                back_href = backlink.get('href')
-
-                if not back_href:
-                    log.debug(f"Broken backlink: id='{backlink.get('id')}")
-                    continue
-
-                back_href = back_href.lstrip('#')
-                target_doc_id = self.id_to_doc_map.get(back_href)
-                if target_doc_id:
-                    target_doc = self.doc_map.get(target_doc_id)
-                    if target_doc:
-                        backlink.set('href', f'{target_doc.filename}#{back_href}')
 
 
     def _resolve_image_paths(self):

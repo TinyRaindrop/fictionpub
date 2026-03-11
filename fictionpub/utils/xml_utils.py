@@ -84,3 +84,9 @@ def add_class(el: etree._Element, cls: str):
     if cls not in existing_classes:
         existing_classes.add(cls)
         el.set("class", " ".join(existing_classes))
+
+
+def remove_attr(element: etree._Element, name: str):
+    "Removes an argument if it exists."
+    if name in element.attrib:
+        del element.attrib[name]
