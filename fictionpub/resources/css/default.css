@@ -309,11 +309,9 @@ a.broken-link {
 /* ==== CUSTOM ELEMENTS ==== */
 
 /* Title page */
-.titlepage-body {
+.titlepage-wrap {
     margin: 30% 1rem 0;
     text-align: center;
-    hyphens: none;
-    -epub-hyphens: none;
 }
 
 .book-author {
@@ -329,22 +327,15 @@ a.broken-link {
     font-size: 2.5em;
 }
 
-/* Container for the internal half-title */
-div.fb2title {
-    margin-top: 20%;
-    margin-bottom: 4rem;
-    text-align: center;
+/* Container for the half-title (body>title from FB2) */
+.halftitle {
+    margin: 20% auto 1rem;
     hyphens: none;
     -epub-hyphens: none;
-    break-after: avoid;
-    page-break-after: avoid;
 }
 
-div.fb2title p {
-    margin-left: 1.25rem;
-    margin-right: 1.25rem;
-    margin-top: 0.5em;
-    margin-bottom: 0.5em;
+.halftitle p {
+    margin: 0.5rem 1rem;
     text-align: center;
     text-indent: 0;
     font-weight: bold;
@@ -352,20 +343,26 @@ div.fb2title p {
 }
 
 /* If there are multiple paragraphs, the first is usually the author */
-div.fb2title p:first-child:not(:last-child) {
+.halftitle p:first-child:not(:last-child) {
     font-size: 1.25rem;
     font-weight: normal;
     margin-bottom: 1.5em;
 }
 
 /* The last paragraph is usually the book title */
-div.fb2title p:last-child {
-    font-size: 2rem;
+.halftitle p:last-child {
+    font-size: 1.5rem;
     margin-top: 0;
 }
 
-/* Copyright page */
-.copyright-body {
+.titlepage-wrap p,
+.halftitle p {
+    hyphens: none;
+    -epub-hyphens: none;
+}
+
+/* Document info page */
+.docinfo-body {
     font-size: 0.9em;
     hyphens: none;
     -epub-hyphens: none;

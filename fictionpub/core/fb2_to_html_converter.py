@@ -299,9 +299,9 @@ class FB2ToHTMLConverter:
 
         parent_tag = xu.get_tag_name(parent)
 
-        # Body-level title → div.fb2title (builder extracts it later)
+        # Body-level title → div.halftitle (builder extracts it later)
         if parent_tag == 'body':
-            attrib = {'class': 'fb2title'}
+            attrib = {'class': 'halftitle'}
             element_id = element.get('id')
             if element_id:
                 attrib['id'] = element_id

@@ -14,10 +14,10 @@
         "ru": "Аннотация",
         "en": "Annotation"
     },
-    "copyright": {
+    "docinfo": {
         "uk": "Інформація",
         "ru": "Информация",
-        "en": "Copyright"
+        "en": "Information"
     },
     "notes": {
         "uk": "Примітки",

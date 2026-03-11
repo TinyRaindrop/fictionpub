@@ -65,15 +65,16 @@ class EpubBuilder:
     Manages the file structure, writes content, generates metadata, and zips the final file.
     """
     def __init__(self, source_path: Path, config: ConversionConfig):
-        """Initializes the builder."""
         self.source_path = source_path
         tmp: Path = source_path.parent / f"{source_path.stem}_epub_temp"
         self.paths: Paths = Paths.from_root(tmp)
+
         self.config = config
 
         self.metadata: BookMetadata = BookMetadata()
         self._epub_id: str = ''
         self.binaries: dict[str, BinaryInfo] = {}
+        self.annotation_el: etree._Element | None = None
         self.main_docs: list[FileInfo] = []
         self.note_docs: list[FileInfo] = []
         self.doc_list: list[FileInfo] = []
@@ -131,6 +132,8 @@ class EpubBuilder:
         for doc in converted_docs:
             html, body = self._create_html(doc.file_id, doc.title)
             body.extend(list(doc.body))
+            # TODO: remove div.halftitle if equal to metadata.title / metadata.author
+
             # Move all children from converted body to new html
             file_info = FileInfo(doc.file_id, doc.title, html)
             self.doc_list.append(file_info)
@@ -161,17 +164,17 @@ class EpubBuilder:
             h1 = etree.Element("h1")
             h1.text = local_title
 
-            # div.fb2title is always a direct child of body (placed there by the converter)
-            fb2title: etree._Element | None = next(
-                (el for el in body if 'fb2title' in (el.get('class') or '')),
+            # div.halftitle is always a direct child of body (placed there by the converter)
+            halftitle: etree._Element | None = next(
+                (el for el in body if 'halftitle' in (el.get('class') or '')),
                 None
             )
 
-            if fb2title is not None:
-                extracted_text: str = " ".join(fb2title.itertext()).strip().capitalize()  # type: ignore
+            if halftitle is not None:
+                extracted_text: str = " ".join(halftitle.itertext()).strip().capitalize()  # type: ignore
                 if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
-                body.replace(fb2title, h1)
+                body.replace(halftitle, h1)
                 # Ensure the H1 is the first child
                 if body.index(h1) != 0:
                     body.remove(h1)
@@ -303,15 +306,16 @@ class EpubBuilder:
         book_author = self.metadata.author
 
         html, body = self._create_html(fileid, book_title)
+        div = etree.SubElement(body, 'div', {'class': 'titlepage-wrap'})
         if book_author:
-            etree.SubElement(body, "p", attrib={'class': 'book-author'}).text = book_author
-        etree.SubElement(body, "h1", attrib={'class': 'book-title'}).text = book_title
+            etree.SubElement(div, "p", attrib={'class': 'book-author'}).text = book_author
+        etree.SubElement(div, "h1", attrib={'class': 'book-title'}).text = book_title
 
         return FileInfo(fileid, book_title, html, order=1)
 
 
-    def _create_copyright_page(self) -> FileInfo | None:
-        """Creates Copyright.xhtml"""
+    def _create_docinfo_page(self) -> FileInfo | None:
+        """Creates Docinfo.xhtml"""
         info_sections = {
             "Publication Info": vars(self.metadata.pub),
             "Original Publication": vars(self.metadata.src),
@@ -319,17 +323,17 @@ class EpubBuilder:
             # TODO: display 'title-info' values?
             "Book Info": {},  # title-info keys are now top-level on BookMetadata
             "Converter": {
-                "Program used": f"{self.config.app_name} {self.config.app_version}",
+                "Program used": f"{self.epub_meta.app_name} {self.epub_meta.app_version}",
             }
         }
 
         has_metadata = any(info_sections.values())
         if not has_metadata:
-            log.warning("No metadata available for copyright page. Skipping.")
+            log.warning("No metadata available for docinfo page. Skipping.")
             return None
 
-        fileid = "copyright"
-        local_title = self.local_terms.get_heading(fileid) or "Copyright"
+        fileid = "docinfo"
+        local_title = self.local_terms.get_heading(fileid) or "Document info"
         html, body = self._create_html(fileid, local_title)
         etree.SubElement(body, "h1").text = local_title
 
@@ -338,7 +342,7 @@ class EpubBuilder:
                 etree.SubElement(body, "p", attrib={'class': 'subtitle'}).text = section_title
                 dl = etree.SubElement(body, "dl") # Definition list for semantics
                 for key, value in data.items():
-                    # Skip adding annotation to copyright page
+                    # Skip adding annotation
                     if key == 'annotation' or not value:
                         continue
 
@@ -377,7 +381,7 @@ class EpubBuilder:
         docs = [
             self._create_cover_page(),
             self._create_title_page(),
-            self._create_copyright_page(),
+            self._create_docinfo_page(),
             self._create_annotation_page(),
         ]
         docs = [d for d in docs if d is not None]
