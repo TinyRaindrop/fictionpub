@@ -15,6 +15,7 @@ from __future__ import annotations
 # App name is a plain constant — never generated, never needs a fallback chain.
 APP_NAME       = "FictionPub"
 APP_NAME_SHORT = "fictionpub"
+APP_URL = "https://github.com/TinyRaindrop/fictionpub"
 
 try:
     from ._version import __version__ as VERSION

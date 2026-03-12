@@ -1,6 +1,6 @@
 import logging
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field as _field
 from typing import NamedTuple
 from PIL import Image
 from io import BytesIO
@@ -165,8 +165,6 @@ class QuickMetadata:
 @dataclass
 class TitleInfo:
     """Metadata block from FB2 `<title-info>`."""
-    from dataclasses import field as _field
-
     title:           str             = 'Untitled'
     authors:         list            = _field(default_factory=list)  # list[str]
     translators:     list            = _field(default_factory=list)  # list[str]
@@ -230,8 +228,6 @@ class BookMetadata:
     EPUB-layer values (epub id, app info, localized genres, description text)
     are supplied separately at the point of use (EpubBuilder / OPF writer).
     """
-    from dataclasses import field as _field
-
     # nested info blocks (always present, defaulting to empty)
     title_info: TitleInfo = _field(default_factory=TitleInfo)
     src: SourceInfo      = _field(default_factory=SourceInfo)
@@ -262,10 +258,11 @@ class BookMetadata:
 
 @dataclass
 class EpubMetadata:
-    book_meta:        BookMetadata
-    epub_id:     str
-    app_name:    str
-    app_version: str
-    lang_genres: list[str]
+    book_meta:   BookMetadata
+    epub_id:     str    # mandatory
+    app_name:    str = ''
+    app_version: str = ''
+    app_url:     str = ''
+    lang_genres: list[str] = _field(default_factory=list)
     description: str | None = None
    

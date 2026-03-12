@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from pathlib import Path
 
-from ..app_info import APP_NAME, VERSION
+from ..app_info import APP_NAME, VERSION, APP_URL
 
 
 @dataclass
@@ -28,10 +28,12 @@ class ConversionConfig:
     custom_stylesheet: Path | None = None
     num_threads: int = 0    # 0 means auto-detect
 
+    # TODO: move out of Config
     # Injected at startup. Values are read not from app_info directly, 
     # but at the moment a ConversionConfig is constructed.
     app_name:    str = field(default_factory=lambda: APP_NAME)
     app_version: str = field(default_factory=lambda: VERSION)
+    app_url: str = field(default_factory=lambda: APP_URL)
 
 
 class ConversionMode(Enum):

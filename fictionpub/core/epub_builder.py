@@ -58,7 +58,7 @@ class EpubBuilder:
         tmp: Path = source_path.parent / f"{source_path.stem}_epub_temp"
         self.paths: Paths = Paths.from_root(tmp)
 
-        self.config = config
+        self.config: ConversionConfig = config
 
         self.metadata: BookMetadata = BookMetadata()
         self.binaries: dict[str, BinaryInfo] = {}
@@ -94,6 +94,7 @@ class EpubBuilder:
             epub_id=f"urn:uuid:{uuid.uuid4()}",
             app_name=self.config.app_name,
             app_version=self.config.app_version,
+            app_url=self.config.app_url,
             lang_genres=tr_genres,
             description=None
         )
@@ -312,6 +313,7 @@ class EpubBuilder:
             "Book Info": {},  # title-info keys are now top-level on BookMetadata
             "Converter": {
                 "Program used": f"{self.epub_meta.app_name} {self.epub_meta.app_version}",
+                "URL": self.epub_meta.app_url
             }
         }
 
