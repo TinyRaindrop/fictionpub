@@ -25,6 +25,7 @@ from .core.fb2_book import FB2Book
 from .resources.loader_gui import load_icon_image, get_icon_path
 from .utils.logger import setup_main_logger, LOG_DIR
 from .utils.models import ConversionConfig, ConversionStatus, ConversionResult
+from .utils.structures import QuickMetadata
 
 
 log = logging.getLogger("fb2_converter")
@@ -446,7 +447,7 @@ class ConverterApp:
     def _parse_meta_task(self, item_id, path):
         """Task running in thread pool."""
         try:
-            meta = FB2Book.get_quick_metadata(path)
+            meta: QuickMetadata = FB2Book.get_quick_metadata(path)
             self.queue.put(("parse_ok", item_id, meta))
         except Exception as e:
             self.queue.put(("parse_fail", item_id, str(e)))
@@ -529,7 +530,8 @@ class ConverterApp:
 
                 match task:
                     case "parse_ok":
-                        self.tree.item(item_id, values=data)
+                        # Convert QuickMetadata to a tuple of values matching TreeView columns
+                        self.tree.item(item_id, values=dataclasses.astuple(data))
                     case "parse_fail":
                         self.tree.item(item_id, values=("Error", str(data), "", ""))
                     case "convert_ok":
