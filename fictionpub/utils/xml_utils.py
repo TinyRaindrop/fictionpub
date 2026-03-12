@@ -87,10 +87,65 @@ def add_class(el: etree._Element, cls: str):
 
 
 def remove_attr(element: etree._Element, name: str):
-    "Removes an argument if it exists."
+    """Removes an argument if it exists."""
     if name in element.attrib:
         del element.attrib[name]
 
+
+def itertext(el: etree._Element, with_tail=True) -> str | None:
+    """Returns all text content in the element subtree as a string."""
+    if el is None:
+        return None
+    result = " ".join(el.itertext(with_tail=with_tail)).strip()  # type: ignore[arg-type]
+    return result or None
+
+
+def itertext_separated(el: etree._Element | None) -> str | None:
+    """
+    Returns text content in the element subtree, separated by newlines.
+    Accepts both FB2 XML and converted XHTML elements.
+    """
+    if el is None:
+        return None
+    
+    # FB2 / XHTML tags which would be separated by a newline.
+    block_tags = {
+        'div', 'p', 'v', 'subtitle', 'text-author', 'empty-line', 
+        'th', 'td', 'title', 'epigraph', 'blockquote', 'poem', 'stanza', 'q'
+    }
+    block_tags.update({f"h{i}" for i in range(1, 7)})
+
+    def _walk(node: etree._Element):
+        if node is None:
+            return
+        
+        tag = get_tag_name(node)
+        is_block = tag in block_tags
+        
+        if node.text:
+            yield node.text
+            
+        for child in node:
+            yield from _walk(child)
+            
+        if is_block:
+            yield "\n"
+            
+        if node.tail:
+            yield node.tail
+
+    # Join everything into one string with \n marking the boundaries
+    raw_text = "".join(_walk(el))
+    
+    # Clean whitespaces
+    clean_lines = []
+    for line in raw_text.split('\n'):
+        clean_line = line.strip()
+        if clean_line:
+            clean_lines.append(clean_line)
+
+    # Join with one newline
+    return "\n".join(clean_lines) or None
 
 # --- Debug utils ---
 

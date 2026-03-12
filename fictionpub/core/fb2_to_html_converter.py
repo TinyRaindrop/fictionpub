@@ -271,7 +271,7 @@ class FB2ToHTMLConverter:
 
         title_el = element.find(f'{{{NS.FB2}}}title')
         if title_el is not None:
-            title_text = " ".join(title_el.itertext()).strip()  # type: ignore
+            title_text = xu.itertext(element)
             backlink_attr = {
                 'href': f'#{element_id}-ref',
                 'class': 'backlink',
@@ -316,7 +316,7 @@ class FB2ToHTMLConverter:
         offset = 1 if self.mode == ConversionMode.NOTE else 0
         adjusted_level = min(max(self._section_depth + offset, 1), 6)
 
-        title_text = " ".join(element.itertext()).strip()  # type: ignore
+        title_text = xu.itertext(element)
         if not title_text:
             log.debug("Found empty <title>. Skipping.")
             return None

@@ -21,6 +21,7 @@ from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
 from ..utils.structures import BookMetadata, EpubMetadata, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
+from ..utils import xml_utils as xu
 
 
 log = logging.getLogger("fb2_converter")
@@ -45,18 +46,6 @@ class Paths(NamedTuple):
             styles=root / FN.OEBPS / FN.STYLES,
             meta_inf=root / FN.META_INF,
         )
-
-
-
-def _annotation_to_description(annotation: 'etree._Element | None') -> str | None:
-    """Extracts plain text from a converted annotation element."""
-    if annotation is None:
-        return None
-    paragraphs = [
-        ' '.join(p.itertext()).strip() # type: ignore
-        for p in annotation.findall('.//p')
-    ]
-    return '\n'.join(p for p in paragraphs if p) or None
 
 
 class EpubBuilder:
@@ -110,11 +99,11 @@ class EpubBuilder:
         )
 
 
-    def set_annotation(self, converted_annotation: etree._Element | None):
-        """Sets the converted <annotation> element in metadata."""
-        if isinstance(converted_annotation, etree._Element):
-            self.annotation_el = converted_annotation
-            self.epub_meta.description = _annotation_to_description(converted_annotation)
+    def set_annotation(self, xhtml_annotation: etree._Element | None):
+        """Sets the converted `<annotation>` element in metadata."""
+        if isinstance(xhtml_annotation, etree._Element):
+            self.annotation_el = xhtml_annotation
+            self.epub_meta.description = xu.itertext_separated(xhtml_annotation)
         else:
             log.warning("Annotation element is invalid.")
         
@@ -170,7 +159,7 @@ class EpubBuilder:
             )
 
             if halftitle is not None:
-                extracted_text: str = " ".join(halftitle.itertext()).strip().capitalize()  # type: ignore
+                extracted_text: str = xu.itertext(halftitle).capitalize()  # type: ignore
                 if extracted_text and extracted_text not in all_local_titles:
                     h1.text = extracted_text
                 body.replace(halftitle, h1)
