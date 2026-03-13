@@ -271,7 +271,7 @@ class FB2ToHTMLConverter:
 
         title_el = element.find(f'{{{NS.FB2}}}title')
         if title_el is not None:
-            title_text = xu.itertext(element)
+            title_text = xu.itertext(title_el)
             backlink_attr = {
                 'href': f'#{element_id}-ref',
                 'class': 'backlink',

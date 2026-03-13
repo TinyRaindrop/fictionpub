@@ -92,11 +92,11 @@ def remove_attr(element: etree._Element, name: str):
         del element.attrib[name]
 
 
-def itertext(el: etree._Element, with_tail=True) -> str | None:
+def itertext(el: etree._Element) -> str | None:
     """Returns all text content in the element subtree as a string."""
     if el is None:
         return None
-    result = " ".join(el.itertext(with_tail=with_tail)).strip()  # type: ignore[arg-type]
+    result = " ".join(t.strip() for t in el.itertext() if t.strip())  # type: ignore
     return result or None
 
 
