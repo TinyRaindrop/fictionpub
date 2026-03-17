@@ -1,3 +1,4 @@
+from enum import Enum, auto
 import logging
 
 from dataclasses import dataclass, field as _field
@@ -16,11 +17,24 @@ __all__ = [
 log = logging.getLogger("fb2_converter")
 
 
+class BodyType(Enum):
+    """Defines types of bodies used in FB2 document."""
+    MAIN = auto()
+    NOTE = auto()
+    COMMENT = auto()
+
+
+class FB2Body(NamedTuple):
+    body: etree._Element
+    body_type: BodyType
+
+
 class ConvertedBody(NamedTuple):
     """Container for a single converted XHTML body, its title, attributes, and ID."""
     file_id: str
     title: str
     body: etree._Element
+    body_type: BodyType
 
 
 class EpubStructureItem(NamedTuple):
@@ -46,6 +60,14 @@ EPUB_TYPES_MAP: dict[str, EpubStructureItem] = {
     key: EpubStructureItem(epub_type=epub, guide_type=guide)
     for key, (epub, guide) in _RAW_EPUB_TYPES.items()
 }
+
+    
+@dataclass
+class MappedId():
+    id: str
+    link_type: str
+    target_type: BodyType
+    refs: list[str] = _field(default_factory=list)
 
 
 @dataclass(order=False)
@@ -75,6 +97,7 @@ class FileInfo():
             return (2, -self.order)       # Group 2: Negative values, sorted descending
         else:
             return (0, self.order)        # Group 0: Positive values, sorted ascending
+
 
 @dataclass
 class BinaryInfo():

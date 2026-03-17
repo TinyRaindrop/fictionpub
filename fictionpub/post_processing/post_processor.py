@@ -5,7 +5,8 @@ import logging
 
 from lxml import etree
 
-from ..utils.models import ConversionConfig, ConversionMode
+from ..utils.models import ConversionConfig
+from ..utils.structures import BodyType
 from ..utils import xml_utils as xu
 
 # Post processing plugins. Must work on xhtml_body
@@ -21,16 +22,16 @@ class PostProcessor():
     Fixes unfinished element conversions, cleans up redundant tags,
     applies typographic improvements.
     """
-    def __init__(self, config: ConversionConfig, mode = ConversionMode.MAIN):
+    def __init__(self, config: ConversionConfig, body_type = BodyType.MAIN):
         self.config = config
-        self.mode = mode
+        self.body_type = body_type
 
 
     def run(self, xhtml_body: etree._Element):
         """Method to run for cleaning up the generated XHTML tree."""
         self.body = xhtml_body
 
-        if self.mode == ConversionMode.NOTE:
+        if self.body_type == BodyType.NOTE:
             # sections are now unwrapped during conversion, no need to unwrap here
             self._fix_note_backlinks()
 

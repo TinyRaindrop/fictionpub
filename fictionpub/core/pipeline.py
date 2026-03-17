@@ -7,7 +7,7 @@ core modules to perform specific tasks.
 from pathlib import Path
 
 from .fb2_book import FB2Book
-from .fb2_to_html_converter import FB2ToHTMLConverter, ConversionMode
+from .fb2_to_html_converter import FB2ToHTMLConverter
 from .epub_builder import EpubBuilder
 from ..utils.models import ConversionConfig
 
@@ -45,21 +45,16 @@ class ConversionPipeline:
         builder.set_metadata(fb2_book.metadata)
 
         # 4. Convert the FB2 bodies to XHTML documents
-        main_doc_fragments = []
-        for body in fb2_book.main_bodies:
-            main_doc_fragments.extend(converter.convert_body(body, ConversionMode.MAIN))
-
-        note_doc_fragments = []
-        for body in fb2_book.note_bodies:
-            note_doc_fragments.extend(converter.convert_body(body, ConversionMode.NOTE))
+        doc_fragments = []
+        for fb2body in fb2_book.bodies:
+            doc_fragments.extend(converter.convert_body(fb2body))
 
         if fb2_book.metadata.annotation_el is not None:
             converted_annotation = converter.convert_element(fb2_book.metadata.annotation_el)
             builder.set_annotation(converted_annotation)
         
         # 4. ASSEMBLE: Pass the fragments to the builder to create final documents.
-        builder.add_main_docs(main_doc_fragments)
-        builder.add_note_docs(note_doc_fragments)
+        builder.add_docs(doc_fragments)
 
         # 5. Build the final EPUB file (adds CSS, creates toc list, NAV, NCX, OPF, writes all docs to disk, zips the package)
         builder.build()

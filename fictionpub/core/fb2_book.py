@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata
+from ..utils.structures import BinaryInfo, BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata, BodyType, FB2Body, MappedId
 from ..utils import xml_utils as xu
 
 
@@ -35,11 +35,10 @@ class FB2Book:
         self.filepath = filepath
         self.tree: etree._ElementTree
 
-        self.metadata:       BookMetadata          = BookMetadata()
-        self.binaries:       dict[str, BinaryInfo] = {}
-        self.referenced_ids: set[str]              = set()
-        self.main_bodies:    list[etree._Element]  = []
-        self.note_bodies:    list[etree._Element]  = []
+        self.metadata: BookMetadata = BookMetadata()
+        self.binaries: dict[str, BinaryInfo] = {}
+        self.referenced_ids: set[str] = set()
+        self.bodies: list[FB2Body] = []
 
 
     def parse(self):
@@ -327,19 +326,32 @@ class FB2Book:
         """Separates FB2 <body> elements into main content and note bodies."""
         root = self.tree.getroot()
         for body in root.iterfind('fb:body', NS.FB2_MAP):
-            bname = body.get('name')
-            if bname in ('notes', 'comments', 'footnotes'):
-                self.note_bodies.append(body)
+            bname = body.get('name', '').lower()
+
+            if bname in ('notes', 'footnotes', 'примечания', 'сноски', 'примітки'):
+                btype = BodyType.NOTE
+            elif bname in ('comments', 'комментарии', 'коментарі'):
+                btype = BodyType.COMMENT
             else:
-                self.main_bodies.append(body)
+                btype = BodyType.MAIN
                 if bname:
                     log.info(f"Treating body[name={bname}] as main content.")
+            self.bodies.append(FB2Body(body, btype))
 
 
     def _create_referenced_ids_set(self):
         """Collects all ids that are pointed to by at least one href."""
+        self.mapped_ids = {}
+        # Find all <a href=...> elements
         for element in self.tree.iterfind('.//*[@l:href]', namespaces=NS.FB2_MAP):
             href = element.get(f'{{{NS.XLINK}}}href')
             id = href.lstrip('#') if href else None
             if id:
                 self.referenced_ids.add(id)
+                """mi = MappedId(
+                    id,
+                    '',
+                    body_name,
+                    )
+                mi.refs.append()"""
+

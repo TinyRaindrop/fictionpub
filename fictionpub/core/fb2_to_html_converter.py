@@ -8,9 +8,9 @@ from lxml import etree
 
 from ..post_processing.post_processor import PostProcessor
 from ..utils import xml_utils as xu
-from ..utils.models import ConversionConfig, ConversionMode
+from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, ConvertedBody
+from ..utils.structures import BinaryInfo, BodyType, FB2Body, ConvertedBody
 
 
 log = logging.getLogger("fb2_converter")
@@ -19,7 +19,7 @@ log = logging.getLogger("fb2_converter")
 class Tag(NamedTuple):
     """Structure to represent an XHTML tag with attributes."""
     name: str
-    attrib: dict | None = None
+    attrib: dict[str, str] | None = None
 
     def create(self) -> etree._Element:
         """Creates an lxml Element with the specified tag and attributes."""
@@ -49,6 +49,8 @@ class FB2ToHTMLConverter:
         self.config = config
         # counters for generating unique IDs on repeated note references
         self.note_ref_counters: dict[str,int] = {}
+
+        self.part_counters: dict[BodyType, int] = {}
 
         # map of straightforward FB2 tag → XHTML tag/attributes tuples;
         # anything not listed here falls back to `div.class=fb2tag`
@@ -90,45 +92,49 @@ class FB2ToHTMLConverter:
     # -------------------------------
     # Public API
 
-    def convert_body(self, fb2_body: etree._Element, mode: ConversionMode) -> list[ConvertedBody]:
+    def convert_body(self, fb2body: FB2Body) -> list[ConvertedBody]:
         """
         Converts a full FB2 <body> and returns one or more ConvertedBody objects.
         MAIN mode may produce multiple documents when splitting is active.
         NOTE mode always returns one document per FB2 body.
         """
-        self.mode = mode
+        self.body_type: BodyType = fb2body.body_type
         self._converted_bodies: list[ConvertedBody] = []
         self._section_depth = 0
-        self._level_counters = [1] + [0] * 5   
-        
+
+        # Get a number of parts already generated for a given BodyType
+        initial_counter = self.part_counters.get(self.body_type, 0) + 1
+        self._level_counters = [initial_counter] + [0] * 5
+        # TODO: if multiple MAIN bodies and body>title on each, use it as h1, and begin section titles from h2s
+
         self._current_title = "Content"
 
-        self._start_new_body(fb2_body)
+        self._start_new_body(fb2body.body)
 
         # Convert
-        for child in fb2_body:
+        for child in fb2body.body:
             self._recursive_convert(child, self._current_body)
 
         # Post-process all converted bodies
         for body_obj in self._converted_bodies:
-            PostProcessor(self.config, self.mode).run(body_obj.body)
+            PostProcessor(self.config, self.body_type).run(body_obj.body)
 
         return self._converted_bodies
 
 
     def convert_element(self, element: etree._Element) -> etree._Element | None:
         """Converts a single FB2 element outside of a full body context (e.g. annotation)."""
-        saved_mode = getattr(self, 'mode', ConversionMode.MAIN)
-        self.mode = ConversionMode.MAIN
+        saved_type = getattr(self, 'mode', BodyType.MAIN)
+        self.body_type = BodyType.MAIN
         self._section_depth = 0
 
         tmp_parent = etree.Element('div')
         self._recursive_convert(element, tmp_parent)
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
         if result is not None:
-            PostProcessor(self.config, self.mode).run(result)
+            PostProcessor(self.config, self.body_type).run(result)
 
-        self.mode = saved_mode
+        self.body_type = saved_type
         return result
 
 
@@ -158,7 +164,7 @@ class FB2ToHTMLConverter:
             # Not a document boundary and not an <aside>.
             # Children go directly into the caller's parent, so we handle them here.
 
-            if (self.mode == ConversionMode.MAIN
+            if (self.body_type == BodyType.MAIN
                 and self._section_depth > self.split_level):
                 self._unwrap_into(fb2_element, xhtml_parent)
                 self._section_depth -= 1
@@ -205,7 +211,7 @@ class FB2ToHTMLConverter:
         """
         element_id = element.get('id')
 
-        if self.mode == ConversionMode.MAIN:
+        if self.body_type == BodyType.MAIN:
             # depth <= split_level: document boundary
             self._split_or_adopt(element)
             self._unwrap_into(element, self._current_body)
@@ -243,6 +249,8 @@ class FB2ToHTMLConverter:
                 self._level_counters[level_index] = 1
             new_file_id = self._generate_part_name(element)
             self._converted_bodies[-1] = self._converted_bodies[-1]._replace(file_id=new_file_id)
+        
+        self.part_counters[self.body_type] = self._level_counters[0]
 
 
     def _unwrap_into(self, element: etree._Element, target: etree._Element):
@@ -313,7 +321,7 @@ class FB2ToHTMLConverter:
 
         # In NOTE mode the body title becomes h1 (inserted by EpubBuilder),
         # so section titles must start at h2 to sit below it.
-        offset = 1 if self.mode == ConversionMode.NOTE else 0
+        offset = 1 if self.body_type != BodyType.MAIN else 0
         adjusted_level = min(max(self._section_depth + offset, 1), 6)
 
         title_text = xu.itertext(element)
@@ -440,7 +448,7 @@ class FB2ToHTMLConverter:
 
     def _generate_part_name(self, fb2_element: etree._Element) -> str:
         """Generates a file ID for a new document body."""
-        if self.mode == ConversionMode.NOTE:
+        if self.body_type != BodyType.MAIN:
             body_name = fb2_element.get('name')
             if body_name is None:
                 log.warning("Note body without 'name' attribute; using 'notes'.")
@@ -459,6 +467,7 @@ class FB2ToHTMLConverter:
             file_id=file_id,
             title=self._current_title,
             body=self._current_body,
+            body_type=self.body_type
         ))
 
 

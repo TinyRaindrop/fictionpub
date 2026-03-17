@@ -20,7 +20,7 @@ from ..utils.link_resolver import LinkResolver
 from ..utils.models import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
-from ..utils.structures import BookMetadata, EpubMetadata, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
+from ..utils.structures import BookMetadata, EpubMetadata, BodyType, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
 from ..utils import xml_utils as xu
 
 
@@ -113,69 +113,78 @@ class EpubBuilder:
         self.binaries = binaries
 
 
-    def add_main_docs(self, converted_docs: list[ConvertedBody]):
+    def add_docs(self, converted_docs: list[ConvertedBody]):
         """
-        Receives a list of documents and adds them to doc_list.
-		Wraps each converted body in a full HTML document. 
+        Receives a list of documents and calls MAIN/NOTE doc handlers. 
         """
         for doc in converted_docs:
-            html, body = self._create_html(doc.file_id, doc.title)
-            body.extend(list(doc.body))
-            # TODO: remove div.halftitle if equal to metadata.title / metadata.author
-
-            # Move all children from converted body to new html
-            file_info = FileInfo(doc.file_id, doc.title, html)
-            self.doc_list.append(file_info)
+            if doc.body_type == BodyType.MAIN:
+                self._add_main_doc(doc)
+            else:
+                self._add_note_doc(doc)
 
 
-    def add_note_docs(self, converted_docs: list[ConvertedBody]):
+    def _add_main_doc(self, doc: ConvertedBody):
         """
-        Wraps each converted note body in a full HTML document with an h1 title.
+        Receives a converted document, wraps body in a full HTML document.
+		Adds it to doc_list.
+        """
+        html, body = self._create_html(doc.file_id, doc.title)
+        body.extend(list(doc.body))
+        # TODO: remove div.halftitle if equal to metadata.title / metadata.author
+
+        # Move all children from converted body to new html
+        file_info = FileInfo(doc.file_id, doc.title, html)
+        self.doc_list.append(file_info)
+
+
+    def _add_note_doc(self, doc: ConvertedBody):
+        """
+        Wraps a converted note body in a full HTML document with an h1 title.
 
         Title source priority:
           1. Text extracted from div.fb2title (the FB2 body-level <title>),
              unless it matches a generic localized label ("Notes").
           2. Localized heading for the body's file id.
         """
-        for doc in converted_docs:
-            if len(doc.body) == 0:
-                log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
-                continue
+        if len(doc.body) == 0:
+            log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
+            return
 
-            # start with the converter-supplied title if available,
-            # otherwise fall back to a localized heading based on the body name
-            local_title = self.local_terms.get_heading(doc.file_id)
-            all_local_titles = self.local_terms.get_all_headings(doc.file_id)
-            html, body = self._create_html(doc.file_id, local_title)
-            # Move all children from converted body to new html
-            body.extend(list(doc.body))
+        # start with the converter-supplied title if available,
+        # otherwise fall back to a localized heading based on the body name
+        local_title = self.local_terms.get_heading(doc.file_id)
+        all_local_titles = self.local_terms.get_all_headings(doc.file_id)
+        html, body = self._create_html(doc.file_id, local_title)
+        # Move all children from converted body to new html
+        body.extend(list(doc.body))
 
-            h1 = etree.Element("h1")
-            h1.text = local_title
+        h1 = etree.Element("h1")
+        h1.text = local_title
 
-            # div.halftitle is always a direct child of body (placed there by the converter)
-            halftitle: etree._Element | None = next(
-                (el for el in body if 'halftitle' in (el.get('class') or '')),
-                None
-            )
+        # div.halftitle is always a direct child of body (placed there by the converter)
+        halftitle: etree._Element | None = next(
+            (el for el in body if 'halftitle' in (el.get('class') or '')),
+            None
+        )
 
-            if halftitle is not None:
-                extracted_text: str = xu.itertext(halftitle).capitalize()  # type: ignore
-                if extracted_text and extracted_text not in all_local_titles:
-                    h1.text = extracted_text
-                body.replace(halftitle, h1)
-                # Ensure the H1 is the first child
-                if body.index(h1) != 0:
-                    body.remove(h1)
-                    body.insert(0, h1)
-                    log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
-
-            else:
-                # No original title existed, so inject a new H1 at the very top
+        if halftitle is not None:
+            extracted_text: str = xu.itertext(halftitle).capitalize()  # type: ignore
+            if extracted_text and extracted_text not in all_local_titles:
+                h1.text = extracted_text
+            body.replace(halftitle, h1)
+            # Ensure the H1 is the first child
+            if body.index(h1) != 0:
+                body.remove(h1)
                 body.insert(0, h1)
+                log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
 
-            file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
-            self.doc_list.append(file_info)
+        else:
+            # No original title existed, so inject a new H1 at the very top
+            body.insert(0, h1)
+
+        file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
+        self.doc_list.append(file_info)
 
 
     def build(self):
