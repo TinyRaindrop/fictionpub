@@ -1,7 +1,7 @@
 from enum import Enum, auto
 import logging
 
-from dataclasses import dataclass, field as _field
+from dataclasses import dataclass, field
 from typing import NamedTuple
 from PIL import Image
 from io import BytesIO
@@ -62,14 +62,6 @@ EPUB_TYPES_MAP: dict[str, EpubStructureItem] = {
 }
 
     
-@dataclass
-class MappedId():
-    id: str
-    link_type: str
-    target_type: BodyType
-    refs: list[str] = _field(default_factory=list)
-
-
 @dataclass(order=False)
 class FileInfo():
     """A container for xhtml file metadata and content."""
@@ -189,15 +181,15 @@ class QuickMetadata:
 class TitleInfo:
     """Metadata block from FB2 `<title-info>`."""
     title:           str             = 'Untitled'
-    authors:         list            = _field(default_factory=list)  # list[str]
-    translators:     list            = _field(default_factory=list)  # list[str]
+    authors:         list            = field(default_factory=list)  # list[str]
+    translators:     list            = field(default_factory=list)  # list[str]
     lang:            str             = ''
-    genres:          list            = _field(default_factory=list)  # list[str]
+    genres:          list            = field(default_factory=list)  # list[str]
     keywords:        str             = ''
     date:            str             = ''
     sequence:        str             = ''
     sequence_number: int | None      = None
-    annotation_el:   'etree._Element | None' = _field(default=None, repr=False)
+    annotation_el:   'etree._Element | None' = field(default=None, repr=False)
 
     @property
     def author(self) -> str:
@@ -252,13 +244,13 @@ class BookMetadata:
     are supplied separately at the point of use (EpubBuilder / OPF writer).
     """
     # nested info blocks (always present, defaulting to empty)
-    title_info: TitleInfo = _field(default_factory=TitleInfo)
-    src: SourceInfo      = _field(default_factory=SourceInfo)
-    doc: DocumentInfo    = _field(default_factory=DocumentInfo)
-    pub: PublishInfo     = _field(default_factory=PublishInfo)
+    title_info: TitleInfo = field(default_factory=TitleInfo)
+    src: SourceInfo      = field(default_factory=SourceInfo)
+    doc: DocumentInfo    = field(default_factory=DocumentInfo)
+    pub: PublishInfo     = field(default_factory=PublishInfo)
 
     # other assets
-    custom_info: list[CustomInfo] = _field(default_factory=list)
+    custom_info: list[CustomInfo] = field(default_factory=list)
     cover_id: str | None = None
 
     # Convenience properties for most widely accessed fields.
@@ -286,6 +278,6 @@ class EpubMetadata:
     app_name:    str = ''
     app_version: str = ''
     app_url:     str = ''
-    lang_genres: list[str] = _field(default_factory=list)
+    lang_genres: list[str] = field(default_factory=list)
     description: str | None = None
    

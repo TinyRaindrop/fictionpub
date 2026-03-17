@@ -22,6 +22,23 @@ from . import xml_utils as xu
 log = logging.getLogger("fb2_converter")
 
 
+"""
+Link classification criteria:
+    1. Note reference (anchor)
+        * has link-type="note"
+        * target BodyType is NOTE
+
+    2. Comment reference (anchor)
+        * target BodyType is COMMENT
+
+    2. Regular link (Toc, index, cross-reference)
+        * starts with #
+        * target id exists
+    
+    3. External link (http, etc)
+        * doesn't start with #
+"""
+
 class LinkResolver:
     """
     Resolves all internal links across a finalised EPUB document list.
@@ -110,3 +127,4 @@ class LinkResolver:
         # Remove href from broken backlinks
         if 'backlink' in current_class:
             xu.remove_attr(a, 'href')
+            a.set('data-target', target_id)

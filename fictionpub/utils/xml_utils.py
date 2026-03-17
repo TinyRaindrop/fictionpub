@@ -80,10 +80,10 @@ def replace_tag(element: etree._Element, new_tag: str) -> etree._Element:
 
 def add_class(el: etree._Element, cls: str):
     """Adds a class to an element, ensuring no duplicates."""
-    existing_classes = set(el.get("class", "").split())
-    if cls not in existing_classes:
-        existing_classes.add(cls)
-        el.set("class", " ".join(existing_classes))
+    current_class = set(el.get("class", "").split())
+    if cls not in current_class:
+        current_class.add(cls)
+        el.set("class", " ".join(current_class))
 
 
 def remove_attr(element: etree._Element, name: str):

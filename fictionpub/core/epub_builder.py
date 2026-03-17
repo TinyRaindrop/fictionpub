@@ -328,7 +328,7 @@ class EpubBuilder:
 
         has_metadata = any(info_sections.values())
         if not has_metadata:
-            log.warning("No metadata available for docinfo page. Skipping.")
+            log.info("No metadata available for docinfo page. Skipping.")
             return None
 
         fileid = "docinfo"

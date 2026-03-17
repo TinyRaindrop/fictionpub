@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata, BodyType, FB2Body, MappedId
+from ..utils.structures import BinaryInfo, BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata, BodyType, FB2Body
 from ..utils import xml_utils as xu
 
 
@@ -348,10 +348,3 @@ class FB2Book:
             id = href.lstrip('#') if href else None
             if id:
                 self.referenced_ids.add(id)
-                """mi = MappedId(
-                    id,
-                    '',
-                    body_name,
-                    )
-                mi.refs.append()"""
-

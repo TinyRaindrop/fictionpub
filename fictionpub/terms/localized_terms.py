@@ -68,7 +68,7 @@ class LocalizedTerms:
         lang = clear_lang(lang)
         
         if lang not in Term._fields:
-            log.warning(f"Unsupported book language: '{lang}'. Must be one of {Term._fields}. Falling back to [{default_lang}].")
+            log.info(f"Unsupported book language: '{lang}'. Must be one of {Term._fields}. Falling back to [{default_lang}].")
             lang = default_lang
         self.lang = lang or default_lang
         self.default_lang = default_lang    # used as a fallback in getters

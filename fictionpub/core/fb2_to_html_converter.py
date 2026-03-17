@@ -404,6 +404,7 @@ class FB2ToHTMLConverter:
         xu.copy_id(element, link)
 
         # Generate id for internal links without one
+        # TODO: move to LinkResolver
         if not is_external and target_id and link.get('id') is None:
             count = self.note_ref_counters.get(target_id, 0) + 1
             self.note_ref_counters[target_id] = count
@@ -448,6 +449,8 @@ class FB2ToHTMLConverter:
 
     def _generate_part_name(self, fb2_element: etree._Element) -> str:
         """Generates a file ID for a new document body."""
+        # BodyType.NOTE / COMMENT
+        # TODO: this doesn't account for multiple bodies with the same name
         if self.body_type != BodyType.MAIN:
             body_name = fb2_element.get('name')
             if body_name is None:
@@ -455,6 +458,7 @@ class FB2ToHTMLConverter:
                 body_name = 'notes'
             return body_name.lower()
 
+        # BodyType.MAIN
         name_parts = [str(c) for c in self._level_counters if c > 0]
         return f"part_{'_'.join(name_parts) or '1'}"
 
