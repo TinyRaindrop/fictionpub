@@ -15,7 +15,7 @@ import logging
 from lxml import etree
 
 from .namespaces import Namespaces as NS
-from .structures import FileInfo
+from .structures import LinkType, BodyType, FileInfo
 from . import xml_utils as xu
 
 
@@ -23,20 +23,17 @@ log = logging.getLogger("fb2_converter")
 
 
 """
-Link classification criteria:
-    1. Note reference (anchor)
-        * has link-type="note"
-        * target BodyType is NOTE
-
-    2. Comment reference (anchor)
-        * target BodyType is COMMENT
-
-    2. Regular link (Toc, index, cross-reference)
-        * starts with #
-        * target id exists
+ 
+Note section criteria:
+    1. Note
+        * body name="notes"
+        * section has id
+        * is being targeted by <a link-type="note">
     
-    3. External link (http, etc)
-        * doesn't start with #
+    2. Comment
+        * body name="comments"
+        * section has id
+
 """
 
 class LinkResolver:
@@ -57,6 +54,7 @@ class LinkResolver:
         for doc in self._doc_map.values():
             if doc.html is None:
                 continue
+            self._current_doc_id = doc.id
             for a in doc.html.iterfind('.//a[@href]'):
                 self._resolve_link(a)
 
@@ -74,7 +72,72 @@ class LinkResolver:
         return id_map
 
 
+    def _determine_link_type(self, a: etree._Element) -> LinkType:
+        """
+        Link classification criteria:
+        1. NOTE: Note reference (anchor)
+            * has link-type="note"
+            * target BodyType is NOTE
+
+        2. COMMENT: Comment reference (anchor)
+            * target BodyType is COMMENT
+            * target body is not current body
+            * not a backlink
+
+        3. REGULAR: Regular internal link (Toc, index, cross-reference)
+            * starts with #
+            * target id exists
+        
+        4. EXTERNAL: External link (http, etc)
+            * doesn't start with #
+        """
+        # FB2 schema specifies that "Footnotes should be implemented by links referring
+        # to additional bodies in the same document", but we can't trust that all files obey this.
+        href = a.get('href', '')
+        if not href.startswith('#'):
+            return LinkType.EXTERNAL
+        
+        data_link_type = a.attrib.pop('data-link-type', '').lower()
+        if data_link_type == 'note':
+            return LinkType.NOTE
+        elif data_link_type:
+            log.debug(f"Noteref id='{a.get('id')}': unexpected link-type '{data_link_type}'")
+        
+        target_id  = href.lstrip('#')
+        target_doc = self._find_target_doc(target_id)
+        
+        if target_doc is None:
+            return LinkType.INVALID
+
+        if (target_doc.body_type == BodyType.COMMENT and
+            target_doc.id != self._current_doc_id and
+            'backlink' not in a.get('class', '')):
+            return LinkType.COMMENT
+        
+        return LinkType.REGULAR     
+
+
     def _resolve_link(self, a: etree._Element) -> None:
+        ltype = self._determine_link_type(a)
+        match ltype:
+            case LinkType.NOTE:
+                self._apply_noteref(a)
+                pass
+
+            case LinkType.COMMENT:
+                self._apply_noteref(a)
+                xu.add_class(a, 'comment')
+                pass
+
+            case LinkType.REGULAR:
+                pass
+
+            case LinkType.EXTERNAL:
+                pass
+
+            case LinkType.INVALID:
+                pass
+
         href = a.get('href', '')
 
         if not href.startswith('#'):
@@ -88,13 +151,14 @@ class LinkResolver:
         target_doc = self._find_target_doc(target_id)
 
         if target_doc is None:
+            # TODO: and if target_id doesn't exist (to prevent epubcheck errors)
             self._mark_broken(a)
             return
 
         a.set('href', f'{target_doc.filename}#{target_id}')
 
         if target_doc.is_note:
-            self._apply_noteref(a, link_type)
+            self._apply_noteref(a)
         elif a.get('class') == 'backlink':
             pass  # backlinks resolved above via href update; no extra attrs needed
 
@@ -106,17 +170,13 @@ class LinkResolver:
         return self._doc_map.get(doc_id)
 
 
-    def _apply_noteref(self, a: etree._Element, link_type: str | None) -> None:
+    def _apply_noteref(self, a: etree._Element, additional_class: str = '') -> None:
+        a_class = ' '.join(['noteref', additional_class]).strip()
         a.attrib.update({
-            'class': 'noteref',
+            'class': a_class,
             f'{{{NS.EPUB}}}type': 'noteref',
-        })
-        
-        if link_type != 'note':
-            # No type: treat as comment reference
-            xu.add_class(a, 'comment')
-            if link_type:
-                log.debug(f"Noteref id='{a.get('id')}': unexpected link-type '{link_type}'")
+            # 'role': 'doc-noteref' ?
+        })           
 
 
     def _mark_broken(self, a: etree._Element) -> None:

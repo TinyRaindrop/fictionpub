@@ -121,6 +121,7 @@ class EpubBuilder:
             if doc.body_type == BodyType.MAIN:
                 self._add_main_doc(doc)
             else:
+                # BodyType.NOTE and BodyType.COMMENT
                 self._add_note_doc(doc)
 
 
@@ -134,7 +135,7 @@ class EpubBuilder:
         # TODO: remove div.halftitle if equal to metadata.title / metadata.author
 
         # Move all children from converted body to new html
-        file_info = FileInfo(doc.file_id, doc.title, html)
+        file_info = FileInfo(doc.file_id, doc.title, html, body_type=doc.body_type)
         self.doc_list.append(file_info)
 
 
@@ -183,7 +184,7 @@ class EpubBuilder:
             # No original title existed, so inject a new H1 at the very top
             body.insert(0, h1)
 
-        file_info = FileInfo(doc.file_id, local_title, html, is_note=True)
+        file_info = FileInfo(doc.file_id, local_title, html, body_type=doc.body_type, is_note=True)
         self.doc_list.append(file_info)
 
 

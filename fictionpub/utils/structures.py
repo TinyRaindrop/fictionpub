@@ -8,11 +8,6 @@ from io import BytesIO
 
 from lxml import etree
 
-__all__ = [
-    "ConvertedBody", "EpubStructureItem", "EPUB_TYPES_MAP",
-    "FileInfo", "BinaryInfo", "TOCItem", "FNames",
-    "PublishInfo", "SourceInfo", "DocumentInfo", "BookMetadata",
-]
 
 log = logging.getLogger("fb2_converter")
 
@@ -22,6 +17,15 @@ class BodyType(Enum):
     MAIN = auto()
     NOTE = auto()
     COMMENT = auto()
+
+
+class LinkType(Enum):
+    """Defines classification categories for links."""
+    NOTE = auto()
+    COMMENT = auto()
+    REGULAR = auto()
+    EXTERNAL = auto()
+    INVALID = auto()
 
 
 class FB2Body(NamedTuple):
@@ -69,6 +73,7 @@ class FileInfo():
     title: str
     html: etree._Element
     prop: str = ''
+    body_type: BodyType = BodyType.MAIN
     is_note: bool = False
     order: int | None = None
     """Sorting order is [positive, None, negative reversed]: 0, 1, 2, None, -2, -1"""

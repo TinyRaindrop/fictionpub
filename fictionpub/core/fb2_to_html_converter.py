@@ -404,7 +404,8 @@ class FB2ToHTMLConverter:
         xu.copy_id(element, link)
 
         # Generate id for internal links without one
-        # TODO: move to LinkResolver
+        # TODO: move to LinkResolver. 
+        # Generate id only for noterefs, not regular internal links
         if not is_external and target_id and link.get('id') is None:
             count = self.note_ref_counters.get(target_id, 0) + 1
             self.note_ref_counters[target_id] = count

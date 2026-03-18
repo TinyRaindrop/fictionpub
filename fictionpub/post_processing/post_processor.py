@@ -31,8 +31,7 @@ class PostProcessor():
         """Method to run for cleaning up the generated XHTML tree."""
         self.body = xhtml_body
 
-        if self.body_type == BodyType.NOTE:
-            # sections are now unwrapped during conversion, no need to unwrap here
+        if self.body_type in (BodyType.NOTE, BodyType.COMMENT):
             self._fix_note_backlinks()
 
         self._strip_heading_formatting()
