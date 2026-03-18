@@ -47,8 +47,6 @@ class FB2ToHTMLConverter:
         self.split_level = config.split_level
         self.split_size = config.split_size_kb
         self.config = config
-        # counters for generating unique IDs on repeated note references
-        self.note_ref_counters: dict[str,int] = {}
 
         self.part_counters: dict[BodyType, int] = {}
 
@@ -379,22 +377,17 @@ class FB2ToHTMLConverter:
 
     def _handle_link(self, element: etree._Element) -> etree._Element | None:
         """
-        Converts `a` and resolves href.
+        Converts `a` and copies its attributes.
 
-        Internal links whose target lives in a note/comment body are tagged with
-        data-link-type="note". This attribute is removed during
-        link resolution in EpubBuilder._resolve_internal_links().
+        Internal links whose target lives in a note body are tagged with
+        data-link-type="note". This attribute is removed later by LinkResolver.
         """
-        # TODO: fix footnote anchors inside note/comment body
         href = element.get(f'{{{NS.XLINK}}}href') or element.get('href')
 
         if not href:
             return etree.Element('a', {'class': 'empty'})
 
-        is_external = not href.startswith('#')
-        target_id = href.lstrip('#')
-        prefix = "" if is_external else "#"
-        attrib: dict = {'href': f'{prefix}{target_id}'}
+        attrib: dict = {'href': href}
 
         link_type = element.get('type')
         if link_type:
@@ -402,15 +395,6 @@ class FB2ToHTMLConverter:
 
         link = etree.Element('a', attrib)
         xu.copy_id(element, link)
-
-        # Generate id for internal links without one
-        # TODO: move to LinkResolver. 
-        # Generate id only for noterefs, not regular internal links
-        if not is_external and target_id and link.get('id') is None:
-            count = self.note_ref_counters.get(target_id, 0) + 1
-            self.note_ref_counters[target_id] = count
-            suffix = '' if count == 1 else f'-{count}'
-            link.set('id', f'{target_id}-ref{suffix}')
 
         return link
 

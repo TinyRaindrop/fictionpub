@@ -12,20 +12,13 @@ from lxml import etree
 log = logging.getLogger("fb2_converter")
 
 
+# TODO: split this module into enums, metadata, structures, models.
+
 class BodyType(Enum):
     """Defines types of bodies used in FB2 document."""
     MAIN = auto()
     NOTE = auto()
     COMMENT = auto()
-
-
-class LinkType(Enum):
-    """Defines classification categories for links."""
-    NOTE = auto()
-    COMMENT = auto()
-    REGULAR = auto()
-    EXTERNAL = auto()
-    INVALID = auto()
 
 
 class FB2Body(NamedTuple):
@@ -149,6 +142,26 @@ class BinaryInfo():
             log.warning(f"Failed to resize '{self.filename}': {e}")
 
 
+# ---------------------------------------------------------------------------
+# Links
+class LinkType(Enum):
+    """Defines classification categories for links."""
+    NOTE = auto()
+    COMMENT = auto()
+    REGULAR = auto()
+    EXTERNAL = auto()
+    INVALID = auto()
+
+
+class LinkEntry(NamedTuple):
+    element: etree._Element
+    link_type: LinkType
+    target_doc: FileInfo | None
+    target_id: str
+
+
+# ---------------------------------------------------------------------------
+# EPUB stuff
 class TOCItem(NamedTuple):
     """A container for Table of Contents items."""
     level: int
