@@ -1,0 +1,845 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FictionBook xmlns="http://www.gribuser.ru/xml/fictionbook/2.0" xmlns:l="http://www.w3.org/1999/xlink">
+ <stylesheet type="text/css">
+     body  { font-family: serif; line-height: 1.6; }
+    .highlight  { background: #ffffaa; }
+    .dropcap    { font-size: 3em; float: left; line-height: 1; }
+    .custom-class { font-variant: small-caps; color: #336699; }
+    .outer-class  { border-left: 3px solid #cccccc; padding-left: 1em; }
+  </stylesheet>
+ <description>
+  <title-info>
+   <genre match="70">sci-fi</genre>
+   <genre match="20">adventure</genre>
+   <genre match="10">humor</genre>
+   <author>
+    <first-name>John</first-name>
+    <middle-name>Alexander</middle-name>
+    <last-name>Doe</last-name>
+    <id>author-john-doe-001</id>
+    <nickname>JAD</nickname>
+    <home-page>https://johndoe.example.com</home-page>
+    <email>john@example.com</email>
+   </author>
+   <author>
+    <nickname>CoAuthorPen</nickname>
+    <home-page>https://coauthor.example.net</home-page>
+    <email>coauthor@example.net</email>
+   </author>
+   <book-title>The Comprehensive Test Book: A Complete FB2 Showcase</book-title>
+   <annotation>
+    <p>A <strong>comprehensive</strong> test document exercising <emphasis>every element</emphasis> and attribute defined in the FictionBook 2.0 schema.</p>
+    <subtitle>Annotation Subtitle Inside title-info</subtitle>
+    <p>It includes tables, poems, citations, all link varieties, nested notes, and the unofficial comments body used by FictionBookEditor.</p>
+    <empty-line/>
+    <cite id="cite-ann-titleinfo">
+     <p>Testing is the lifeblood of robust software.</p>
+     <text-author>Anonymous Tester</text-author>
+    </cite>
+    <poem id="poem-ann-titleinfo">
+     <title>
+      <p>A Testing Ode</p>
+     </title>
+     <stanza>
+      <v>To test is to know,</v>
+      <v>To know is to trust.</v>
+     </stanza>
+     <text-author>QA Team</text-author>
+    </poem>
+    <table id="table-ann-titleinfo">
+     <tr>
+      <th align="center">Feature</th>
+      <th align="center">Status</th>
+     </tr>
+     <tr>
+      <td>All tags covered</td>
+      <td align="center">✓</td>
+     </tr>
+     <tr>
+      <td>All attributes covered</td>
+      <td align="center">✓</td>
+     </tr>
+    </table>
+   </annotation>
+   <keywords>test, fb2, comprehensive, schema, epub, converter, sample</keywords>
+   <date value="2024-01-15">January 15, 2024</date>
+   <coverpage>
+    <image l:href="#img-cover"/></coverpage>
+   <lang>en</lang>
+   <src-lang>ru</src-lang>
+   <translator>
+    <first-name>Jane</first-name>
+    <last-name>Smith</last-name>
+    <nickname>JaneT</nickname>
+    <email>jane.smith@translate.example.com</email>
+   </translator>
+   <sequence name="Test Series" number="1">
+    <sequence name="Sub-Series Alpha" number="1"/>
+    <sequence name="Sub-Series Beta" number="2"/>
+   </sequence>
+   <sequence name="Another Series" number="3"/>
+  </title-info>
+  <src-title-info>
+   <genre>sci-fi</genre>
+   <author>
+    <first-name>Иван</first-name>
+    <middle-name>Сергеевич</middle-name>
+    <last-name>Петров</last-name>
+    <email>ivan@example.ru</email>
+   </author>
+   <book-title>Комплексная тестовая книга: Полный показ FB2</book-title>
+   <keywords>тест, фб2, пример</keywords>
+   <date value="2023-06-01">Июнь 2023</date>
+   <lang>ru</lang>
+   <sequence name="Тестовая серия" number="1"/>
+  </src-title-info>
+  <document-info>
+   <author>
+    <nickname>TestFileCreator</nickname>
+    <home-page>https://github.com/testfilecreator</home-page>
+    <email>creator@testfile.example.com</email>
+   </author>
+   <author>
+    <first-name>Alice</first-name>
+    <last-name>Formatter</last-name>
+    <email>alice@format.example.com</email>
+   </author>
+   <program-used>FB2 Comprehensive Test Generator v1.0; FictionBookEditor 2.6.6, FictionBook Editor Release 2.7.8</program-used>
+   <date value="2024-03-18">2024-03-18</date>
+   <src-url>https://example.com/original-document/v1</src-url>
+   <src-url>https://archive.example.com/backup/doc-001</src-url>
+   <src-ocr>OCR_Operator_42</src-ocr>
+   <id>550e8400-e29b-41d4-a716-446655440000</id>
+   <version>1.5</version>
+   <history>
+    <p>v1.0 — Initial creation of the comprehensive test document.</p>
+    <p>v1.1 — Added table tests and expanded inline style coverage.</p>
+    <p>v1.2 — Extended link section: all protocols, all internal target types.</p>
+    <p>v1.5 — Added nested notes, comments body, endnotes, poem-in-note, table-in-note, cite-in-note.</p>
+    <empty-line/>
+    <subtitle>Changelog</subtitle>
+    <table id="table-history">
+     <tr>
+      <th>Version</th>
+      <th>Date</th>
+      <th>Change</th>
+     </tr>
+     <tr>
+      <td>1.0</td>
+      <td>2024-01-15</td>
+      <td>Initial release</td>
+     </tr>
+     <tr>
+      <td>1.5</td>
+      <td>2024-03-18</td>
+      <td>Full coverage pass</td>
+     </tr>
+    </table>
+   </history>
+  </document-info>
+  <publish-info>
+   <book-name>The Comprehensive Test Book</book-name>
+   <publisher>Test Publishers Ltd.</publisher>
+   <city>Test City, TC</city>
+   <year>2024</year>
+   <isbn>978-0-000000-00-0</isbn>
+   <sequence name="Printed Library Series" number="7"/>
+   <sequence name="Digital Classics" number="12"/>
+  </publish-info>
+  <custom-info info-type="owner">Test Owner Organization</custom-info>
+  <custom-info info-type="fb2-version">2.0</custom-info>
+  <custom-info info-type="rights">CC-BY-SA 4.0</custom-info>
+ </description>
+ <body>
+  <image l:href="#img-body-header" title="Main Body Header Image"/>
+  <title>
+   <p>The Comprehensive Test Book</p>
+   <p><emphasis>A Complete FictionBook 2.0 Showcase</emphasis></p>
+   <empty-line/>
+   <p><strong>Second Edition</strong></p>
+  </title>
+  <epigraph id="epigraph-body-1">
+   <p>In the beginning was the tag, and the tag was well-formed, and the tag was with the schema.</p>
+   <empty-line/>
+   <poem id="poem-body-epigraph-1">
+    <stanza>
+     <v>Schema binds us,</v>
+     <v>Parsers set us free.</v>
+    </stanza>
+   </poem>
+   <cite id="cite-body-epigraph-1">
+    <p>All good books begin with well-structured markup.</p>
+    <text-author>Anonymous Markup Sage</text-author>
+   </cite>
+   <text-author>The Test Authors</text-author>
+  </epigraph>
+  <epigraph id="epigraph-body-2">
+   <p>The second body epigraph tests that multiple epigraphs at body level are handled.</p>
+   <text-author>QA Manual, §3.2</text-author>
+  </epigraph>
+  <section id="section-preface">
+   <title>
+    <p>Preface</p>
+   </title>
+   <epigraph id="epigraph-preface">
+    <p style="font-style: italic">Every converter needs a challenger.</p>
+    <empty-line/>
+    <cite id="cite-preface-epigraph">
+     <p>Robustness is the child of adversarial testing.</p>
+    </cite>
+    <text-author>Test Framework Handbook, 4th ed.</text-author>
+   </epigraph>
+   <image id="img-preface" l:href="#img-section" title="Preface Illustration"/>
+   <annotation id="ann-preface">
+    <p>This <strong>preface annotation</strong> demonstrates the optional <code>annotation</code> element inside a section.</p>
+    <subtitle>Annotation Subtitle in Preface</subtitle>
+    <empty-line/>
+    <table id="table-preface-annotation">
+     <tr>
+      <th>Element</th>
+      <th>Location</th>
+     </tr>
+     <tr>
+      <td>annotation</td>
+      <td>title-info, section</td>
+     </tr>
+    </table>
+   </annotation>
+   <p id="para-preface-styles" style="text-indent: 2em">Inline style showcase: <strong>bold</strong>, <emphasis>italic/emphasis</emphasis>, <strikethrough>strikethrough</strikethrough>, <sub>subscript</sub> and <sup>superscript</sup>, <code>monospace code</code>. </p>
+   <p>Deep nesting of inline styles: <strong><emphasis>bold-italic <strikethrough>bold-italic-strike</strikethrough></emphasis></strong>, <emphasis><code>italic-code</code></emphasis>, <strong><code>bold-code</code></strong>, <strong><sub>bold-sub</sub></strong>, <strong><sup>bold-sup</sup></strong>. </p>
+   <p>Named style element (<code>&lt;style name="…"&gt;</code>): <style name="highlight">highlighted text</style>, <style name="dropcap">D</style>ropcap example, <style name="outer-class"><strong>strong inside named style</strong> and <emphasis>emphasis inside named style</emphasis> and <code>code inside named style</code></style>. </p>
+   <p>Абзац на русском языке — тест атрибута <code>xml:lang</code> на элементе <code>&lt;p&gt;</code>.</p>
+   <p>Inline image inside paragraph: <image l:href="#img-inline-bullet"/> text following inline image. </p>
+   <empty-line/>
+   <subtitle id="subtitle-preface">— Preface Subtitle: All Paragraph-Level Elements — </subtitle>
+   <p id="para-preface-extlinks">External links of various protocols:</p>
+   <p>HTTP: <a l:href="http://www.example.com/">HTTP link (xlink:type explicit)</a>.</p>
+   <p>HTTPS with path, query string, and fragment: <a l:href="https://secure.example.com/path/to/page?query=value&amp;other=123#section-anchor">HTTPS complex URL</a>. </p>
+   <p>HTTPS to a well-known specification: <a l:href="https://www.w3.org/TR/xhtml1/">W3C XHTML 1.0 Specification</a>. </p>
+   <p>FTP: <a l:href="ftp://ftp.example.com/pub/docs/manual.pdf">FTP file download</a>. </p>
+   <p>mailto with subject and body: <a l:href="mailto:test@example.com?subject=FB2%20Test&amp;body=Hello%20World">Send test e-mail</a>. </p>
+   <p>URI with ampersand in query: <a l:href="https://example.com/search?q=fb2+converter&amp;lang=en&amp;format=epub">Search result</a>. </p>
+   <empty-line/>
+   <p id="para-preface-intlinks">Internal document links targeting different ID types:</p>
+   <p>To a top-level section: <a l:href="#section-chapter1">→ Chapter One</a>. </p>
+   <p>To a sub-section: <a l:href="#section-ch1-s3">→ §1.3 Tables</a>. </p>
+   <p>To a specific paragraph: <a l:href="#para-chapter1-special">→ special paragraph</a>. </p>
+   <p>To a subtitle: <a l:href="#subtitle-preface">→ this very subtitle (self-link demo)</a>. </p>
+   <p>To a poem: <a l:href="#poem-main">→ The XML Ballad</a>. </p>
+   <p>To a poem verse: <a l:href="#verse-1">→ first verse</a>. </p>
+   <p>To a table: <a l:href="#table-data">→ data table</a>. </p>
+   <p>To a table cell (td with id): <a l:href="#td-r1c1">→ table cell</a>. </p>
+   <p>To a body epigraph: <a l:href="#epigraph-body-1">→ body epigraph #1</a>. </p>
+   <p>To a cite block: <a l:href="#cite-main">→ main citation</a>. </p>
+   <p>To the section image: <a l:href="#img-preface">→ preface image</a>. </p>
+   <p>To the appendix: <a l:href="#section-appendix">→ Appendix</a> (styled link: <a l:href="#section-appendix"><emphasis>Appendix (emphasis)</emphasis></a>). </p>
+   <empty-line/>
+   <p id="para-preface-notelinks">Footnote links (<code>type="note"</code>) targeting <code>body name="notes"</code>: note one<a l:href="#note-1" type="note"><sup>1</sup></a>, note two<a l:href="#note-2" type="note"><sup>2</sup></a>, note alpha<a l:href="#note-3" type="note"><sup>α</sup></a>, note with image<a l:href="#note-image" type="note"><sup>4</sup></a>, note with table<a l:href="#note-table" type="note"><sup>5</sup></a>, note with poem<a l:href="#note-poem" type="note"><sup>6</sup></a>, note with cite<a l:href="#note-cite" type="note"><sup>7</sup></a>, outer nested note<a l:href="#note-nested-outer" type="note"><sup>*</sup></a>, chemistry note H<a l:href="#note-chemistry" type="note"><sub>2</sub></a>O. </p>
+   <p>Note links with styled anchor content: <a l:href="#note-1" type="note"><strong>bold note ref</strong></a>, <a l:href="#note-2" type="note"><emphasis>italic note ref</emphasis></a>, <a l:href="#note-3" type="note"><code>code note ref</code></a>, <a l:href="#note-poem" type="note"><strikethrough>strike note ref</strikethrough></a>, <a l:href="#note-1" type="note"><sub>sub note ref</sub></a>, <a l:href="#note-2" type="note"><sup>sup note ref</sup></a>. </p>
+   <p>Note link whose anchor is an inline image: <a l:href="#note-1" type="note"><image l:href="#img-inline-bullet"/></a>. </p>
+   <empty-line/>
+   <p id="para-preface-commentlinks">Comment links (no <code>type</code> attribute) targeting <code>body name="comments"</code>: comment one<a l:href="#comment-1">[*]</a>, comment two<a l:href="#comment-2">[†]</a>, long comment<a l:href="#comment-long">[‡]</a>. </p>
+   <p>Comment links with styled anchor content: <a l:href="#comment-1"><strong>bold comment ref</strong></a>, <a l:href="#comment-2"><emphasis>italic comment ref</emphasis></a>, <a l:href="#comment-long"><code>code comment ref</code></a>. </p>
+   <empty-line/>
+   <cite id="cite-preface">
+    <p>The quick brown fox jumps over the lazy dog — a classic test string covering all ASCII letters.</p>
+    <p>A second paragraph inside the citation block.</p>
+    <poem id="poem-in-cite-preface">
+     <title>
+      <p>Ode to the Fox</p>
+     </title>
+     <stanza>
+      <v>Structured markup is beauty,</v>
+      <v>Correct nesting is duty.</v>
+     </stanza>
+     <text-author>Pangram Enthusiast</text-author>
+    </poem>
+    <empty-line/>
+    <subtitle>Citation Subtitle</subtitle>
+    <table id="table-in-cite-preface" style="border: 1px solid #999">
+     <tr>
+      <th align="center">Alphabet</th>
+      <th align="center">Coverage</th>
+     </tr>
+     <tr align="center">
+      <td align="left">All 26 letters</td>
+      <td>✓</td>
+     </tr>
+    </table>
+    <text-author>Pangram Society</text-author>
+    <text-author>Société des Pangrammes</text-author>
+   </cite>
+  </section>
+  <section id="section-chapter1">
+   <title>
+    <p>Chapter One</p>
+    <p><emphasis>In Which Every Block Element Appears</emphasis></p>
+   </title>
+   <epigraph id="epigraph-ch1">
+    <p>Form follows function — and in FB2, structure follows schema.</p>
+    <text-author>A Thoughtful Architect</text-author>
+   </epigraph>
+   <section id="section-ch1-s1">
+    <title>
+     <p>1.1 Paragraphs and Inline Elements</p>
+    </title>
+    <p>A plain paragraph with no attributes.</p>
+    <p id="para-chapter1-special" style="text-indent: 2em">This paragraph carries both <code>id="para-chapter1-special"</code> and <code>style="text-indent: 2em"</code> attributes, making it a target for internal links and a test of paragraph-level style. </p>
+    <p>Dieser Absatz ist auf Deutsch geschrieben — <code>xml:lang="de"</code> Test auf Absatz-Ebene.</p>
+    <p>日本語のテスト段落 — xml:lang="ja"。</p>
+    <p>All seven inline style elements in one paragraph: <strong>strong</strong>, <emphasis>emphasis</emphasis>, <strikethrough>strikethrough</strikethrough>, <sub>sub</sub>, <sup>sup</sup>, <code>code</code>, <style name="custom-class">named style</style>. </p>
+    <p>Deeply nested inline styles: <strong><emphasis>strong+emphasis <sub>sub inside</sub> <sup>sup inside</sup></emphasis></strong>, <emphasis><strikethrough>em+strike <code>code-in-strike</code></strikethrough></emphasis>, <style name="outer-class"><strong>strong</strong> and <emphasis>emphasis</emphasis> and <code>code</code> all inside a named style</style>. </p>
+    <p>Note links inline in a paragraph: The boiling point of water is 100 °C<a l:href="#note-1" type="note"><sup>1</sup></a> at sea level; the formula is H<a l:href="#note-chemistry" type="note"><sub>2</sub></a>O. See also the general chemistry note<a l:href="#note-3" type="note"><sup>α</sup></a>. </p>
+    <p>Comment inline: the first editorial remark<a l:href="#comment-1">[*]</a> and the second<a l:href="#comment-2">[†]</a>. </p>
+    <empty-line/>
+    <subtitle id="subtitle-ch1-s1">Subtitle Demonstrating All Subtitle Attributes</subtitle>
+    <p>Paragraph after subtitle. Back to <a l:href="#section-preface">Preface</a>.</p>
+   </section>
+   <section id="section-ch1-s2">
+    <title>
+     <p>1.2 Poems (poemType)</p>
+    </title>
+    <poem id="poem-main">
+     <title>
+      <p>The XML Ballad</p>
+      <empty-line/>
+      <p><emphasis>A Song of Tags and Trees</emphasis></p>
+     </title>
+     <epigraph id="epigraph-poem-main">
+      <p>Poetry and markup share rhythm and structure.</p>
+      <text-author>A Poetic Programmer</text-author>
+     </epigraph>
+     <stanza>
+      <title>
+       <p>Canto I — Opening</p>
+      </title>
+      <subtitle>The Invocation</subtitle>
+      <v id="verse-1">Oh, angle bracket, open wide,</v>
+      <v>Let element names dwell inside;</v>
+      <v>With attributes of every kind,</v>
+      <v>And closing tags to close the mind.</v>
+     </stanza>
+     <stanza>
+      <v>The namespace binds us, true and tight,</v>
+      <v>The schema guards both left and right;</v>
+      <v>Validators shine their light,</v>
+      <v>On documents both day and night.</v>
+     </stanza>
+     <stanza>
+      <subtitle>Coda Latina</subtitle>
+      <v>Documentum bonum est,</v>
+      <v>Schema legem dat.</v>
+     </stanza>
+     <subtitle>Interlude</subtitle>
+     <stanza>
+      <v>And so we parse from top to last,</v>
+      <v>Each well-formed document unsurpassed.</v>
+     </stanza>
+     <text-author>The FB2 Collective</text-author>
+     <text-author>Коллектив ФБ2</text-author>
+     <text-author>New Year's Day, 2024</text-author>
+    </poem>
+    <empty-line/>
+    <subtitle>A Minimal Poem Follows (no title, no epigraph, no date)</subtitle>
+    <poem id="poem-short">
+     <stanza>
+      <v>Parse me if you can,</v>
+      <v>Render if you dare.</v>
+     </stanza>
+     <text-author>Anonymous</text-author>
+    </poem>
+    <image id="img-between-poems" l:href="#img-section" title="Between poems"/>
+   </section>
+   <section id="section-ch1-s3">
+    <title>
+     <p>1.3 Tables (tableType)</p>
+    </title>
+    <p>A full-featured table using all tableType attributes (<code>id</code>, <code>style</code>) and all tdType attributes (<code>id</code>, <code>style</code>, <code>colspan</code>, <code>rowspan</code>, <code>align</code>, <code>valign</code>): </p>
+    <table id="table-data" style="width:100%; border-collapse:collapse; border: 1px solid #333">
+     <tr align="center">
+      <th id="th-name-id" style="background:#eee; font-weight:bold" colspan="2" rowspan="1" align="center" valign="middle">Name &amp; Identifier </th>
+      <th style="background:#eee" align="left" valign="top">Type</th>
+      <th style="background:#eee" align="right" valign="bottom">Required?</th>
+      <th style="background:#eee" align="center" valign="middle">Notes</th>
+     </tr>
+     <tr align="left">
+      <td id="td-r1c1" style="padding:4px" align="left" valign="top">FictionBook</td>
+      <td align="left" valign="top">(root)</td>
+      <td align="center" valign="middle">element</td>
+      <td align="center" valign="middle">yes</td>
+      <td align="right" valign="bottom">Root element of document</td>
+     </tr>
+     <tr>
+      <td colspan="2" align="left" valign="top">description</td>
+      <td align="center" valign="middle">element</td>
+      <td align="center" valign="middle">yes</td>
+      <td id="td-rowspan" rowspan="2" align="right" valign="middle">Metadata block</td>
+     </tr>
+     <tr align="right">
+      <td colspan="2" align="left" valign="bottom">body</td>
+      <td align="center" valign="middle">element</td>
+      <td align="center" valign="middle">yes</td>
+     </tr>
+     <tr>
+      <td id="td-binary" align="left" valign="top">binary</td>
+      <td align="left" valign="top">base64</td>
+      <td align="center" valign="middle">element</td>
+      <td align="center" valign="middle">no</td>
+      <td align="right" valign="bottom">Embedded images &amp; resources</td>
+     </tr>
+     <tr align="center">
+      <th style="font-style:italic" colspan="5" align="center" valign="middle">— end of element list — </th>
+     </tr>
+    </table>
+    <empty-line/>
+    <p>Minimal table (no <code>id</code> or <code>style</code> on table element):</p>
+    <table id="table-minimal">
+     <tr>
+      <th>A</th>
+      <th>B</th>
+      <th>C</th>
+     </tr>
+     <tr>
+      <td>1</td>
+      <td>2</td>
+      <td>3</td>
+     </tr>
+     <tr>
+      <td>4</td>
+      <td>5</td>
+      <td>6</td>
+     </tr>
+    </table>
+   </section>
+   <section id="section-ch1-s4">
+    <title>
+     <p>1.4 Citations (citeType)</p>
+    </title>
+    <p>A full citation block demonstrating all citeType children (<code>p</code>, <code>poem</code>, <code>empty-line</code>, <code>subtitle</code>, <code>table</code>, <code>text-author</code>) plus the <code>id</code> and <code>xml:lang</code> attributes: </p>
+    <cite id="cite-main">
+     <p>The best test is one that fails fast, fails clearly, and fails completely.</p>
+     <p>Comprehensive coverage requires both breadth and depth.</p>
+     <poem id="poem-in-cite-main">
+      <title>
+       <p>Ode to Coverage</p>
+      </title>
+      <epigraph id="epigraph-in-poem-in-cite">
+       <p>One hundred percent coverage is the dream.</p>
+       <text-author>Optimistic Engineer</text-author>
+      </epigraph>
+      <stanza>
+       <v>Every branch, every leaf,</v>
+       <v>Every node, every grief.</v>
+      </stanza>
+      <text-author>Test Engineering Guild</text-author>
+     </poem>
+     <empty-line/>
+     <subtitle>Coverage Metrics</subtitle>
+     <table id="table-in-cite-main">
+      <tr>
+       <th>Metric</th>
+       <th align="right">Value</th>
+      </tr>
+      <tr>
+       <td>Line coverage</td>
+       <td align="right">100%</td>
+      </tr>
+      <tr>
+       <td>Branch coverage</td>
+       <td align="right">97.3%</td>
+      </tr>
+      <tr>
+       <td>Element coverage</td>
+       <td align="right">100%</td>
+      </tr>
+     </table>
+     <text-author>Quality Assurance Department</text-author>
+     <text-author>Département Assurance Qualité</text-author>
+    </cite>
+    <empty-line/>
+    <image id="img-separator-ch1" l:href="#img-section" title="Section separator"/>
+    <subtitle id="subtitle-ch1-end">End of Chapter One · Return to </subtitle>
+    <p>Navigate: <a l:href="#section-preface">← Preface</a> · <a l:href="#section-chapter2">Chapter Two →</a>. </p>
+   </section>
+  </section>
+  <section id="section-chapter2">
+   <title>
+    <p>Chapter Two: The Link Laboratory</p>
+   </title>
+   <image id="img-chapter2" l:href="#img-body-header" title="Chapter 2 Heading Illustration"/>
+   <p>This chapter exhaustively tests all link forms defined by the schema.</p>
+   <section id="section-ch2-extlinks">
+    <title>
+     <p>2.1 External Links</p>
+    </title>
+    <p>HTTP (plain): <a l:href="http://www.example.com/">http://www.example.com</a>.</p>
+    <p>HTTPS (simple path): <a l:href="https://secure.example.com/">https://secure.example.com/</a>.</p>
+    <p>HTTPS (path + query + fragment): <a l:href="https://secure.example.com/path/page?q=fb2&amp;lang=en#top">complex HTTPS URL</a>. </p>
+    <p>HTTPS (well-known standard): <a l:href="https://www.w3.org/1999/xlink">XLink specification</a>. </p>
+    <p>FTP: <a l:href="ftp://ftp.example.com/pub/manual.pdf">FTP download link</a>.</p>
+    <p>mailto (plain): <a l:href="mailto:hello@example.com">hello@example.com</a>.</p>
+    <p>mailto (with subject &amp; body): <a l:href="mailto:hello@example.com?subject=FB2%20Test&amp;body=Testing%20complete">Send test e-mail</a>. </p>
+    <p>URL with special XML entities in attribute value: <a l:href="https://example.com/?a=1&amp;b=2&amp;c=3">multi-parameter URL</a>. </p>
+    <p>External link with <code>xlink:type="simple"</code> explicitly set: <a l:href="https://example.com/explicit-type">explicit xlink:type</a>. </p>
+    <empty-line/>
+    <p>External link, anchor is <code>&lt;strong&gt;</code>: <a l:href="https://example.com/bold"><strong>Bold external link</strong></a>. </p>
+    <p>External link, anchor is <code>&lt;emphasis&gt;</code>: <a l:href="https://example.com/em"><emphasis>Italic external link</emphasis></a>. </p>
+    <p>External link, anchor is <code>&lt;code&gt;</code>: <a l:href="https://example.com/code"><code>monospace link</code></a>. </p>
+    <p>External link, anchor is <code>&lt;strikethrough&gt;</code>: <a l:href="https://example.com/strike"><strikethrough>strikethrough link</strikethrough></a>. </p>
+    <p>External link, anchor is <code>&lt;sub&gt;</code>: CO<a l:href="https://example.com/sub"><sub>2</sub></a> (subscript anchor). </p>
+    <p>External link, anchor is <code>&lt;sup&gt;</code>: E=mc<a l:href="https://example.com/sup"><sup>2</sup></a> (superscript anchor). </p>
+    <p>External link, anchor is <code>&lt;image&gt;</code> (inline image): <a l:href="https://example.com/img-link"><image l:href="#img-inline-bullet"/> </a>. </p>
+    <p>External link, anchor is <code>&lt;strong&gt;&lt;emphasis&gt;</code> (nested): <a l:href="https://example.com/nested-anchor"><strong><emphasis>bold-italic external link</emphasis></strong> </a>. </p>
+   </section>
+   <section id="section-ch2-intlinks">
+    <title>
+     <p>2.2 Internal Document Links</p>
+    </title>
+    <p>Targeting a top-level section: <a l:href="#section-preface">§ Preface</a>. </p>
+    <p>Targeting a sub-section: <a l:href="#section-ch1-s1">§ 1.1 Paragraphs</a>. </p>
+    <p>Targeting a 3rd-level sub-section: <a l:href="#section-appendix-a1">§ A.1</a>. </p>
+    <p>Targeting a 4th-level sub-section: <a l:href="#section-appendix-a1i">§ A.1.i</a>. </p>
+    <p>Targeting a paragraph: <a l:href="#para-chapter1-special">special paragraph</a>. </p>
+    <p>Targeting another paragraph: <a l:href="#para-preface-extlinks">external links paragraph</a>. </p>
+    <p>Targeting a subtitle: <a l:href="#subtitle-preface">preface subtitle</a>. </p>
+    <p>Targeting a poem: <a l:href="#poem-main">The XML Ballad</a>. </p>
+    <p>Targeting a verse (v with id): <a l:href="#verse-1">first verse</a>. </p>
+    <p>Targeting a table: <a l:href="#table-data">data table</a>. </p>
+    <p>Targeting a table cell: <a l:href="#td-r1c1">cell td-r1c1</a>. </p>
+    <p>Targeting a th cell: <a l:href="#th-name-id">header cell</a>. </p>
+    <p>Targeting a cite block: <a l:href="#cite-main">main citation</a>. </p>
+    <p>Targeting an epigraph: <a l:href="#epigraph-body-1">body epigraph #1</a>. </p>
+    <p>Targeting an image element (by its id): <a l:href="#img-preface">preface image</a>. </p>
+    <p>Targeting the annotation: <a l:href="#ann-preface">preface annotation</a>. </p>
+    <p>Targeting a section with no title: <a l:href="#section-no-title">untitled section</a>. </p>
+    <p>Targeting a binary image id: <a l:href="#img-cover">cover binary</a>. </p>
+   </section>
+   <section id="section-ch2-notelinks">
+    <title>
+     <p>2.3 Note-Type Links (<code>type="note"</code>)</p>
+    </title>
+    <p>All note-type links target sections in <code>&lt;body name="notes"&gt;</code>.</p>
+    <p>Note 1 — basic text footnote<a l:href="#note-1" type="note"><sup>1</sup></a>.</p>
+    <p>Note 2 — footnote referencing another note inside its text<a l:href="#note-2" type="note"><sup>2</sup></a>.</p>
+    <p>Note 3 — alpha marker, non-numeric title<a l:href="#note-3" type="note"><sup>α</sup></a>.</p>
+    <p>Note 4 — contains an image<a l:href="#note-image" type="note"><sup>4</sup></a>.</p>
+    <p>Note 5 — contains a table<a l:href="#note-table" type="note"><sup>5</sup></a>.</p>
+    <p>Note 6 — contains a poem<a l:href="#note-poem" type="note"><sup>6</sup></a>.</p>
+    <p>Note 7 — contains a citation block<a l:href="#note-cite" type="note"><sup>7</sup></a>.</p>
+    <p>Note * — outer of a nested-note pair; references inner note **<a l:href="#note-nested-outer" type="note"><sup>*</sup></a>.</p>
+    <p>Note ** — inner note; referenced from outer note<a l:href="#note-nested-inner" type="note"><sup>**</sup></a>.</p>
+    <p>Chemistry note — subscript anchor: H<a l:href="#note-chemistry" type="note"><sub>2</sub></a>O, CO<a l:href="#note-chemistry" type="note"><sub>2</sub></a>, H<a l:href="#note-chemistry" type="note"><sub>2</sub></a>SO<a l:href="#note-chemistry" type="note"><sub>4</sub></a>. </p>
+    <p>Note link with <code>&lt;strong&gt;</code> anchor: <a l:href="#note-1" type="note"><strong>Bold footnote ref</strong></a>. </p>
+    <p>Note link with <code>&lt;emphasis&gt;</code> anchor: <a l:href="#note-2" type="note"><emphasis>Italic footnote ref</emphasis></a>. </p>
+    <p>Note link with <code>&lt;code&gt;</code> anchor: <a l:href="#note-3" type="note"><code>monospace footnote ref</code></a>. </p>
+    <p>Note link with <code>&lt;strikethrough&gt;</code> anchor: <a l:href="#note-poem" type="note"><strikethrough>strike footnote ref</strikethrough></a>. </p>
+    <p>Note link with inline image anchor: <a l:href="#note-image" type="note"><image l:href="#img-inline-bullet"/> </a>. </p>
+    <p>Endnote 1 in the notes body's second section<a l:href="#endnote-1" type="note"><sup>E1</sup></a>.</p>
+    <p>Endnote 2<a l:href="#endnote-2" type="note"><sup>E2</sup></a>.</p>
+   </section>
+   <section id="section-ch2-commentlinks">
+    <title>
+     <p>2.4 Comment Links (no <code>type</code> attribute)</p>
+    </title>
+    <p>Comment 1<a l:href="#comment-1">[c1]</a>.</p>
+    <p>Comment 2<a l:href="#comment-2">[c2]</a>.</p>
+    <p>Long extended comment<a l:href="#comment-long">[c3]</a>.</p>
+    <p>Comment link with <code>&lt;strong&gt;</code> anchor: <a l:href="#comment-1"><strong>Bold comment ref</strong></a>. </p>
+    <p>Comment link with <code>&lt;emphasis&gt;</code> anchor: <a l:href="#comment-2"><emphasis>Italic comment ref</emphasis></a>. </p>
+    <p>Comment link with <code>&lt;code&gt;</code> anchor: <a l:href="#comment-long"><code>code comment ref</code></a>. </p>
+    <p>Comment link (no xlink:type attribute set — href only): <a l:href="#comment-1">href-only comment link</a>. </p>
+    <p>Comment link with xlink:type="simple" explicitly set: <a l:href="#comment-2">explicit-type comment link</a>. </p>
+   </section>
+  </section>
+  <section id="section-appendix">
+   <title>
+    <p>Appendix</p>
+   </title>
+   <section id="section-appendix-a">
+    <title>
+     <p>Appendix A: Nested Sections (Four Levels Deep)</p>
+    </title>
+    <section id="section-appendix-a1">
+     <title>
+      <p>A.1 Third-Level Section</p>
+     </title>
+     <section id="section-appendix-a1i">
+      <title>
+       <p>A.1.i Fourth-Level Section</p>
+      </title>
+      <p>Nesting depth = 4 (body → section → section → section → section). This is the deepest nesting exercised in this test file. </p>
+      <p>Cross-reference: <a l:href="#section-chapter1">Chapter One</a>, <a l:href="#section-ch1-s3">§ 1.3 Tables</a>. </p>
+     </section>
+    </section>
+    <section id="section-appendix-a2">
+     <title>
+      <p>A.2 Sibling Section at Level 3</p>
+     </title>
+     <p>Sibling of A.1 at the same nesting depth.</p>
+    </section>
+   </section>
+   <section id="section-appendix-b">
+    <title>
+     <p>Appendix B: Attribute Completeness</p>
+    </title>
+    <p id="para-appendix-b-1" style="color: #cc0000">Paragraph with <code>id</code>, <code>style</code>, and (below) <code>xml:lang</code> attributes all set simultaneously. </p>
+    <p>Absatz mit <code>xml:lang="de"</code>.</p>
+    <p>带有 xml:lang="zh" 属性的段落。</p>
+    <subtitle id="subtitle-appendix-b">SUBTITLE WITH id AND style ATTRIBUTES </subtitle>
+    <empty-line/>
+    <p>Document navigation: <a l:href="#section-preface">← Preface</a> · <a l:href="#section-chapter1">Chapter One</a> · <a l:href="#section-chapter2">Chapter Two</a> · <a l:href="https://example.com/full-spec">Full Specification Online ↗</a>. </p>
+   </section>
+  </section>
+  <section id="section-no-title">
+   <p>This section intentionally omits <code>title</code>, <code>epigraph</code>, <code>image</code>, and <code>annotation</code>, all of which are optional in <code>sectionType</code>. </p>
+   <p>It also provides a link target for the internal-link demo in §2.2.</p>
+  </section>
+  <section id="section-deleted">
+   <title>
+    <p>Removed Chapter (Stub)</p>
+   </title>
+   <p>This section exists solely as a link target for the strikethrough-anchor link demonstration in the Preface. </p>
+  </section>
+ </body>
+ <body name="notes">
+  <title>
+   <p>Notes &amp; Endnotes</p>
+  </title>
+  <section id="note-1">
+   <title>
+    <p>1</p>
+   </title>
+   <p>This is footnote one. It contains standard paragraph text with all inline styles: <strong>bold</strong>, <emphasis>italic</emphasis>, <strikethrough>strikethrough</strikethrough>, <sub>sub</sub>, <sup>sup</sup>, <code>code</code>. </p>
+   <p>Second paragraph in note 1. External reference from within a note: <a l:href="https://example.com/note1-ref">External note reference</a>. Back-link to the text: <a l:href="#para-preface-notelinks">↩ back to preface</a>. </p>
+  </section>
+  <section id="note-2">
+   <title>
+    <p>2</p>
+   </title>
+   <p>Footnote two. This note itself references another note (notes inside other notes): see note<a l:href="#note-3" type="note"><sup>α</sup></a> for the alpha footnote. </p>
+   <p>It also references a comment: see comment<a l:href="#comment-1">[c1]</a>. </p>
+   <p>And an internal section link: <a l:href="#section-ch1-s2">§ 1.2 Poems</a>. </p>
+  </section>
+  <section id="note-3">
+   <title>
+    <p>α</p>
+   </title>
+   <p>Footnote alpha — note titles can be any text, not only integers. Inline styles: <strikethrough>strikethrough in note</strikethrough>, <sub>sub in note</sub>, <sup>sup in note</sup>, <style name="highlight">highlighted in note</style>. </p>
+   <p>External link from this note: <a l:href="https://en.wikipedia.org/wiki/Greek_alphabet">Greek alphabet</a>. </p>
+  </section>
+  <section id="note-image">
+   <title>
+    <p>4</p>
+   </title>
+   <p>This footnote contains a block image:</p>
+   <image id="img-in-note" l:href="#img-section" title="Figure in footnote"/>
+   <p>Caption text after the image inside the note. Link back: <a l:href="#para-preface-notelinks">↩ preface note links</a>. </p>
+  </section>
+  <section id="note-table">
+   <title>
+    <p>5</p>
+   </title>
+   <p>This footnote contains a table:</p>
+   <table id="table-in-note" style="border: 1px solid #aaa">
+    <tr>
+     <th align="center">Parameter</th>
+     <th align="center">Value</th>
+     <th align="center">Unit</th>
+    </tr>
+    <tr>
+     <td>Alpha</td>
+     <td align="right">1.000</td>
+     <td>dimensionless</td>
+    </tr>
+    <tr>
+     <td>Beta</td>
+     <td align="right">2.718</td>
+     <td>radians</td>
+    </tr>
+    <tr>
+     <td>Gamma</td>
+     <td align="right">3.141</td>
+     <td>radians</td>
+    </tr>
+   </table>
+  </section>
+  <section id="note-poem">
+   <title>
+    <p>6</p>
+   </title>
+   <p>This footnote contains a poem:</p>
+   <poem id="poem-in-note">
+    <title>
+     <p>The Footnote Verse</p>
+    </title>
+    <stanza>
+     <v>Even footnotes can have verse,</v>
+     <v>For better or for worse.</v>
+    </stanza>
+    <text-author>Footnote Poet</text-author>
+    <text-author>2024</text-author>
+   </poem>
+  </section>
+  <section id="note-cite">
+   <title>
+    <p>7</p>
+   </title>
+   <p>This footnote contains a citation block:</p>
+   <cite id="cite-in-note">
+    <p>In documentation, as in life, completeness is next to correctness.</p>
+    <text-author>DocTest Philosopher</text-author>
+   </cite>
+   <p>Back-reference: <a l:href="#section-ch2-notelinks">§ 2.3</a>.</p>
+  </section>
+  <section id="note-nested-outer">
+   <title>
+    <p>*</p>
+   </title>
+   <p>This is the <strong>outer</strong> note of a nested-note pair. It references the inner note<a l:href="#note-nested-inner" type="note"><sup>**</sup></a> which itself lives in this same notes body. </p>
+   <p>This pattern tests: notes referencing other notes (a.k.a. "notes inside other notes"). </p>
+   <p>It also chains back to a regular footnote: see note<a l:href="#note-1" type="note"><sup>1</sup></a>. </p>
+   <p>And references a comment: <a l:href="#comment-long">[c3]</a>. </p>
+  </section>
+  <section id="note-nested-inner">
+   <title>
+    <p>**</p>
+   </title>
+   <p>This is the <strong>inner</strong> note, referenced from the outer note (<a l:href="#note-nested-outer" type="note">↩ outer note *</a>). </p>
+   <p>Demonstrates multi-level note chaining: inner → outer → main text. It also references a third note for triple chaining: see note<a l:href="#note-3" type="note"><sup>α</sup></a>. </p>
+   <p>External link from inner nested note: <a l:href="https://example.com/nested-notes-doc">Nested Notes Documentation</a>. </p>
+  </section>
+  <section id="note-chemistry">
+   <title>
+    <p>H₂O</p>
+   </title>
+   <p>Water (H<sub>2</sub>O) is a polar inorganic compound. This note demonstrates subscript content in the note body and also tests the use of a subscript-carrying <code>&lt;a&gt;</code> element as a footnote marker in the main text. </p>
+   <p>Related compounds: CO<sub>2</sub>, H<sub>2</sub>SO<sub>4</sub>, NH<sub>3</sub>. </p>
+   <p>Wikipedia: <a l:href="https://en.wikipedia.org/wiki/Water">Water — Wikipedia</a>. </p>
+  </section>
+  <section id="section-endnotes">
+   <title>
+    <p>Endnotes</p>
+   </title>
+   <section id="endnote-1">
+    <title>
+     <p>Endnote 1</p>
+    </title>
+    <p>This is an endnote. Per the FB2 spec annotation, sections nested inside the second top-level section of the notes body are treated as endnotes rather than footnotes by advanced readers. </p>
+    <p>Back-reference: <a l:href="#section-appendix">Appendix</a>. Note cross-reference: <a l:href="#note-1" type="note"><sup>1</sup></a>. </p>
+   </section>
+   <section id="endnote-2">
+    <title>
+     <p>Endnote 2</p>
+    </title>
+    <p>Second endnote, containing a poem:</p>
+    <poem id="poem-endnote">
+     <stanza>
+      <v>At the document's end,</v>
+      <v>Notes and endnotes blend.</v>
+     </stanza>
+     <text-author>End-Matter Poet</text-author>
+    </poem>
+    <p>Table in an endnote:</p>
+    <table id="table-in-endnote">
+     <tr>
+      <th>Type</th>
+      <th>Position</th>
+     </tr>
+     <tr>
+      <td>Footnote</td>
+      <td>Bottom of page</td>
+     </tr>
+     <tr>
+      <td>Endnote</td>
+      <td>End of document</td>
+     </tr>
+    </table>
+   </section>
+  </section>
+ </body>
+ <body name="comments">
+  <title>
+   <p>Editorial Comments</p>
+  </title>
+  <section id="comment-1">
+   <title>
+    <p>Comment 1</p>
+   </title>
+   <p>This is editorial comment number one. The <code>body name="comments"</code> element is <strong>not</strong> part of the official FictionBook 2.0 XSD, but FictionBookEditor creates it and it appears in countless real-world FB2 files. Converters should handle it gracefully. </p>
+   <p>Inline styles in a comment: <strong>bold</strong>, <emphasis>italic</emphasis>, <strikethrough>strikethrough</strikethrough>, <code>code</code>, <sub>sub</sub>, <sup>sup</sup>. </p>
+   <p>A comment referencing a note: see note<a l:href="#note-1" type="note"><sup>1</sup></a>. </p>
+   <p>A comment with an external link: <a l:href="https://fictionbook.ru/">FictionBook.ru</a>. </p>
+   <p>Back to text: <a l:href="#para-preface-commentlinks">↩ preface comment links</a>.</p>
+  </section>
+  <section id="comment-2">
+   <title>
+    <p>Comment 2</p>
+   </title>
+   <p>Second editorial comment. <strong>Bold text in comment.</strong> <emphasis>Italic text in comment.</emphasis> <style name="highlight">Named style in comment.</style> </p>
+   <p>Comment cross-referencing another comment: see <a l:href="#comment-long">[long comment]</a>. </p>
+   <p>Comment referencing a main-body section: <a l:href="#section-chapter2">Chapter Two</a>. </p>
+  </section>
+  <section id="comment-long">
+   <title>
+    <p>Comment 3: Extended Editorial Note</p>
+   </title>
+   <p>This extended comment demonstrates that comment sections support all the same content as regular sections: paragraphs, subtitles, empty-lines, tables, citations, poems, and images. </p>
+   <empty-line/>
+   <subtitle>Revision History</subtitle>
+   <table id="table-in-comment" style="border: 1px solid #ccc">
+    <tr>
+     <th align="center">Revision</th>
+     <th align="center">Date</th>
+     <th>Change</th>
+     <th>Author</th>
+    </tr>
+    <tr>
+     <td align="center">1.0</td>
+     <td>2024-01-15</td>
+     <td>Initial draft</td>
+     <td>Editor A</td>
+    </tr>
+    <tr>
+     <td align="center">1.1</td>
+     <td>2024-02-01</td>
+     <td>Added link examples</td>
+     <td>Editor B</td>
+    </tr>
+    <tr>
+     <td align="center">1.5</td>
+     <td>2024-03-18</td>
+     <td>Full coverage pass</td>
+     <td>Editor A</td>
+    </tr>
+   </table>
+   <empty-line/>
+   <cite id="cite-in-comment">
+    <p>Good comments improve understanding by two standard deviations.</p>
+    <text-author>Publishing Standards Council</text-author>
+   </cite>
+   <empty-line/>
+   <poem id="poem-in-comment">
+    <title>
+     <p>The Editor's Lament</p>
+    </title>
+    <stanza>
+     <v>I mark the margins, red on white,</v>
+     <v>My comments guide the author's night.</v>
+    </stanza>
+    <text-author>The Red-Pen Editor</text-author>
+    <text-author>January 2024</text-author>
+   </poem>
+   <empty-line/>
+   <image id="img-in-comment" l:href="#img-inline-bullet" title="Comment separator"/>
+   <p>Cross-references: <a l:href="#comment-1">[Comment 1]</a>, <a l:href="#comment-2">[Comment 2]</a>, <a l:href="#section-ch2-commentlinks">§ 2.4</a>, <a l:href="https://example.com/editorial-guide">Editorial Guide ↗</a>. </p>
+  </section>
+ </body>
+ <binary id="img-cover" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGO4Y2QEAAMuAUHw
+MaabAAAAAElFTkSuQmCC</binary>
+ <binary id="img-body-header" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGMwSjkBAAIqAV+c
+8JavAAAAAElFTkSuQmCC</binary>
+ <binary id="img-section" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGMw2hIAAAJSATes
+HUwfAAAAAElFTkSuQmCC</binary>
+ <binary id="img-inline-bullet" content-type="image/png">iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGOQk5MDAAC4AFuF
+/QUSAAAAAElFTkSuQmCC</binary>
+</FictionBook>

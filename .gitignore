@@ -107,6 +107,8 @@ fictionpub/_version.py
 *.bak
 
 books/
+sample-books/*
+!sample-books/*.fb2
 *epub_temp/
 {F}
 {FB2}

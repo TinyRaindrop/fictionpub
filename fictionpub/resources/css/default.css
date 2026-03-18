@@ -124,9 +124,9 @@ div.poem {
     /* width: fit-content; */
 }
 
-div.stanza {
-    margin-bottom: 1em;
-}
+/* div.stanza {
+    margin-bottom: 1em; 
+} */
 
 .stanza+.stanza {
     margin-top: 1em;
@@ -189,10 +189,7 @@ blockquote p {
     margin: 0.5em 0;
 }
 
-/* We don't actually use <cite> during conversion */
-/* cite.text-author, */
 .text-author {
-    /*! blockquote > .text-author still has right margin */
     margin-top: 0.5em;
     margin-left: 1.25em;
     text-align: right;
@@ -200,11 +197,13 @@ blockquote p {
     font-style: normal;
 }
 
+.text-author+.text-author {
+    margin-top: 0;
+}
+
 figure {
     margin: 0.75em auto;
     padding: 0;
-    /*! width=100% might not be necessary !*/
-    /* width: 100%; */
     text-align: center;
     page-break-inside: avoid;
 }
@@ -264,6 +263,20 @@ img {
     /* max-height: 98vh; */
 }
 
+table {
+    margin: 0.5em auto;
+    border-collapse: collapse;
+    page-break-inside: avoid;
+}
+
+th,
+td {
+    padding: 0.25em 0.5em;
+}
+
+tr {
+    page-break-inside: avoid;
+}
 
 /* ==== FOOTNOTES & COMMENTS ==== */
 
@@ -374,6 +387,10 @@ a.broken-link {
 
 
 /* ==== TYPOGRAPHY, FIXES ==== */
+
+s {
+    text-decoration: line-through;
+}
 
 .em {
     font-style: italic;
