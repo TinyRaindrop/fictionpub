@@ -9,7 +9,7 @@ from pathlib import Path
 from .fb2_book import FB2Book
 from .fb2_to_html_converter import FB2ToHTMLConverter
 from .epub_builder import EpubBuilder
-from ..utils.models import ConversionConfig
+from ..models.conversion import ConversionConfig
 
 
 class ConversionPipeline:

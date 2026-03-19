@@ -8,9 +8,9 @@ from lxml import etree
 
 from ..post_processing.post_processor import PostProcessor
 from ..utils import xml_utils as xu
-from ..utils.models import ConversionConfig
+from ..models.conversion import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, BodyType, FB2Body, ConvertedBody
+from ..models.structures import BinaryInfo, BodyType, FB2Body, ConvertedBody
 
 
 log = logging.getLogger("fb2_converter")

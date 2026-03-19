@@ -24,8 +24,8 @@ from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
 from .resources.loader_gui import load_icon_image, get_icon_path
 from .utils.logger import setup_main_logger, LOG_DIR
-from .utils.models import ConversionConfig, ConversionStatus, ConversionResult
-from .utils.structures import QuickMetadata
+from .models.conversion import ConversionConfig, ConversionStatus, ConversionResult
+from .models.metadata import QuickMetadata
 
 
 log = logging.getLogger("fb2_converter")

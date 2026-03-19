@@ -10,14 +10,30 @@ Functions:
 This module has no dependency on EpubBuilder.
 It receives the doc list after it's fully assembled and sorted.
 """
+from enum import Enum, auto
+from typing import NamedTuple
 import logging
 
 from lxml import etree
 
 from .namespaces import Namespaces as NS
-from .structures import LinkType, LinkEntry, BodyType, FileInfo
+from ..models.structures import BodyType, FileInfo
 from . import xml_utils as xu
 
+
+class LinkType(Enum):
+    """Defines classification categories for links."""
+    NOTE = auto()
+    COMMENT = auto()
+    REGULAR = auto()
+    EXTERNAL = auto()
+    INVALID = auto()
+
+class LinkEntry(NamedTuple):
+    element: etree._Element
+    link_type: LinkType
+    target_doc: FileInfo | None
+    target_id: str
 
 NOTE_TYPES = frozenset({LinkType.NOTE, LinkType.COMMENT})
 

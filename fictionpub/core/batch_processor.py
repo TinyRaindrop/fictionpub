@@ -12,7 +12,7 @@ from typing import Callable
 from .pipeline import ConversionPipeline
 from ..terms.localized_terms import LocalizedTerms
 from ..utils.logger import setup_worker_logger
-from ..utils.models import ConversionConfig, ConversionStatus, ConversionResult
+from ..models.conversion import ConversionConfig, ConversionStatus, ConversionResult
 
 
 log = logging.getLogger("fb2_converter")

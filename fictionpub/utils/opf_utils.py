@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from lxml import etree
 
 from .namespaces import Namespaces as NS
-from .structures import BookMetadata, EpubMetadata
+from ..models.metadata import BookMetadata, EpubMetadata
 
 
 def _add_dc(parent: etree._Element, tag: str, text: str | None,

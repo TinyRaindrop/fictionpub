@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .core.batch_processor import BatchProcessor
 from .utils.logger import setup_main_logger
-from .utils.models import ConversionConfig, ConversionStatus, ConversionResult
+from .models.conversion import ConversionConfig, ConversionStatus, ConversionResult
 
 
 # Get logger. It will be configured in run_cli()

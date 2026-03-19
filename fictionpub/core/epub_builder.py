@@ -17,10 +17,11 @@ from lxml import etree
 from ..resources.loader import get_css_path
 from ..terms.localized_terms import LocalizedTerms
 from ..utils.link_resolver import LinkResolver
-from ..utils.models import ConversionConfig
+from ..models.conversion import ConversionConfig
 from ..utils.namespaces import Namespaces as NS
 from ..utils.opf_utils import fill_opf_metadata
-from ..utils.structures import BookMetadata, EpubMetadata, BodyType, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
+from ..models.metadata import BookMetadata, EpubMetadata
+from ..models.structures import BodyType, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
 from ..utils import xml_utils as xu
 
 
@@ -316,9 +317,9 @@ class EpubBuilder:
     def _create_docinfo_page(self) -> FileInfo | None:
         """Creates Docinfo.xhtml"""
         info_sections = {
-            "Publication Info": vars(self.metadata.pub),
-            "Original Publication": vars(self.metadata.src),
-            "Document Info": vars(self.metadata.doc),
+            "Publication Info": self.metadata.pub._asdict(),
+            "Original Publication": self.metadata.src._asdict(),
+            "Document Info": self.metadata.doc._asdict(),
             # TODO: display 'title-info' values?
             "Book Info": {},  # title-info keys are now top-level on BookMetadata
             "Converter": {

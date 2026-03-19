@@ -5,8 +5,8 @@ import logging
 
 from lxml import etree
 
-from ..utils.models import ConversionConfig
-from ..utils.structures import BodyType
+from ..models.conversion import ConversionConfig
+from ..models.structures import BodyType
 from ..utils import xml_utils as xu
 
 # Post processing plugins. Must work on xhtml_body
@@ -37,7 +37,7 @@ class PostProcessor():
         self._strip_heading_formatting()
         self._handle_empty_line()
         self._remove_empty_elements()
-        self._clean_noterefs()
+        # self._clean_noterefs()
 
         if self.config.improve_typography:
             typography.improve_typography(
@@ -183,6 +183,7 @@ class PostProcessor():
                 a = sup[0]
                 a.tail = sup.tail
                 parent.replace(sup, a)
+
 
     def _unwrap_sections(self):
         """Replaces `<section>` elements with their children.

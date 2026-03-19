@@ -10,7 +10,8 @@ from pathlib import Path
 from PIL import Image
 
 from ..utils.namespaces import Namespaces as NS
-from ..utils.structures import BinaryInfo, BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata, BodyType, FB2Body
+from ..models.metadata import BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata
+from ..models.structures import BinaryInfo, BodyType, FB2Body
 from ..utils import xml_utils as xu
 
 
