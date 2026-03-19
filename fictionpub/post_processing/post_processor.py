@@ -168,44 +168,6 @@ class PostProcessor():
                 parent.remove(empty_line)
 
 
-    def _clean_noterefs(self):
-        """Removes `sup` from note references (unwrap `sup > a` and `a > sup`)."""
-        # TODO: remove this method
-        # class="noteref" doesn't exist at this stage, it's added later in EpubBuilder
-        for sup in self.body.iterfind('.//sup'):
-            parent = sup.getparent()
-            if parent is None: continue
-            # a > sup
-            if parent.tag == 'a':
-                etree.strip_tags(parent, 'sup')
-            # sup > a
-            elif len(sup) == 1 and sup[0].tag == 'a':
-                a = sup[0]
-                a.tail = sup.tail
-                parent.replace(sup, a)
-
-
-    def _unwrap_sections(self):
-        """Replaces `<section>` elements with their children.
-
-        This is only run in NOTE mode; the converter needs `<section>` nodes
-        during splitting but they are not required (and in fact are harmful)
-        in the final XHTML.  After unwrapping the headings still reflect the
-        original hierarchy since they were generated before this step.
-        """
-        # find all sections, process from bottom up to avoid re-wrapping
-        for section in list(self.body.iterfind('.//section')):
-            parent = section.getparent()
-            if parent is None:
-                continue
-            index = parent.index(section)
-            # move children out
-            for child in list(section):
-                parent.insert(index, child)
-                index += 1
-            parent.remove(section)
-
-
     def _remove_empty_elements(self):
         """Removes empty elements."""
         for tag in ['p', 'div', 'span', 'em', 'strong']:
@@ -216,20 +178,3 @@ class PostProcessor():
                 if parent is not None:
                     parent.remove(el)
                     log.debug(f"Removed empty {el} from {parent}.")
-
-
-    @staticmethod
-    def remove_sup_from_noteref(a: etree._Element): # TODO: remove?
-        """
-        Removes `sup` from a note reference link (from `sup > a` and `a > sup`).
-        Noterefs are styled via CSS and don't need a `sup` tag.
-        """
-        etree.strip_tags(a, 'sup')
-        # If the <a> tag itself is wrapped in a <sup>, unwrap it
-        parent = a.getparent()
-        if parent is not None and parent.tag == 'sup':
-            grandparent = parent.getparent()
-            if grandparent is not None:
-                # Replace the <sup> with its child <a>
-                grandparent.replace(parent, a)
-

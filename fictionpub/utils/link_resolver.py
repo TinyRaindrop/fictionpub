@@ -122,30 +122,11 @@ class LinkResolver:
         return note_links, other_links
 
 
-    def _apply_link(self, entry: LinkEntry) -> None:
-        a, link_type, target_doc, target_id = entry
-        match link_type:
-            case LinkType.NOTE:
-                self._apply_noteref(a)
-                self._set_noteref_id(a, target_id)
-            case LinkType.COMMENT:
-                self._apply_noteref(a)
-                self._set_noteref_id(a, target_id)
-                xu.add_class(a, 'comment')
-            case LinkType.REGULAR:
-                pass
-            case LinkType.EXTERNAL:
-                # leave untouched
-                return
-            case LinkType.INVALID:
-                self._mark_broken(a, target_id)
-                return
-            case _:
-                log.warning(f"Unexpected LinkType for id='{a.get('id')}' with href='{a.get('href', '')}'")
-                return
-
-        if target_doc:
-            a.set('href', f'{target_doc.filename}#{target_id}')
+    def _find_target_doc(self, target_id: str) -> FileInfo | None:
+        doc_id = self._id_to_doc.get(target_id)
+        if doc_id is None:
+            return None
+        return self._doc_map.get(doc_id)
 
 
     def _determine_link_type(self, a: etree._Element, target_doc: FileInfo | None) -> LinkType:
@@ -190,20 +171,40 @@ class LinkResolver:
         return LinkType.REGULAR
 
 
-    def _find_target_doc(self, target_id: str) -> FileInfo | None:
-        doc_id = self._id_to_doc.get(target_id)
-        if doc_id is None:
-            return None
-        return self._doc_map.get(doc_id)
+    def _apply_link(self, entry: LinkEntry) -> None:
+        """Modifies a link according to its LinkType."""
+        a, link_type, target_doc, target_id = entry
+        match link_type:
+            case LinkType.NOTE:
+                self._apply_noteref(a, target_id)
+            case LinkType.COMMENT:
+                self._apply_noteref(a, target_id, extra_class='comment')
+            case LinkType.REGULAR:
+                pass
+            case LinkType.EXTERNAL:
+                # leave untouched
+                return
+            case LinkType.INVALID:
+                self._mark_broken(a, target_id)
+                return
+            case _:
+                log.warning(f"Unexpected LinkType for id='{a.get('id')}' with href='{a.get('href', '')}'")
+                return
+
+        if target_doc:
+            a.set('href', f'{target_doc.filename}#{target_id}')
 
 
-    def _apply_noteref(self, a: etree._Element, additional_class: str = '') -> None:
-        a_class = ' '.join(['noteref', additional_class]).strip()
+    def _apply_noteref(self, a: etree._Element, target_id: str, extra_class: str = '') -> None:
+        a_class = ' '.join(['noteref', extra_class]).strip()
         a.attrib.update({
             'class': a_class,
             f'{{{NS.EPUB}}}type': 'noteref',
             # 'role': 'doc-noteref' ?
         })
+
+        self._set_noteref_id(a, target_id)
+        self._remove_sup_tag(a)
 
 
     def _set_noteref_id(self, a: etree._Element, target_id: str) -> None:
@@ -213,6 +214,21 @@ class LinkResolver:
             self._note_ref_counters[target_id] = count
             suffix = '' if count == 1 else f'-{count}'
             a.set('id', f'{target_id}-ref{suffix}')
+
+
+    def _remove_sup_tag(self, a: etree._Element) -> None: 
+        """
+        Removes `sup` from a note reference link (from `sup > a` and `a > sup`).
+        Noterefs are styled via CSS and don't need a `sup` tag.
+        """
+        etree.strip_tags(a, 'sup')
+        # If the <a> tag itself is wrapped in a <sup>, unwrap it
+        parent = a.getparent()
+        if parent is not None and parent.tag == 'sup':
+            grandparent = parent.getparent()
+            if grandparent is not None:
+                # Replace the <sup> with its child <a>
+                grandparent.replace(parent, a)
 
 
     def _mark_broken(self, a: etree._Element, target_id: str) -> None:
