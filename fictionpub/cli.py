@@ -6,9 +6,10 @@ import argparse
 import logging
 from pathlib import Path
 
+from . import app_info
 from .core.batch_processor import BatchProcessor
-from .utils.logger import setup_main_logger
 from .models.conversion import ConversionConfig, ConversionStatus, ConversionResult
+from .utils.logger import setup_main_logger
 
 
 # Get logger. It will be configured in run_cli()
@@ -66,6 +67,10 @@ def run_cli():
     
     console_level = logging.ERROR
     setup_main_logger(console_level)
+    
+    app_name_version = f"{app_info.APP_NAME} {app_info.VERSION}"
+    print(app_name_version)
+    log.info(app_name_version)
     log.info(f"Console logger set to level: {logging.getLevelName(console_level)}")
 
     # Collect all files to be processed
@@ -99,8 +104,6 @@ def run_cli():
         num_threads=args.threads,
     )
     processor = BatchProcessor(config)
-
-    log.info(f"{config.app_name} {config.app_version}")
 
     num_files = len(files_to_process)
     log.info(f"Found {len(files_to_process)} files. Starting conversion...")

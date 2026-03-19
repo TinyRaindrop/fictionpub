@@ -6,11 +6,10 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..post_processing.post_processor import PostProcessor
-from ..utils import xml_utils as xu
+from ..models import namespaces as NS
 from ..models.conversion import ConversionConfig
-from ..utils.namespaces import Namespaces as NS
 from ..models.structures import BinaryInfo, BodyType, FB2Body, ConvertedBody
+from ..utils import xml_utils as xu
 
 
 log = logging.getLogger("fb2_converter")
@@ -113,10 +112,6 @@ class FB2ToHTMLConverter:
         for child in fb2body.body:
             self._recursive_convert(child, self._current_body)
 
-        # Post-process all converted bodies
-        for body_obj in self._converted_bodies:
-            PostProcessor(self.config, self.body_type).run(body_obj.body)
-
         return self._converted_bodies
 
 
@@ -129,8 +124,6 @@ class FB2ToHTMLConverter:
         tmp_parent = etree.Element('div')
         self._recursive_convert(element, tmp_parent)
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
-        if result is not None:
-            PostProcessor(self.config, self.body_type).run(result)
 
         self.body_type = saved_type
         return result
@@ -276,6 +269,10 @@ class FB2ToHTMLConverter:
         aside = etree.Element('aside', aside_attr)
 
         title_el = element.find(f'{{{NS.FB2}}}title')
+        # TODO: title may contain noterefs (it shouldn't, but we can try to preserve them anyway)
+        # <title>
+        # <p><strong>Section subtitle text</strong><a l:href="#n533" type="note">[533]</a></p>
+        # </title>
         if title_el is not None:
             title_text = xu.itertext(title_el)
             backlink_attr = {

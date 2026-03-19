@@ -1,7 +1,7 @@
 import logging
 from typing import NamedTuple
 
-from ..resources.loader import load_terms_json
+from .loader import load_terms_json
 
 
 log = logging.getLogger("fb2_converter")
@@ -109,5 +109,3 @@ class LocalizedTerms:
         if not term:
             return [default]
         return [translation for translation in term if translation]
-
-# --- END of LocalizedTerms class ---

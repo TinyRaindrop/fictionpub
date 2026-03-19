@@ -1,15 +1,15 @@
 """
 Contains the code for a feature-rich graphical user interface (GUI).
 """
-import logging
-import threading
-import queue
-import re
+import concurrent.futures
 import dataclasses
+import logging
 import os
 import platform
+import queue
+import re
 import subprocess
-import concurrent.futures
+import threading
 from pathlib import Path
 
 import tkinter as tk
@@ -20,12 +20,13 @@ try:
 except ImportError:
     TkinterDnD = None
 
+from . import app_info
 from .core.batch_processor import BatchProcessor
 from .core.fb2_book import FB2Book
-from .resources.loader_gui import load_icon_image, get_icon_path
-from .utils.logger import setup_main_logger, LOG_DIR
 from .models.conversion import ConversionConfig, ConversionStatus, ConversionResult
 from .models.metadata import QuickMetadata
+from .resources.loader_gui import load_icon_image, get_icon_path
+from .utils.logger import setup_main_logger, LOG_DIR
 
 
 log = logging.getLogger("fb2_converter")
@@ -146,7 +147,7 @@ class ConverterApp:
         self.config = ConversionConfig()
         
         self.root = root
-        self.root.title(f"{self.config.app_name} {self.config.app_version}")
+        self.root.title(f"{app_info.APP_NAME} {app_info.VERSION}")
         self.root.geometry("950x600")
 
         setup_main_logger(logging.INFO)

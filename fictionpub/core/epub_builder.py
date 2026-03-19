@@ -1,7 +1,6 @@
 """
 Handles the creation of the EPUB file structure and packaging.
 """
-
 import copy
 import logging
 import os
@@ -14,14 +13,17 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..resources.loader import get_css_path
-from ..terms.localized_terms import LocalizedTerms
-from ..utils.link_resolver import LinkResolver
+from .. import app_info
+from ..epub.constants import EPUB_TYPES_MAP, FNames as FN
+from ..epub.link_resolver import LinkResolver
+from ..epub.opf_builder import OpfBuilder
+from ..epub.toc_utils import TOCItem, iter_toc_items
+from ..models import namespaces as NS
 from ..models.conversion import ConversionConfig
-from ..utils.namespaces import Namespaces as NS
-from ..utils.opf_utils import fill_opf_metadata
 from ..models.metadata import BookMetadata, EpubMetadata
-from ..models.structures import BodyType, ConvertedBody, EPUB_TYPES_MAP, FileInfo, BinaryInfo, TOCItem, FNames as FN
+from ..models.structures import BodyType, ConvertedBody, FileInfo, BinaryInfo
+from ..resources.loader import get_css_path
+from ..resources.localized_terms import LocalizedTerms
 from ..utils import xml_utils as xu
 
 
@@ -93,9 +95,9 @@ class EpubBuilder:
         self.epub_meta: EpubMetadata = EpubMetadata(
             book_meta=self.metadata,
             epub_id=f"urn:uuid:{uuid.uuid4()}",
-            app_name=self.config.app_name,
-            app_version=self.config.app_version,
-            app_url=self.config.app_url,
+            app_name=app_info.APP_NAME,
+            app_version=app_info.VERSION,
+            app_url=app_info.APP_URL,
             lang_genres=tr_genres,
             description=None
         )
@@ -103,12 +105,11 @@ class EpubBuilder:
 
     def set_annotation(self, xhtml_annotation: etree._Element | None):
         """Sets the converted `<annotation>` element in metadata."""
-        if isinstance(xhtml_annotation, etree._Element):
-            self.annotation_el = xhtml_annotation
-            self.epub_meta.description = xu.itertext_separated(xhtml_annotation)
-        else:
-            log.warning("Annotation element is invalid.")
-        
+        if xhtml_annotation is None:
+            return
+        self.annotation_el = xhtml_annotation
+        self.epub_meta.description = xu.itertext_separated(xhtml_annotation)
+
 
     def set_binaries(self, binaries: dict[str, BinaryInfo]):
         self.binaries = binaries
@@ -469,31 +470,13 @@ class EpubBuilder:
         # A list that tracks the parent <ol> for each level. level_parents[0] is the root.
         level_parents = [ol]
 
-        for item in self.toc_items:
-            if item.level > self.config.toc_depth:
-                continue
-
-            # If we need to go deeper, create a new <ol> and add it to the list
-            if item.level > len(level_parents):
-                parent_ol = level_parents[-1]
-                if len(parent_ol) == 0:
-                    # Heading jumped more than one level. Attach to root
-                    log.warning(f"TOC: heading jumped from level {len(level_parents)} to {item.level}. Flattening.")
-                    ol = parent_ol
-                else:
-                    # Get the last <li> in the current parent <ol>
-                    last_li = parent_ol[-1]
-                    ol = etree.SubElement(last_li, "ol")
-                level_parents.append(ol)
-            else:
-                # Go up in levels
-                while item.level < len(level_parents):
-                    level_parents.pop()
-                # Get last <ol>
-                ol = level_parents[-1]
-
-            # ol is the current parent <ol>
-            li = etree.SubElement(ol, "li")
+        for item, depth in iter_toc_items(self.toc_items, self.config.toc_depth):
+            while len(level_parents) > depth:
+                level_parents.pop()
+            if len(level_parents) < depth:
+                new_ol = etree.SubElement(level_parents[-1][-1], "ol")
+                level_parents.append(new_ol)
+            li = etree.SubElement(level_parents[-1], "li")
             a = etree.SubElement(li, "a", href=item.href_nav)
             a.text = item.text
 
@@ -542,25 +525,20 @@ class EpubBuilder:
         # A list that tracks the parent <navPoint> for each level
         level_parents = [nav_map]
         play_order = 1
-
-        for item in self.toc_items:
-            if item.level > self.config.toc_depth:
-                continue
-
-            while item.level < len(level_parents):
+        
+        for item, depth in iter_toc_items(self.toc_items, self.config.toc_depth):
+            while len(level_parents) > depth:
                 level_parents.pop()
-
-            parent_navpoint = level_parents[-1]
-
-            nav_point = etree.SubElement(parent_navpoint, "navPoint", id=f"navpoint-{play_order}", playOrder=str(play_order))
+            nav_point = etree.SubElement(
+                level_parents[-1], "navPoint",
+                id=f"navpoint-{play_order}",
+                playOrder=str(play_order)
+            )
             play_order += 1
-
             nav_label = etree.SubElement(nav_point, "navLabel")
             etree.SubElement(nav_label, "text").text = item.text
             etree.SubElement(nav_point, "content", src=item.href_ncx)
-
-            if item.level >= len(level_parents):
-                level_parents.append(nav_point)
+            level_parents.append(nav_point)   # always push — popped when a sibling arrives
 
         self._write_html(ncx, ncx_path, doctype=False)
 
@@ -568,57 +546,7 @@ class EpubBuilder:
     def _create_opf(self):
         """Creates the content.opf file."""
         opf_path = self.paths.oebps / FN.OPF
-        root = etree.Element("package", version="3.0", nsmap=NS.OPF_MAP)
-        root.set("unique-identifier", "BookId")
-
-        # Metadata
-        meta = etree.SubElement(root, "metadata")
-        fill_opf_metadata(meta, self.epub_meta)
-
-        # Manifest, Spine, Guide
-        manifest = etree.SubElement(root, "manifest")
-        spine = etree.SubElement(root, "spine", toc="ncx")
-        guide = etree.SubElement(root, "guide")     # for compatibility with EPUB2 readers
-
-        # Add NCX and CSS to the Manifest
-        etree.SubElement(manifest, "item", id="ncx", href="toc.ncx", attrib={"media-type": "application/x-dtbncx+xml"})
-        etree.SubElement(manifest, "item", id="css", href="Styles/style.css", attrib={"media-type": "text/css"})
-
-        # Add all documents from doc_map to Manifest, Spine, Guide
-        for doc in self.doc_list:
-            if doc is None:
-                log.warning("[OPF] an xhtml file is missing. Skipping.")
-                continue
-
-            # Manifest
-            href = f"{FN.TEXT}/{doc.filename}"
-            item = etree.SubElement(manifest, "item", id=doc.id, href=href,
-                                    attrib={"media-type": "application/xhtml+xml"})
-            if doc.prop:
-                item.set('properties', doc.prop)
-
-            # Spine
-            if doc.is_note or doc.id == "nav":     # ? make 'cover' non-linear as well ?
-                # Footnote bodies are non-linear
-                spine.append(etree.Element("itemref", idref=doc.id, linear="no"))
-            else:
-                spine.append(etree.Element("itemref", idref=doc.id))
-
-            # Guide
-            if doc.id in EPUB_TYPES_MAP:
-                guide_type = EPUB_TYPES_MAP[doc.id].guide_type
-                etree.SubElement(guide, "reference", type=guide_type, title=doc.title, href=href)
-
-
-        # Add images to Manifest
-        for img in self.binaries.values():
-            href = f"{FN.IMAGES}/{img.filename}"
-            # using img.filename as ID
-            item = etree.SubElement(
-                manifest, "item", id=img.filename, href=href, attrib={"media-type": img.media_type})
-            if img.prop:
-                item.set('properties', img.prop)
-
+        root = OpfBuilder(self.epub_meta, self.doc_list, self.binaries).build()
         self._write_html(root, opf_path, doctype=False)
 
 

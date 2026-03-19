@@ -10,9 +10,11 @@ Version resolution order:
   2. importlib.metadata — works for `pip install` / editable installs.
   3. Hard-coded fallback — bare `git clone` with no build step.
 """
-from __future__ import annotations
+
+from importlib.metadata import version as _meta_version, PackageNotFoundError
 
 # App name is a plain constant — never generated, never needs a fallback chain.
+
 APP_NAME       = "FictionPub"
 APP_NAME_SHORT = "fictionpub"
 APP_URL = "https://github.com/TinyRaindrop/fictionpub"
@@ -21,7 +23,6 @@ try:
     from ._version import __version__ as VERSION
 except ImportError:
     try:
-        from importlib.metadata import version as _meta_version
         VERSION = _meta_version(APP_NAME_SHORT)
-    except Exception:
+    except PackageNotFoundError:
         VERSION = "0.0.0+unknown"

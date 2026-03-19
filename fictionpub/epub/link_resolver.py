@@ -10,15 +10,15 @@ Functions:
 This module has no dependency on EpubBuilder.
 It receives the doc list after it's fully assembled and sorted.
 """
+import logging
 from enum import Enum, auto
 from typing import NamedTuple
-import logging
 
 from lxml import etree
 
-from .namespaces import Namespaces as NS
+from ..models import namespaces as NS
 from ..models.structures import BodyType, FileInfo
-from . import xml_utils as xu
+from ..utils import xml_utils as xu
 
 
 class LinkType(Enum):
@@ -29,29 +29,19 @@ class LinkType(Enum):
     EXTERNAL = auto()
     INVALID = auto()
 
+
 class LinkEntry(NamedTuple):
     element: etree._Element
     link_type: LinkType
     target_doc: FileInfo | None
     target_id: str
 
+
 NOTE_TYPES = frozenset({LinkType.NOTE, LinkType.COMMENT})
 
 
 log = logging.getLogger("fb2_converter")
 
-
-"""
-Note section criteria:
-    1. Note
-        * body name="notes"
-        * section has id
-        * is being targeted by <a link-type="note">
-    
-    2. Comment
-        * body name="comments"
-        * section has id
-"""
 
 class LinkResolver:
     """

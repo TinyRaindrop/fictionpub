@@ -5,11 +5,12 @@ import base64
 import logging
 import zipfile
 from io import BytesIO
-from lxml import etree
 from pathlib import Path
+
+from lxml import etree
 from PIL import Image
 
-from ..utils.namespaces import Namespaces as NS
+from ..models import namespaces as NS
 from ..models.metadata import BookMetadata, TitleInfo, SourceInfo, DocumentInfo, PublishInfo, CustomInfo, QuickMetadata
 from ..models.structures import BinaryInfo, BodyType, FB2Body
 from ..utils import xml_utils as xu
@@ -273,6 +274,7 @@ class FB2Book:
                 log.warning("Invalid binary: no id. Skipping.")
                 continue
             if binary_id not in self.referenced_ids:
+                # TODO: move this to LinkResolver / EpubBuilder
                 log.warning(f"Binary '{binary_id}' is never referenced. Skipping.")
                 continue
             if not binary.text:

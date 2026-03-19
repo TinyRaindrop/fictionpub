@@ -2,17 +2,17 @@
 Handles the parallel processing of a batch of files.
 This class contains the ThreadPoolExecutor and is used by both the CLI and GUI.
 """
-import logging
-import time
-import os
 import concurrent.futures
+import logging
+import os
+import time
 from pathlib import Path
 from typing import Callable
 
 from .pipeline import ConversionPipeline
-from ..terms.localized_terms import LocalizedTerms
-from ..utils.logger import setup_worker_logger
 from ..models.conversion import ConversionConfig, ConversionStatus, ConversionResult
+from ..resources.localized_terms import LocalizedTerms
+from ..utils.logger import setup_worker_logger
 
 
 log = logging.getLogger("fb2_converter")

@@ -22,22 +22,20 @@ class PostProcessor():
     Fixes unfinished element conversions, cleans up redundant tags,
     applies typographic improvements.
     """
-    def __init__(self, config: ConversionConfig, body_type = BodyType.MAIN):
+    def __init__(self, config: ConversionConfig):
         self.config = config
-        self.body_type = body_type
 
 
-    def run(self, xhtml_body: etree._Element):
+    def run(self, xhtml_body: etree._Element, body_type: BodyType = BodyType.MAIN):
         """Method to run for cleaning up the generated XHTML tree."""
         self.body = xhtml_body
 
-        if self.body_type in (BodyType.NOTE, BodyType.COMMENT):
+        if body_type in (BodyType.NOTE, BodyType.COMMENT):
             self._fix_note_backlinks()
 
         self._strip_heading_formatting()
         self._handle_empty_line()
         self._remove_empty_elements()
-        # self._clean_noterefs()
 
         if self.config.improve_typography:
             typography.improve_typography(

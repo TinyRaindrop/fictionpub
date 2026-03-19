@@ -4,11 +4,11 @@ The main entry point for the FB2 to EPUB Converter application.
 This module inspects command-line arguments to decide whether to launch
 the command-line interface (CLI) or the graphical user interface (GUI).
 """
-from enum import Enum
-import sys
 import logging
+import sys
+from enum import Enum
 
-from .terms.localized_terms import LocalizedTerms
+from .resources.localized_terms import LocalizedTerms
 
 
 class AppMode(Enum):

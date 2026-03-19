@@ -2,12 +2,12 @@
 Handles configuration of logging for the main process and for
 multiprocessing workers.
 """
-import logging
-import sys
-import os
 import io
-from pathlib import Path
+import logging
+import os
+import sys
 from datetime import datetime
+from pathlib import Path
 
 
 LOG_DIR = Path("./logs")

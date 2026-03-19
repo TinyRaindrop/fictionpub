@@ -1,8 +1,10 @@
 from lxml import etree
 
-from .namespaces import Namespaces as NS
+from ..models import namespaces as NS
 
-# --- Element find helpers ---
+
+# -------------------------------
+# Element find helpers
 
 def elem_find(element: etree._Element | etree._ElementTree, tag, 
                 namespaces=NS.FB2_MAP):
@@ -21,7 +23,8 @@ def elem_findtext(element: etree._Element, tag,
     """Helper to find all elements of <tag> using a namespace."""
     return element.findtext(tag, default, namespaces)
 
-# --- Metadata helpers ---
+# -------------------------------
+# Metadata helpers
 
 def get_person_name(author_element: etree._Element | None) -> str:
     """Helper to format a person's name from <first-name>, etc."""
@@ -42,7 +45,8 @@ def get_metadata_tags(element: etree._Element, tag_list: list[str]) -> dict:
     } 
     return meta
 
-# --- Conversion helpers ---
+# -------------------------------
+# Tag/attribute manipulation
 
 def get_tag_name(element: etree._Element) -> str:
     """Returns tag name without a namespace prefix."""
@@ -91,6 +95,9 @@ def remove_attr(element: etree._Element, name: str):
     if name in element.attrib:
         del element.attrib[name]
 
+
+# -------------------------------
+# Text extraction
 
 def itertext(el: etree._Element) -> str | None:
     """Returns all text content in the element subtree as a string."""
@@ -147,7 +154,8 @@ def itertext_separated(el: etree._Element | None) -> str | None:
     # Join with one newline
     return "\n".join(clean_lines) or None
 
-# --- Debug utils ---
+# -------------------------------
+# Debug utils
 
 def pretty_print_xml(element: etree._Element | etree._ElementTree) -> str:
     """Returns a pretty-printed XML string of the element/tree."""
