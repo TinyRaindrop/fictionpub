@@ -18,6 +18,7 @@ class ConversionConfig:
     toc_depth: int = 4  
     split_level: int = 2    # split at each h1..h6
     split_size_kb: int = 0  # 0 means no splitting  # TODO: implement splitting by size
+    remove_unused_images: bool = True
     improve_typography: bool = False
     # word length range [min, max] to qualify for typography processing
     # using very conservative values as defaults
@@ -25,13 +26,6 @@ class ConversionConfig:
     word_len_nobreak_range: tuple[int, int] = (4, 6)
     custom_stylesheet: Path | None = None
     num_threads: int = 0    # 0 means auto-detect
-
-
-class ConversionMode(Enum):
-    """Defines the context for the conversion (e.g., main text vs. notes)."""
-    MAIN = auto()   # main content bodies
-    NOTE = auto()   # note / comment bodies
-    ELEMENT = auto()
 
 
 class ConversionStatus(Enum):

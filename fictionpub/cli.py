@@ -71,7 +71,6 @@ def run_cli():
     app_name_version = f"{app_info.APP_NAME} {app_info.VERSION}"
     print(app_name_version)
     log.info(app_name_version)
-    log.info(f"Console logger set to level: {logging.getLevelName(console_level)}")
 
     # Collect all files to be processed
     files_to_process = []

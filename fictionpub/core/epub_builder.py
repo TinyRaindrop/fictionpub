@@ -193,7 +193,7 @@ class EpubBuilder:
     def build(self):
         """
         Generates metadata files and zips the workspace into an .epub file.
-        add_main_docs() and add_note_docs() must be called before building.
+        add_docs() must be called before building.
         """
         try:
             self._setup_workspace()
@@ -388,6 +388,34 @@ class EpubBuilder:
         ]
         docs = [d for d in docs if d is not None]
         self.doc_list.extend(docs)
+
+
+    def _resolve_image_paths(self):
+        """Constructs full image paths and inserts src attr. for every <img> element."""
+        referenced_ids: set[str] = set()
+
+        for doc in self.doc_list:
+            for img in doc.html.iterfind('.//img[@data-img-id]'):
+                img_id = img.get('data-img-id')
+                if not img_id: 
+                    continue
+                referenced_ids.add(img_id)
+
+                binary = self.binaries.get(img_id)
+                if binary:
+                    src = f"../{FN.IMAGES}/{binary.filename}"
+                    del img.attrib['data-img-id']   # Clean up temporary attribute
+                else:
+                    src = "#"   # Fallback for missing images
+                    log.warning(f"Image source for ID '{img_id}' not found.")
+                img.set('src', src)
+        
+        if self.config.remove_unused_images:
+            a = self.binaries.keys()
+            unused: set[str] = self.binaries.keys() - referenced_ids - {self.metadata.cover_id}
+            for img_id in unused:
+                log.debug(f"Removing unused image: {img_id}")
+                del self.binaries[img_id]
 
 
     def _build_toc(self):
@@ -676,20 +704,3 @@ class EpubBuilder:
         if notify:
             # log filename, not full path
             log.info(f"Created: {Path(filepath).name}")
-
-
-    def _resolve_image_paths(self):
-        """Constructs full image paths and inserts src attr. for every <img> element."""
-        for doc in self.doc_list:
-            for img in doc.html.iterfind('.//img[@data-img-id]'):
-                img_id = img.get('data-img-id')
-                if not img_id: continue
-
-                binary = self.binaries.get(img_id)
-                if binary:
-                    src = f"../{FN.IMAGES}/{binary.filename}"
-                    del img.attrib['data-img-id']   # Clean up temporary attribute
-                else:
-                    src = "#"   # Fallback for missing images
-                    log.warning(f"Image source for ID '{img_id}' not found.")
-                img.set('src', src)

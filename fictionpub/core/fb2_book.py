@@ -39,14 +39,12 @@ class FB2Book:
 
         self.metadata: BookMetadata = BookMetadata()
         self.binaries: dict[str, BinaryInfo] = {}
-        self.referenced_ids: set[str] = set()
         self.bodies: list[FB2Body] = []
 
 
     def parse(self):
         """Parses the FB2 file and populates all instance attributes."""
         self._parse_xml_tree()
-        self._create_referenced_ids_set()
         self._extract_binaries()            # must run before _extract_metadata (cover lookup)
         self._extract_metadata()
         self._extract_bodies()
@@ -273,10 +271,6 @@ class FB2Book:
             if not binary_id:
                 log.warning("Invalid binary: no id. Skipping.")
                 continue
-            if binary_id not in self.referenced_ids:
-                # TODO: move this to LinkResolver / EpubBuilder
-                log.warning(f"Binary '{binary_id}' is never referenced. Skipping.")
-                continue
             if not binary.text:
                 log.warning(f"Invalid binary '{binary_id}': empty content. Skipping.")
                 continue
@@ -340,14 +334,3 @@ class FB2Book:
                 if bname:
                     log.info(f"Treating body[name={bname}] as main content.")
             self.bodies.append(FB2Body(body, btype))
-
-
-    def _create_referenced_ids_set(self):
-        """Collects all ids that are pointed to by at least one href."""
-        self.mapped_ids = {}
-        # Find all <a href=...> elements
-        for element in self.tree.iterfind('.//*[@l:href]', namespaces=NS.FB2_MAP):
-            href = element.get(f'{{{NS.XLINK}}}href')
-            id = href.lstrip('#') if href else None
-            if id:
-                self.referenced_ids.add(id)

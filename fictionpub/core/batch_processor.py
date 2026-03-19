@@ -184,7 +184,7 @@ class BatchProcessor:
                 try:
                     file_handler.stream.write(f"\n--- Log for {result.path.name} ---\n")
                     file_handler.stream.write(result.log_output)
-                    file_handler.stream.write(f"--- End log for {result.path.name} ---\n")
+                    file_handler.stream.write(f"--- End log for {result.path.name} ---\n\n")
                 except Exception as e:
                     log.error(f"Failed to write buffered log for {result.path.name}: {e}")
 
