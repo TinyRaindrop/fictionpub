@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from PIL import Image, ImageTk
+from PIL import Image
 
 from .loader import _resource_path
 
@@ -21,11 +21,12 @@ def _load_pil_image(package: str, filename: str) -> Image.Image | None:
     return Image.open(path)
 
 
-def load_icon_image(filename: str, size: int) -> ImageTk.PhotoImage:
+def load_icon_image(filename: str, size: int):
     """
     Load a Tkinter PhotoImage from packaged resources/icons/*.png
     Scales down large images to specified size in px.
     """
+    from PIL import ImageTk
     img = _load_pil_image(ICONS_PACKAGE, filename)
     if img is None:
         log.error(f"Failed to load icon {filename}")

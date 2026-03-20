@@ -121,3 +121,4 @@ logs/
 .github/
 
 *crash-report.xml
+*compilation-report*.xml

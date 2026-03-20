@@ -35,53 +35,86 @@ VERSION = ".".join(map(str, get_version_tuple()))
 
 
 build_options = [
+    # ---- Metadata
     "--product-name=FictionPub",
     "--company-name=TinyRaindrop",
     "--file-description=FB2 to EPUB converter",
     f"--file-version={VERSION}",
     f"--product-version={VERSION}",
+
+    # ---- Output
     "--onefile",  # Single .exe
     "--standalone",
     "--output-dir=./dist/",
+
+    # ---- Compilation
     "--lto=yes",
     "--static-libpython=auto",
     "--follow-imports",
+    # "--msvc=latest",  # Requires Windows SDK
+    "--mingw64",
+
+    # ---- Size reduction
+    "--python-flag=no_docstrings",
+    "--nofollow-import-to=importlib.metadata",  # exclude csv
+
+    # ---- Resources
     "--assume-yes-for-downloads",
     "--include-package=fictionpub.resources",
     "--include-data-dir=fictionpub/resources=fictionpub/resources",
-    "--msvc=latest",  # Requires Windows SDK
-    # "--mingw64",
 ]
 
 PLUGIN_EXCLUDES = [
-    "PIL.DdsImagePlugin",
-    "PIL.PcxImagePlugin",
-    "PIL.PpmImagePlugin",
-    "PIL.PsdImagePlugin",
-    "PIL.MpoImagePlugin",
-    "PIL.PdfImagePlugin",
-    "PIL.PdfParser",
-    "PIL.SpiderImagePlugin",
-    "PIL.PalmImagePlugin",
-    "PIL.Hdf5StubImagePlugin",
-    "PIL.EpsImagePlugin",
-    "PIL.WebpImagePlugin",
+    # Pillow - unused image formats
+    "PIL.BlpImagePlugin", "PIL.BufrStubImagePlugin", "PIL.CurImagePlugin",
+    "PIL.DcxImagePlugin", "PIL.DdsImagePlugin", "PIL.EpsImagePlugin", 
+    "PIL.FliImagePlugin", "PIL.FpxImagePlugin", "PIL.FtexImagePlugin",
+    "PIL.GbrImagePlugin", "PIL.GribStubImagePlugin", "PIL.Hdf5StubImagePlugin",
+    "PIL.IcnsImagePlugin", "PIL.IcoImagePlugin", "PIL.ImImagePlugin",
+    "PIL.ImtImagePlugin", "PIL.IptcImagePlugin", "PIL.Jpeg2KImagePlugin",
+    "PIL.McIdasImagePlugin", "PIL.MicImagePlugin", "PIL.MpegImagePlugin",
+    "PIL.MpoImagePlugin", "PIL.MspImagePlugin", "PIL.PalmImagePlugin",
+    "PIL.PcdImagePlugin", "PIL.PcxImagePlugin", "PIL.PdfImagePlugin",
+    "PIL.PdfParser", "PIL.PixarImagePlugin", "PIL.PpmImagePlugin",
+    "PIL.PsdImagePlugin", "PIL.SgiImagePlugin", "PIL.SpiderImagePlugin",
+    "PIL.SunImagePlugin", "PIL.TgaImagePlugin", "PIL.WmfImagePlugin",
+    "PIL.XVThumbImagePlugin", "PIL.XbmImagePlugin", "PIL.XpmImagePlugin",
+    # "PIL.WebpImagePlugin",   # WebP is not supported in FB2
+    # "PIL.TiffImagePlugin",
+    "PIL.ImageQt",
+    "PIL.ImageShow",         # opens images in external viewer
+    "PIL.ImageWin",          # Windows printing API
+    "PIL.ImageCms",          # ICC color profiles
     "PIL.ImageFilter",
     "PIL.ImageEnhance",
     "PIL.ImageDraw",
     "PIL.ImageFont",
+    # lxml extras
+    "lxml.html",         # we only use lxml.etree
+    "lxml.objectify",
+    # stdlib test/dev, setuptools
+    "unittest",
+    "doctest",
+    "pdb",
+    "difflib",
+    "py_compile",
+    "compileall",
+    "setuptools",
+    "pkg_resources",
+    "distutils",
 ]
 
 PLUGIN_EXCLUDES_CLI = [
     "tkinter",
     "tkinterdnd2",
+    "PIL.ImageTk",  
 ]
 
 exclude_options = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
 
 # TODO: Remove tkinter and PIL from CLI build
 # Breaks loader.py which does `from PIL import Image, ImageTk` at top level
-# exclude_options_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
+exclude_options_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
 
 
 def compile_cli():
@@ -89,11 +122,11 @@ def compile_cli():
     options = (
         build_options
         + exclude_options
+        + exclude_options_cli
         + [
             "--output-filename=fictionpub_cli.exe",
             "--windows-icon-from-ico=fictionpub/resources/icons/app_cli.ico",
             "--windows-console-mode=force",  # Force console for CLI
-            "--enable-plugin=tk-inter",  # TODO: remove
             "run_app_cli.py",
         ]
     )
