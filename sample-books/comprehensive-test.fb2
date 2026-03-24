@@ -258,12 +258,12 @@
     <subtitle>Citation Subtitle</subtitle>
     <table id="table-in-cite-preface" style="border: 1px solid #999">
      <tr>
-      <th align="center">Alphabet</th>
-      <th align="center">Coverage</th>
+      <th align="center" valign="middle">Alphabet</th>
+      <th align="center" valign="bottom">Coverage</th>
      </tr>
      <tr align="center">
       <td align="left">All 26 letters</td>
-      <td>✓</td>
+      <td align="right">✓</td>
      </tr>
     </table>
     <text-author>Pangram Society</text-author>

@@ -2,6 +2,7 @@
 Post processing of converted to XHTML bodies.
 """
 import logging
+from typing import NamedTuple
 
 from lxml import etree
 
@@ -104,20 +105,37 @@ class PostProcessor():
                 # strip trailing whitespace from the last child
                 if heading[-1].tail:
                     heading[-1].tail = heading[-1].tail.rstrip()
-
+            
 
     def _handle_empty_line(self):
         """
         Converts necessary `empty-line`, discards redundant ones.
         Replaces `empty-line` with `class="space-after/before"` on a sibling element.
         Inside titles, replaces `empty-line` with `br`.
-        """
-        target_tags = ('p', 'div')
-    
-        # h1..h6, p.subtitle
-        heading_tags = [f'h{i}' for i in range(1, 7)]
-        heading_tags.append('p[@class="subtitle"]') # TODO: this will not match 'if in' check
-        excl_tags = ['figure']
+        """    
+        class Tag(NamedTuple):
+            name: str
+            cls: str = ""
+
+            @classmethod
+            def from_el(_cls, el: etree._Element | None):
+                if el is None: 
+                    return Tag('None')
+                name = xu.get_tag_name(el)
+                cls = el.attrib.get('class', '')
+                return Tag(name, cls)
+            
+            def matches(self, tag_list: list) -> bool:
+                """Returns True if Tag is in provided list."""
+                for tag in tag_list:
+                    if self.name == tag.name and tag.cls in self.cls:
+                        return True
+                return False
+
+
+        heading_tags: list[Tag] = [Tag(f'h{i}') for i in range(1,7)]
+        heading_tags.append(Tag('p', 'subtitle'))
+        excl_tags: list[Tag] = [Tag('figure'), Tag('div', 'poem')]
         excl_tags.extend(heading_tags)
 
         for empty_line in self.body.iterfind(".//empty-line"):
@@ -126,23 +144,24 @@ class PostProcessor():
                 log.warning("<empty-line> has no parent. Skipping.")
                 continue
 
-            # 1. Inside titles - convert to <br/> or remove
-            if xu.get_tag_name(parent) in heading_tags:
-                next_el = empty_line.getnext()
-                # If empty-line is the last child or is followed by another empty-line
-                if next_el is None or xu.get_tag_name(next_el) == 'empty-line':
-                    parent.remove(empty_line)
-                    continue          
-                
-                br = etree.Element('br')
-                parent.replace(empty_line, br)
+            # 1. If empty-line is the last child or is followed by another empty-line
+            next_el = empty_line.getnext()
+            if next_el is None or xu.get_tag_name(next_el) == 'empty-line':
+                parent.remove(empty_line)
+                continue   
 
-            # 2. As spacers between other elements
+            # 2. Inside titles - convert to <br/> or remove
+            if Tag.from_el(parent).matches(heading_tags):
+                parent.replace(empty_line, etree.Element('br'))
+
+            # 3. As spacers between other elements
             else:
                 prev_el = empty_line.getprevious()
-                next_el = empty_line.getnext()
-                tags = [xu.get_tag_name(el) for el in [prev_el, next_el] if el is not None]
-                if any(tag in excl_tags for tag in tags):
+                neighbor_tags = [
+                    Tag.from_el(el) for el in [prev_el, next_el]
+                    if el is not None
+                ]
+                if any(tag.matches(excl_tags) for tag in neighbor_tags):
                     # Skip empty-line around excluded tags
                     parent.remove(empty_line)
                     continue

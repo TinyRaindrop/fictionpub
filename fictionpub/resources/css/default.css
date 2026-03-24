@@ -366,6 +366,7 @@ a.broken-link {
     margin-bottom: 1.5em;
 }
 
+/* TODO: middle paragraphs would be styled differently? */
 /* The last paragraph is usually the book title */
 .halftitle p:last-child {
     font-size: 1.5rem;

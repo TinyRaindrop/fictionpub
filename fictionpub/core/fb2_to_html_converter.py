@@ -362,7 +362,7 @@ class FB2ToHTMLConverter:
         xu.copy_id(element, img)
 
         parent = element.getparent()
-        if parent is not None and xu.get_tag_name(parent) in ('p', 'subtitle'):
+        if parent is not None and xu.get_tag_name(parent) in ('p', 'subtitle', 'a'):
             # Inline <img> inside a paragraph.
             return img
 
@@ -396,6 +396,11 @@ class FB2ToHTMLConverter:
         return link
 
 
+    def _handle_table(self, element: etree._Element) -> etree._Element | None:
+        # TODO: handle align, valign, colspan, rowspan
+        pass
+
+
     def _handle_style(self, element: etree._Element) -> etree._Element | None:
         """Converts `style name="X"` to `span class="X"`."""
         name = element.get('name')
@@ -421,6 +426,7 @@ class FB2ToHTMLConverter:
             html_tag, html_attrib = 'div', {'class': fb2_tag}
 
         # Merge attributes with existing ones (typically only 'id', 'name')
+        # TODO: this would also merge style/align/valign attribs
         attrib = xu.get_attrib_dict(element)
         attrib.update(html_attrib or {})
         return etree.Element(html_tag, attrib)
