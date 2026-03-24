@@ -4,6 +4,7 @@ The main entry point for the FB2 to EPUB Converter application.
 This module inspects command-line arguments to decide whether to launch
 the command-line interface (CLI) or the graphical user interface (GUI).
 """
+
 import logging
 import sys
 from enum import Enum
@@ -17,7 +18,7 @@ class AppMode(Enum):
     AUTO = 3
 
 
-def main(mode: AppMode = AppMode.AUTO):
+def main(mode: AppMode = AppMode.AUTO) -> None:
     """
     Launches either the CLI or the GUI based on the presence of command-line arguments.
     """
@@ -25,7 +26,7 @@ def main(mode: AppMode = AppMode.AUTO):
 
     # Load term translations from JSONs
     LocalizedTerms.load_terms()
-    
+
     if mode == AppMode.AUTO:
         # sys.argv[0] is always the name of the script itself.
         # If the list has more than one item, it means the user has provided arguments.
@@ -34,14 +35,16 @@ def main(mode: AppMode = AppMode.AUTO):
     if mode == AppMode.CLI:
         try:
             from .cli import run_cli
+
             run_cli()
         except Exception:
             log.exception("A critical error occurred while running the CLI.")
             sys.exit(1)
-    
+
     elif mode == AppMode.GUI:
         try:
             from .gui import run_gui
+
             log.info("No input file provided, launching GUI...")
             run_gui()
         except ImportError as e:
@@ -52,5 +55,5 @@ def main(mode: AppMode = AppMode.AUTO):
             sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,22 +1,24 @@
 """
 Handles the conversion of FB2 XML elements to XHTML.
 """
+
 import logging
+from collections.abc import Callable
 from typing import NamedTuple
 
 from lxml import etree
 
 from ..models import namespaces as NS
 from ..models.conversion import ConversionConfig
-from ..models.structures import BinaryInfo, BodyType, FB2Body, ConvertedBody
+from ..models.structures import BinaryInfo, BodyType, ConvertedBody, FB2Body
 from ..utils import xml_utils as xu
-
 
 log = logging.getLogger("fb2_converter")
 
 
 class Tag(NamedTuple):
     """Structure to represent an XHTML tag with attributes."""
+
     name: str
     attrib: dict[str, str] | None = None
 
@@ -52,39 +54,42 @@ class FB2ToHTMLConverter:
         # map of straightforward FB2 tag → XHTML tag/attributes tuples;
         # anything not listed here falls back to `div.class=fb2tag`
         self.tag_map: dict[str, Tag] = {
-            'body': Tag('body'),
-            'p': Tag('p'),
-            'subtitle': Tag('p', {'class': 'subtitle'}),
-            'text-author': Tag('p', {'class': 'text-author'}),
-            'strong': Tag('strong'), 'b': Tag('strong'),
-            'em': Tag('em'), 'emphasis': Tag('em'), 'i': Tag('em'),
-            'strikethrough': Tag('s'), 's': Tag('s'),
-            'cite': Tag('blockquote', {'class': 'q'}),
-            'v': Tag('p', {'class': 'v'}),
-            'table': Tag('table'),
-            'tr': Tag('tr'),
-            'th': Tag('th'),
-            'td': Tag('td'),
-            'sup': Tag('sup'),
-            'sub': Tag('sub'),
-            'code': Tag('code'), #HTMLTag('span', {'class': 'code'}),
-            'ol': Tag('ol'),
-            'ul': Tag('ul'),
-            'li': Tag('li'),
-            'empty-line': Tag('empty-line'),  # resolved up in post-processing
+            "body": Tag("body"),
+            "p": Tag("p"),
+            "subtitle": Tag("p", {"class": "subtitle"}),
+            "text-author": Tag("p", {"class": "text-author"}),
+            "strong": Tag("strong"),
+            "b": Tag("strong"),
+            "em": Tag("em"),
+            "emphasis": Tag("em"),
+            "i": Tag("em"),
+            "strikethrough": Tag("s"),
+            "s": Tag("s"),
+            "cite": Tag("blockquote", {"class": "q"}),
+            "v": Tag("p", {"class": "v"}),
+            "table": Tag("table"),
+            "tr": Tag("tr"),
+            "th": Tag("th"),
+            "td": Tag("td"),
+            "sup": Tag("sup"),
+            "sub": Tag("sub"),
+            "code": Tag("code"),  # HTMLTag('span', {'class': 'code'}),
+            "ol": Tag("ol"),
+            "ul": Tag("ul"),
+            "li": Tag("li"),
+            "empty-line": Tag("empty-line"),  # resolved up in post-processing
             # annotation, epigraph, poem, stanza -> div class=tag
         }
 
         # Handlers for tags that need more than a simple tag/attrib substitution.
         # Result: return an xhtml element, or return None after managing own children.
-        self._handler_map = {
-            'section': self._handle_section,
-            'title':   self._handle_title,
-            'a':       self._handle_link,
-            'image':   self._handle_image,
-            'style':   self._handle_style,
+        self._handler_map: dict[str, Callable] = {
+            "section": self._handle_section,
+            "title": self._handle_title,
+            "a": self._handle_link,
+            "image": self._handle_image,
+            "style": self._handle_style,
         }
-
 
     # -------------------------------
     # Public API
@@ -114,25 +119,25 @@ class FB2ToHTMLConverter:
 
         return self._converted_bodies
 
-
     def convert_element(self, element: etree._Element) -> etree._Element | None:
         """Converts a single FB2 element outside of a full body context (e.g. annotation)."""
-        saved_type = getattr(self, 'mode', BodyType.MAIN)
+        saved_type = getattr(self, "mode", BodyType.MAIN)
         self.body_type = BodyType.MAIN
         self._section_depth = 0
 
-        tmp_parent = etree.Element('div')
+        tmp_parent = etree.Element("div")
         self._recursive_convert(element, tmp_parent)
         result = tmp_parent[0] if len(tmp_parent) > 0 else None
 
         self.body_type = saved_type
         return result
 
-
     # -------------------------------
     # Core recursive engine
 
-    def _recursive_convert(self, fb2_element: etree._Element, xhtml_parent: etree._Element):
+    def _recursive_convert(
+        self, fb2_element: etree._Element, xhtml_parent: etree._Element
+    ) -> None:
         """
         Converts one FB2 element and recurses into its children.
 
@@ -148,15 +153,14 @@ class FB2ToHTMLConverter:
         # A section nested below the split threshold is not a document boundary and
         # is not an <aside>. Its children belong directly in the calling parent.
         # This is the one case where child recursion cannot be delegated to a handler.
-        if tag == 'section':
+        if tag == "section":
             self._section_depth += 1
-            
+
             # -- Structural unwrap: deep section in MAIN mode
             # Not a document boundary and not an <aside>.
             # Children go directly into the caller's parent, so we handle them here.
 
-            if (self.body_type == BodyType.MAIN
-                and self._section_depth > self.split_level):
+            if self.body_type == BodyType.MAIN and self._section_depth > self.split_level:
                 self._unwrap_into(fb2_element, xhtml_parent)
                 self._section_depth -= 1
                 return
@@ -166,7 +170,7 @@ class FB2ToHTMLConverter:
         new_element = handler(fb2_element)
 
         if new_element is None:
-            if tag == 'section':
+            if tag == "section":
                 self._section_depth -= 1
             return
 
@@ -178,13 +182,12 @@ class FB2ToHTMLConverter:
             if child.tail:
                 if len(new_element) > 0:
                     last_child = new_element[-1]
-                    last_child.tail = (last_child.tail or '') + child.tail
+                    last_child.tail = (last_child.tail or "") + child.tail
                 else:
-                    new_element.text = (new_element.text or '') + child.tail
+                    new_element.text = (new_element.text or "") + child.tail
 
-        if tag == 'section':
+        if tag == "section":
             self._section_depth -= 1
-
 
     # -------------------------------
     # Section handler
@@ -200,7 +203,7 @@ class FB2ToHTMLConverter:
           NOTE, atomic footnote     : build <aside> shell, return it so standard
             flow appends it and recurses children at correct depth.
         """
-        element_id = element.get('id')
+        element_id = element.get("id")
 
         if self.body_type == BodyType.MAIN:
             # depth <= split_level: document boundary
@@ -209,7 +212,7 @@ class FB2ToHTMLConverter:
             return None
 
         # NOTE mode
-        has_child_section = any(xu.get_tag_name(ch) == 'section' for ch in element)
+        has_child_section = any(xu.get_tag_name(ch) == "section" for ch in element)
 
         if element_id and not has_child_section:
             # Atomic footnote: convert to <aside>, let standard flow recurse children
@@ -219,8 +222,7 @@ class FB2ToHTMLConverter:
             self._unwrap_into(element, self._current_body)
             return None
 
-
-    def _split_or_adopt(self, element: etree._Element):
+    def _split_or_adopt(self, element: etree._Element) -> None:
         """
         Manages the document split for a section at or above the split threshold.
 
@@ -239,19 +241,21 @@ class FB2ToHTMLConverter:
             if self._level_counters[level_index] == 0:
                 self._level_counters[level_index] = 1
             new_file_id = self._generate_part_name(element)
-            self._converted_bodies[-1] = self._converted_bodies[-1]._replace(file_id=new_file_id)
-        
+            self._converted_bodies[-1] = self._converted_bodies[-1]._replace(
+                file_id=new_file_id
+            )
+
         self.part_counters[self.body_type] = self._level_counters[0]
 
-
-    def _unwrap_into(self, element: etree._Element, target: etree._Element):
+    def _unwrap_into(self, element: etree._Element, target: etree._Element) -> None:
         """Recurses all children of element into target, emitting an ID anchor first if needed."""
-        element_id = element.get('id')
+        element_id = element.get("id")
         if element_id:
-            target.append(etree.Element('div', {'id': element_id, 'class': 'section-anchor'}))
+            target.append(
+                etree.Element("div", {"id": element_id, "class": "section-anchor"})
+            )
         for child in element:
             self._recursive_convert(child, target)
-
 
     def _make_footnote_aside(self, element: etree._Element) -> etree._Element:
         """
@@ -259,16 +263,16 @@ class FB2ToHTMLConverter:
         Extracts `title` as a backlink prepended to the aside.
         Children (everything except `title`) are recursed by the standard flow.
         """
-        element_id = element.get('id')
+        element_id = element.get("id")
         aside_attr = {
-            'class': 'footnote',
-            'id': element_id,
-            f'{{{NS.EPUB}}}type': 'footnote',
-            'role': 'doc-footnote',
+            "class": "footnote",
+            "id": element_id,
+            f"{{{NS.EPUB}}}type": "footnote",
+            "role": "doc-footnote",
         }
-        aside = etree.Element('aside', aside_attr)
+        aside = etree.Element("aside", aside_attr)
 
-        title_el = element.find(f'{{{NS.FB2}}}title')
+        title_el = element.find(f"{{{NS.FB2}}}title")
         # TODO: title may contain noterefs (it shouldn't, but we can try to preserve them anyway)
         # <title>
         # <p><strong>Section subtitle text</strong><a l:href="#n533" type="note">[533]</a></p>
@@ -276,19 +280,18 @@ class FB2ToHTMLConverter:
         if title_el is not None:
             title_text = xu.itertext(title_el)
             backlink_attr = {
-                'href': f'#{element_id}-ref',
-                'class': 'backlink',
-                'id': f'{element_id}-back',
-                f'{{{NS.EPUB}}}type': 'backlink',
-                'role': 'doc-backlink',
+                "href": f"#{element_id}-ref",
+                "class": "backlink",
+                "id": f"{element_id}-back",
+                f"{{{NS.EPUB}}}type": "backlink",
+                "role": "doc-backlink",
             }
-            backlink = etree.Element('a', backlink_attr)
-            backlink.text = f'{title_text}.'
+            backlink = etree.Element("a", backlink_attr)
+            backlink.text = f"{title_text}."
             aside.insert(0, backlink)
             element.remove(title_el)
 
         return aside
-
 
     # -------------------------------
     # Element handlers
@@ -303,16 +306,16 @@ class FB2ToHTMLConverter:
         parent_tag = xu.get_tag_name(parent)
 
         # Body-level title → div.halftitle (builder extracts it later)
-        if parent_tag == 'body':
-            attrib = {'class': 'halftitle'}
-            element_id = element.get('id')
+        if parent_tag == "body":
+            attrib = {"class": "halftitle"}
+            element_id = element.get("id")
             if element_id:
-                attrib['id'] = element_id
-            return etree.Element('div', attrib)
+                attrib["id"] = element_id
+            return etree.Element("div", attrib)
 
         # Poem title → p.subtitle
-        if parent_tag == 'poem':
-            return self._handle_default(element, convert_as='subtitle')
+        if parent_tag == "poem":
+            return self._handle_default(element, convert_as="subtitle")
 
         # In NOTE mode the body title becomes h1 (inserted by EpubBuilder),
         # so section titles must start at h2 to sit below it.
@@ -329,48 +332,50 @@ class FB2ToHTMLConverter:
         if self._section_depth <= self.split_level:
             self._current_title = title_text
             if self._converted_bodies:
-                self._converted_bodies[-1] = self._converted_bodies[-1]._replace(title=title_text)
+                self._converted_bodies[-1] = self._converted_bodies[-1]._replace(
+                    title=title_text
+                )
 
-        h = etree.Element(f'h{adjusted_level}')
+        h = etree.Element(f"h{adjusted_level}")
         xu.copy_id(element, h)
         return h
-
 
     def _handle_image(self, element: etree._Element) -> etree._Element | None:
         """Converts `image` to `figure>img`, or inline `img` when inside a paragraph."""
         # TODO: section>img as fullscreen
-        img_id = element.get(f'{{{NS.XLINK}}}href', '').lstrip('#')
+        img_id = element.get(f"{{{NS.XLINK}}}href", "").lstrip("#")
         if not img_id or img_id not in self.binary_map:
             log.warning(f"Image {img_id} does not exist. Skipping.")
             return None
 
         binary = self.binary_map[img_id]
 
-        img_attrib = {'data-img-id': img_id}
-        fig_attrib = {'class': 'image'}
+        img_attrib = {"data-img-id": img_id}
+        fig_attrib = {"class": "image"}
 
         dimensions = binary.dimensions
         if dimensions is not None:
-            img_attrib.update({
-                'data-width':       str(dimensions[0]),
-                'data-height':      str(dimensions[1]),
-                'data-orientation': binary.orientation,
-            })
-            fig_attrib['class'] += f" {binary.orientation}".strip()
+            img_attrib.update(
+                {
+                    "data-width": str(dimensions[0]),
+                    "data-height": str(dimensions[1]),
+                    "data-orientation": binary.orientation,
+                }
+            )
+            fig_attrib["class"] += f" {binary.orientation}".strip()
 
-        img = etree.Element('img', img_attrib)
+        img = etree.Element("img", img_attrib)
         xu.copy_id(element, img)
 
         parent = element.getparent()
-        if parent is not None and xu.get_tag_name(parent) in ('p', 'subtitle', 'a'):
+        if parent is not None and xu.get_tag_name(parent) in ("p", "subtitle", "a"):
             # Inline <img> inside a paragraph.
             return img
 
         # Otherwise, wrap it in a <figure>.
-        figure = etree.Element('figure', fig_attrib)
+        figure = etree.Element("figure", fig_attrib)
         figure.append(img)
         return figure
-
 
     def _handle_link(self, element: etree._Element) -> etree._Element | None:
         """
@@ -379,37 +384,36 @@ class FB2ToHTMLConverter:
         Internal links whose target lives in a note body are tagged with
         data-link-type="note". This attribute is removed later by LinkResolver.
         """
-        href = element.get(f'{{{NS.XLINK}}}href') or element.get('href')
+        href = element.get(f"{{{NS.XLINK}}}href") or element.get("href")
 
         if not href:
-            return etree.Element('a', {'class': 'empty'})
+            return etree.Element("a", {"class": "empty"})
 
-        attrib: dict = {'href': href}
+        attrib: dict[str, str] = {"href": href}
 
-        link_type = element.get('type')
+        link_type = element.get("type")
         if link_type:
-            attrib['data-link-type'] = link_type
+            attrib["data-link-type"] = link_type
 
-        link = etree.Element('a', attrib)
+        link = etree.Element("a", attrib)
         xu.copy_id(element, link)
 
         return link
-
 
     def _handle_table(self, element: etree._Element) -> etree._Element | None:
         # TODO: handle align, valign, colspan, rowspan
         pass
 
-
     def _handle_style(self, element: etree._Element) -> etree._Element | None:
         """Converts `style name="X"` to `span class="X"`."""
-        name = element.get('name')
+        name = element.get("name")
         if not name:
             return None
-        return etree.Element('span', {'class': name})
+        return etree.Element("span", {"class": name})
 
-
-    def _handle_default(self, element: etree._Element, convert_as: str | None = None) -> etree._Element | None:
+    def _handle_default(
+        self, element: etree._Element, convert_as: str | None = None
+    ) -> etree._Element | None:
         """
         Simple tag substitution via tag_map. Falls back to `div class="fb2tag"`.
 
@@ -423,7 +427,7 @@ class FB2ToHTMLConverter:
             html_tag, html_attrib = self.tag_map[fb2_tag]
         else:
             # poem, epigraph, etc.
-            html_tag, html_attrib = 'div', {'class': fb2_tag}
+            html_tag, html_attrib = "div", {"class": fb2_tag}
 
         # Merge attributes with existing ones (typically only 'id', 'name')
         # TODO: this would also merge style/align/valign attribs
@@ -431,7 +435,6 @@ class FB2ToHTMLConverter:
         attrib.update(html_attrib or {})
         return etree.Element(html_tag, attrib)
 
-    
     # -------------------------------
     # Document splitting helpers
 
@@ -440,40 +443,39 @@ class FB2ToHTMLConverter:
         # BodyType.NOTE / COMMENT
         # TODO: this doesn't account for multiple bodies with the same name
         if self.body_type != BodyType.MAIN:
-            body_name = fb2_element.get('name')
+            body_name = fb2_element.get("name")
             if body_name is None:
                 log.warning("Note body without 'name' attribute; using 'notes'.")
-                body_name = 'notes'
+                body_name = "notes"
             return body_name.lower()
 
         # BodyType.MAIN
         name_parts = [str(c) for c in self._level_counters if c > 0]
         return f"part_{'_'.join(name_parts) or '1'}"
 
-
-    def _start_new_body(self, fb2_element: etree._Element):
+    def _start_new_body(self, fb2_element: etree._Element) -> None:
         """Creates a new ConvertedBody and makes it the active conversion target."""
         file_id = self._generate_part_name(fb2_element)
-        self._current_body = etree.Element('body')
-        self._converted_bodies.append(ConvertedBody(
-            file_id=file_id,
-            title=self._current_title,
-            body=self._current_body,
-            body_type=self.body_type
-        ))
-
+        self._current_body = etree.Element("body")
+        self._converted_bodies.append(
+            ConvertedBody(
+                file_id=file_id,
+                title=self._current_title,
+                body=self._current_body,
+                body_type=self.body_type,
+            )
+        )
 
     def _has_actual_content(self) -> bool:
         """Returns True if the current body contains anything beyond invisible ID anchors."""
         if self._current_body.text and self._current_body.text.strip():
             return True
         for child in self._current_body:
-            if child.get('class') != 'section-anchor':
+            if child.get("class") != "section-anchor":
                 return True
             if (child.text and child.text.strip()) or (child.tail and child.tail.strip()):
                 return True
         return False
-
 
     def _get_section_depth(self, element: etree._Element) -> int:
         """
@@ -481,5 +483,5 @@ class FB2ToHTMLConverter:
         Used only for the structural-unwrap check in _recursive_convert.
         Prefer reading self._section_depth inside handlers, where it is already current.
         """
-        section_tag = f'{{{NS.FB2}}}section'
+        section_tag = f"{{{NS.FB2}}}section"
         return sum(1 for _ in element.iterancestors(section_tag)) + 1

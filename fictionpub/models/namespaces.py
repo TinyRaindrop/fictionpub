@@ -13,10 +13,10 @@ NCX = "http://www.daisy.org/z3986/2005/ncx/"
 CONTAINER = "urn:oasis:names:tc:opendocument:xmlns:container"
 
 # Namespace Maps
-FB2_MAP = {'fb': FB2, 'l': XLINK}
-XHTML_MAP = {None: XHTML, 'epub': EPUB}
-XPATH_MAP = {'x': XHTML}
-SVG_MAP = {None: SVG, 'xlink': XLINK}
-OPF_MAP = {None: OPF, 'dc': DC}
+FB2_MAP = {"fb": FB2, "l": XLINK}
+XHTML_MAP = {None: XHTML, "epub": EPUB}
+XPATH_MAP = {"x": XHTML}
+SVG_MAP = {None: SVG, "xlink": XLINK}
+OPF_MAP = {None: OPF, "dc": DC}
 NCX_MAP = {None: NCX}
 CONTAINER_MAP = {None: CONTAINER}

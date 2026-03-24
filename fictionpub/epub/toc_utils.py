@@ -1,8 +1,10 @@
-from typing import Iterator, NamedTuple
+from collections.abc import Iterator
+from typing import NamedTuple
 
 
 class TOCItem(NamedTuple):
     """A container for Table of Contents items."""
+
     level: int
     text: str
     href_nav: str

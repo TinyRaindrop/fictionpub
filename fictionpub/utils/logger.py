@@ -2,13 +2,13 @@
 Handles configuration of logging for the main process and for
 multiprocessing workers.
 """
+
 import io
 import logging
 import os
 import sys
 from datetime import datetime
 from pathlib import Path
-
 
 LOG_DIR = Path("./logs")
 MAX_LOG_FILES = 20
@@ -18,7 +18,7 @@ FILE_LOG_FORMAT = (
 )
 
 
-def setup_main_logger(console_level=logging.ERROR):
+def setup_main_logger(console_level=logging.ERROR) -> None:
     """
     Configures the root logger for the main application process.
 
@@ -45,7 +45,6 @@ def setup_main_logger(console_level=logging.ERROR):
         # Fallback in case stdout is unusual (e.g., in pyinstaller --noconsole)
         print(f"Warning: Could not set up console logger: {e}")
 
-
     # --- File Handler (Rotation and New File) ---
     try:
         LOG_DIR.mkdir(exist_ok=True)
@@ -65,7 +64,7 @@ def setup_main_logger(console_level=logging.ERROR):
                     log_file.unlink()
                 except OSError:
                     pass  # Ignore errors if file is locked
-        
+
         # 2. Create new log file for this run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         new_log_path = LOG_DIR / f"converter_{timestamp}.log"
@@ -88,19 +87,19 @@ def setup_main_logger(console_level=logging.ERROR):
 def setup_worker_logger():
     """
     Configures a temporary, in-memory logger for a child process.
-    
+
     Returns:
-        tuple[io.StringIO, logging.Handler]: 
+        tuple[io.StringIO, logging.Handler]:
             - The string buffer that will capture logs.
             - The handler attached to the logger.
     (Both must be closed by the caller)
     """
     log_stream = io.StringIO()
-    
+
     # Create a handler that writes to the string buffer
-    handler = logging.StreamHandler(log_stream)
+    handler: logging.StreamHandler[io.StringIO] = logging.StreamHandler(log_stream)
     handler.setLevel(logging.DEBUG)  # Capture everything from this worker
-    
+
     formatter = logging.Formatter(FILE_LOG_FORMAT, datefmt="%H:%M:%S")
     handler.setFormatter(formatter)
 
@@ -109,6 +108,6 @@ def setup_worker_logger():
     logger.handlers.clear()  # Remove any handlers inherited from parent
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
-    
+
     # Return the buffer and handler so they can be closed later
     return log_stream, handler

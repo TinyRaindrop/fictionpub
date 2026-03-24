@@ -1,6 +1,7 @@
 """
 Defines configuration and settings for the conversion process.
 """
+
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -12,20 +13,21 @@ class ConversionConfig:
     A container for all settings related to a conversion task.
     This object is created by the UI (CLI or GUI) and passed to the ConversionPipeline.
     """
-    # Args already have some defaults, 
+
+    # Args already have some defaults,
     # but we're specifying sane defaults here as well
     output_path: Path | None = None
-    toc_depth: int = 4  
-    split_level: int = 2    # split at each h1..h6
+    toc_depth: int = 4
+    split_level: int = 2  # split at each h1..h6
     split_size_kb: int = 0  # 0 means no splitting  # TODO: implement splitting by size
     remove_unused_images: bool = True
     improve_typography: bool = False
     # word length range [min, max] to qualify for typography processing
     # using very conservative values as defaults
-    word_len_nbsp_range: tuple[int, int] = (1, 1)  
+    word_len_nbsp_range: tuple[int, int] = (1, 1)
     word_len_nobreak_range: tuple[int, int] = (4, 6)
     custom_stylesheet: Path | None = None
-    num_threads: int = 0    # 0 means auto-detect
+    num_threads: int = 0  # 0 means auto-detect
 
 
 class ConversionStatus(Enum):

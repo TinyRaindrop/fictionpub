@@ -2,24 +2,25 @@
 Handles the parallel processing of a batch of files.
 This class contains the ThreadPoolExecutor and is used by both the CLI and GUI.
 """
+
 import concurrent.futures
 import logging
 import os
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
-from .pipeline import ConversionPipeline
-from ..models.conversion import ConversionConfig, ConversionStatus, ConversionResult
+from ..models.conversion import ConversionConfig, ConversionResult, ConversionStatus
 from ..resources.localized_terms import LocalizedTerms
 from ..utils.logger import setup_worker_logger
-
+from .pipeline import ConversionPipeline
 
 log = logging.getLogger("fb2_converter")
 
 
 class WarningTracker(logging.Filter):
     """A custom filter that tracks if any warnings were emitted."""
+
     def __init__(self):
         super().__init__()
         self.has_warnings = False
@@ -30,7 +31,7 @@ class WarningTracker(logging.Filter):
         return True
 
 
-def _init_worker(genres, headings):
+def _init_worker(genres, headings) -> None:
     """
     This function runs once inside every new child process.
     It receives the data and injects it into the local class.
@@ -60,35 +61,39 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> ConversionResu
 
     try:
         worker_log.info(f"Converting: {path.name}")
-        
+
         # Main Conversion Logic
         pipeline = ConversionPipeline(config)
         pipeline.convert(path)
-        
-        status = ConversionStatus.WARNING if tracker.has_warnings else ConversionStatus.SUCCESS
+
+        status = (
+            ConversionStatus.WARNING if tracker.has_warnings else ConversionStatus.SUCCESS
+        )
         warn_status_msg = " (with warnings!)" if tracker.has_warnings else ""
-        worker_log.info(f"Successfully finished{warn_status_msg} conversion for: {path.name}")
+        worker_log.info(
+            f"Successfully finished{warn_status_msg} conversion for: {path.name}"
+        )
 
         return ConversionResult(path, status, log_stream.getvalue())
 
     except Exception as e:
-        # 1. Log the full traceback locally to the worker's buffer. 
+        # 1. Log the full traceback locally to the worker's buffer.
         # This ensures the details are saved to the log file later.
         worker_log.error(f"Failed conversion for: {path.name}", exc_info=True)
 
         # 2. Sanitize the exception.
         # Convert the exception to a built-in type with the string message.
         # This allows the main process to receive the error without crashing.
-        safe_error_msg = f"{type(e).__name__}: {str(e)}"
+        safe_error_msg = f"{type(e).__name__}: {e!s}"
         safe_exc = RuntimeError(safe_error_msg)
-        
+
         return ConversionResult(
-            path=path, 
-            status=ConversionStatus.FAILURE, 
-            log_output=log_stream.getvalue(), 
-            error=safe_exc
+            path=path,
+            status=ConversionStatus.FAILURE,
+            log_output=log_stream.getvalue(),
+            error=safe_exc,
         )
-    
+
     finally:
         # Clean up handlers and close the stream
         log_handler.close()
@@ -101,10 +106,10 @@ class BatchProcessor:
     def __init__(self, config: ConversionConfig):
         self.config = config
         import pickle
+
         pickle.dumps(self.config)
 
-
-    def run(self, files: list[Path], progress_callback: Callable | None = None):
+    def run(self, files: list[Path], progress_callback: Callable | None = None) -> None:
         """
         Processes a list of files in parallel using Thread/ProcessPoolExecutor.
 
@@ -116,19 +121,22 @@ class BatchProcessor:
         # Determine the number of worker threads
         th = self.config.num_threads
         max_workers = th if th > 0 else (os.cpu_count() or 1)
-        print(f"\nStarting batch processing with up to {max_workers} worker threads.", flush=True)
+        print(
+            f"\nStarting batch processing with up to {max_workers} worker threads.",
+            flush=True,
+        )
 
         # Map paths to their original index to maintain order
         path_to_index = {path: i for i, path in enumerate(files)}
-        
+
         # This list will store results in the original file order
         # Each item will be: (path, log_string, exception)
         ordered_results: list[ConversionResult | None] = [None] * len(files)
 
         with concurrent.futures.ProcessPoolExecutor(
             max_workers,
-            initializer=_init_worker,                # Function to run on start
-            initargs=(LocalizedTerms.get_terms())   # Arguments for that function
+            initializer=_init_worker,  # Function to run on start
+            initargs=(LocalizedTerms.get_terms()),  # Arguments for that function
         ) as executor:
             # Submit all conversion tasks
             future_to_path = {
@@ -153,12 +161,14 @@ class BatchProcessor:
                 except Exception as e:
                     # This catches a critical failure in the worker itself
                     # (e.g., the process died)
-                    log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
+                    log.error(
+                        f"Critical worker failure for {path.name}: {e}", exc_info=True
+                    )
                     ordered_results[idx] = ConversionResult(
-                        path=path, 
-                        status=ConversionStatus.FAILURE, 
-                        log_output=f"CRITICAL FAILURE: {e}\n", 
-                        error=e
+                        path=path,
+                        status=ConversionStatus.FAILURE,
+                        log_output=f"CRITICAL FAILURE: {e}\n",
+                        error=e,
                     )
 
             # Short delay for process shutdown

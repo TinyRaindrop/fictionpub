@@ -4,16 +4,17 @@ The main conversion pipeline (Facade).
 This module orchestrates the entire conversion process, using the other
 core modules to perform specific tasks.
 """
+
 from pathlib import Path
 
 from lxml.etree import _Element
 
-from .fb2_book import FB2Book
-from .fb2_to_html_converter import FB2ToHTMLConverter
-from .epub_builder import EpubBuilder
 from ..models.conversion import ConversionConfig
 from ..models.structures import ConvertedBody
 from ..post_processing.post_processor import PostProcessor
+from .epub_builder import EpubBuilder
+from .fb2_book import FB2Book
+from .fb2_to_html_converter import FB2ToHTMLConverter
 
 
 class ConversionPipeline:
@@ -28,8 +29,7 @@ class ConversionPipeline:
         """Initializes the pipeline with a specific configuration."""
         self.config = config
 
-
-    def convert(self, source_path: Path):
+    def convert(self, source_path: Path) -> None:
         """
         Executes the full FB2 to EPUB conversion for a single file.
         """
@@ -47,19 +47,20 @@ class ConversionPipeline:
         doc_fragments: list[ConvertedBody] = []
         for fb2body in fb2_book.bodies:
             doc_fragments.extend(converter.convert_body(fb2body))
-        
+
         annotation: _Element | None = (
             converter.convert_element(fb2_book.metadata.annotation_el)
-            if fb2_book.metadata.annotation_el is not None else None
+            if fb2_book.metadata.annotation_el is not None
+            else None
         )
-        
+
         # 4. Post-process: run cleanup transformations on the converted XHTML documents
         post_processor = PostProcessor(self.config)
         for df in doc_fragments:
             post_processor.run(df.body, df.body_type)
         if annotation is not None:
             post_processor.run(annotation)
-        
+
         # 5. Assemble: pass the fragments to the builder to create final documents
         builder.set_annotation(annotation)
         builder.add_docs(doc_fragments)

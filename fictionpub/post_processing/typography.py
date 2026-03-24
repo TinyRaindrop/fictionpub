@@ -11,7 +11,7 @@ PUNCTUATION_RE = re.compile(r'([.,:;?!' + "".join(DASHES) + r']+)$')
 # Start of <p> is guaranteed to begin at a new line, nbsp is not needed there. 
 # But each sentence inside of a <p> needs the same processing.
 
-def improve_typography(body: etree._Element, len_nbsp_range, len_nobreak_range):
+def improve_typography(body: etree._Element, len_nbsp_range, len_nobreak_range) -> None:
     """
     Applies typographic tweaks to an XHTML body to improve word wrapping and hyphenation.
 
@@ -235,7 +235,7 @@ def _find_next_separator_owner_recursive_up(element):
     return _find_next_separator_owner_recursive_up(parent)
 
 
-def _process_first_word(p, len_nbsp_range, len_nobreak_range):
+def _process_first_word(p, len_nbsp_range, len_nobreak_range) -> None:
     """Processes the first word of a paragraph."""
     # TODO: The very first word of a <p> needs no proсessing, skip it.
     owner, attr = _find_first_text_owner(p)

@@ -1,8 +1,7 @@
 import json
 import logging
-from pathlib import Path
 from importlib import resources as res
-
+from pathlib import Path
 
 log = logging.getLogger("fb2_converter")
 
@@ -39,14 +38,14 @@ def load_json(package: str, filename: str) -> dict:
         return {}
 
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return json.load(f)
     except Exception as e:
         log.error(f"Failed to load JSON {filename}: {e}")
         return {}
 
 
-def load_terms_json(filename: str):
+def load_terms_json(filename: str) -> dict:
     return load_json(TERMS_PACKAGE, filename)
 
 

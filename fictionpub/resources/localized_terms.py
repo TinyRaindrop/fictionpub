@@ -1,25 +1,23 @@
 import logging
-from typing import NamedTuple
+from typing import ClassVar, NamedTuple
 
 from .loader import load_terms_json
-
 
 log = logging.getLogger("fb2_converter")
 
 
 class Term(NamedTuple):
     """Represents a term with Ukrainian, Russian and English names."""
+
     uk: str
     ru: str
     en: str
 
- 
-def clear_lang(lang):
+
+def clear_lang(lang) -> str:
     """Returns first 2 letters of a language code."""
     # Direct replacement mapping
-    lang_map = {
-        'ua': 'uk'
-    }
+    lang_map = {"ua": "uk"}
     clean_lang = lang_map.get(lang) or lang[:2].lower()
     if clean_lang != lang:
         log.info(f"[Language]: Using {clean_lang} instead of {lang}.")
@@ -31,8 +29,9 @@ class LocalizedTerms:
     A wrapper class for translatable text. Loads available translations from json.
     Instances can be initialized with a lang parameter and use get_term() methods.
     """
-    _GENRES: dict[str, Term] = {}
-    _HEADINGS: dict[str, Term] = {}
+
+    _GENRES: ClassVar[dict[str, Term]] = {}
+    _HEADINGS: ClassVar[dict[str, Term]] = {}
 
     @staticmethod
     def _get_json_data(filename: str) -> dict[str, Term]:
@@ -40,45 +39,42 @@ class LocalizedTerms:
         data = load_terms_json(filename)
         return {k: Term(**v) for k, v in data.items()}
 
-
     @classmethod
-    def load_terms(cls):
+    def load_terms(cls) -> None:
         """LocalizedTerms.load_terms() must be called once before creating instances."""
         cls._GENRES = cls._get_json_data("genres.json")
         cls._HEADINGS = cls._get_json_data("headings.json")
 
-
     @classmethod
-    def inject_terms(cls, terms: tuple):
+    def inject_terms(cls, terms: tuple) -> None:
         """
         Manually sets terms data returned by get_terms().
         Used for initialization in multiprocessing.
         """
         cls._GENRES, cls._HEADINGS = terms
 
-
     @classmethod
     def get_terms(cls) -> tuple:
         """Returns (GENRES, HEADINGS) tuple."""
         return cls._GENRES, cls._HEADINGS
 
-
-    def __init__(self, lang: str ='uk', default_lang = 'uk'):
+    def __init__(self, lang: str = "uk", default_lang="uk"):
         """Pass lang=metadata['lang']. Default_lang is used as a fallback in getters."""
         lang = clear_lang(lang)
-        
+
         if lang not in Term._fields:
-            log.info(f"Unsupported book language: '{lang}'. Must be one of {Term._fields}. Falling back to [{default_lang}].")
+            log.info(
+                f"Unsupported book language: '{lang}'. Must be one of {Term._fields}. Falling back to [{default_lang}]."
+            )
             lang = default_lang
         self.lang = lang or default_lang
-        self.default_lang = default_lang    # used as a fallback in getters
+        self.default_lang = default_lang  # used as a fallback in getters
 
         if not self.__class__._GENRES or not self.__class__._HEADINGS:
             log.debug("[LocalizedTerms] Missing terms. Loading from file.")
             self.__class__.load_terms()
 
-
-    def _get_translation(self, dictionary, key, default='') -> str:
+    def _get_translation(self, dictionary, key, default="") -> str:
         """General method to fetch a term from a dictionary with language fallback."""
         term = dictionary.get(key)
         if not term:
@@ -92,18 +88,15 @@ class LocalizedTerms:
 
         return translation
 
-
-    def get_genre(self, key, default=''):
+    def get_genre(self, key, default="") -> str:
         """Get a genre translation."""
         return self._get_translation(self.__class__._GENRES, key, default)
 
-
-    def get_heading(self, key, default=''):
+    def get_heading(self, key, default="") -> str:
         """Get a heading translation."""
         return self._get_translation(self.__class__._HEADINGS, key, default)
 
-
-    def get_all_headings(self, key, default=''):
+    def get_all_headings(self, key, default="") -> list[str]:
         """Get a list of all heading translations for a given key."""
         term = self._HEADINGS.get(key)
         if not term:

@@ -11,11 +11,12 @@ Version resolution order:
   3. Hard-coded fallback — bare `git clone` with no build step.
 """
 
-from importlib.metadata import version as _meta_version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _meta_version
 
 # App name is a plain constant — never generated, never needs a fallback chain.
 
-APP_NAME       = "FictionPub"
+APP_NAME = "FictionPub"
 APP_NAME_SHORT = "fictionpub"
 APP_URL = "https://github.com/TinyRaindrop/fictionpub"
 
@@ -26,3 +27,5 @@ except ImportError:
         VERSION = _meta_version(APP_NAME_SHORT)
     except PackageNotFoundError:
         VERSION = "0.0.0+unknown"
+
+__all__ = ["APP_NAME", "APP_NAME_SHORT", "APP_URL", "VERSION"]

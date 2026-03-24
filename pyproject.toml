@@ -54,10 +54,42 @@ local_scheme = "no-local-version"
 version_file = "fictionpub/_version.py"
 
 [tool.ruff]
-exclude = ["dist", "build", ".venv", ".*"]
+exclude = ["dist", "build", ".venv", ".*", "typography.py"]
+line-length = 92
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings (e.g. trailing whitespace)
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear — catches common bugs
+    "UP",   # pyupgrade — modernise syntax for py312
+    "SIM",  # flake8-simplify — simplify boolean/conditional expressions
+    "C4",   # flake8-comprehensions — better list/dict/set comprehensions
+    "RUF",  # ruff-specific rules (e.g. unused noqa, mutable defaults)
+    "N",    # pep8-naming
+    "ERA",  # commented-out code detection
+    "PT",   # flake8-pytest-style (if you use pytest)
+    #"TID",  # tidy imports (ban relative imports etc.)
+]
+ignore = [
+    "E501",   # line too long — handled by formatter
+    "E203",   # whitespace before ':' — conflicts with formatter
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 [tool.mypy]
 exclude = '(dist|build)/'
+python_version = "3.12"
+strict = true            # enables all strict checks
+ignore_missing_imports = true  # suppress errors for untyped third-party libs
 
 [project.urls]
 Homepage = "https://github.com/TinyRaindrop/fictionpub"

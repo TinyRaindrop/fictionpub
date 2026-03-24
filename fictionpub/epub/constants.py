@@ -3,21 +3,23 @@ from typing import NamedTuple
 
 class FNames:
     """Folder / File names that EpubBuilder uses."""
-    META_INF: str = 'META-INF'
-    OEBPS: str = 'OEBPS'
-    TEXT: str = 'Text'
-    IMAGES: str = 'Images'
-    STYLES: str = 'Styles'
-    CSS: str = 'style.css'
-    NCX: str = 'toc.ncx'
-    OPF: str = 'content.opf'
-    CONTAINER: str = 'container.xml'
+
+    META_INF: str = "META-INF"
+    OEBPS: str = "OEBPS"
+    TEXT: str = "Text"
+    IMAGES: str = "Images"
+    STYLES: str = "Styles"
+    CSS: str = "style.css"
+    NCX: str = "toc.ncx"
+    OPF: str = "content.opf"
+    CONTAINER: str = "container.xml"
 
 
 class EpubStructureItem(NamedTuple):
     """A structured immutable representation of an EPUB structural component."""
-    epub_type: str = ''
-    guide_type: str = ''
+
+    epub_type: str = ""
+    guide_type: str = ""
 
 
 _RAW_EPUB_TYPES = {

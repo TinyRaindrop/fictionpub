@@ -7,64 +7,70 @@ from lxml import etree
 @dataclass
 class QuickMetadata:
     """Metadata excerpt with only a few most important fields. Parsed without a full tree load."""
-    author: str = ''
-    title: str = ''
-    date: str = ''
-    lang: str = ''
+
+    author: str = ""
+    title: str = ""
+    date: str = ""
+    lang: str = ""
 
 
 @dataclass
 class TitleInfo:
     """Metadata block from FB2 `<title-info>`."""
-    title: str             = 'Untitled'
-    authors: list            = field(default_factory=list)  # list[str]
-    translators: list            = field(default_factory=list)  # list[str]
-    lang: str             = ''
-    genres: list            = field(default_factory=list)  # list[str]
-    keywords: str             = ''
-    date: str             = ''
-    sequence: str             = ''
-    sequence_number: int | None      = None
+
+    title: str = "Untitled"
+    authors: list[str] = field(default_factory=list)
+    translators: list[str] = field(default_factory=list)
+    lang: str = ""
+    genres: list[str] = field(default_factory=list)
+    keywords: str = ""
+    date: str = ""
+    sequence: str = ""
+    sequence_number: int | None = None
     annotation_el: etree._Element | None = field(default=None, repr=False)
 
     @property
     def author(self) -> str:
         """First author name, or empty string."""
-        return self.authors[0] if self.authors else ''
+        return self.authors[0] if self.authors else ""
 
 
 class SourceInfo(NamedTuple):
     """Metadata block from FB2 `<src-title-info>`."""
-    title: str = ''
-    author: str = ''
-    src_lang: str = ''
-    date: str = ''
+
+    title: str = ""
+    author: str = ""
+    src_lang: str = ""
+    date: str = ""
     # Ignoring <src-title-info> genres. They are usually set accidentally and are wrong.
 
 
 class PublishInfo(NamedTuple):
     """Metadata block from FB2 `<publish-info>`."""
-    book_name: str = ''
-    publisher: str = ''
-    city: str = ''
-    year: str = ''
-    isbn: str = ''
+
+    book_name: str = ""
+    publisher: str = ""
+    city: str = ""
+    year: str = ""
+    isbn: str = ""
 
 
 class DocumentInfo(NamedTuple):
     """Metadata block from FB2 `<document-info>`."""
-    program_used: str = ''
-    date: str = ''
-    doc_id: str = ''
-    version: str = ''
-    author: str = ''
-    src_ocr: str = ''
+
+    program_used: str = ""
+    date: str = ""
+    doc_id: str = ""
+    version: str = ""
+    author: str = ""
+    src_ocr: str = ""
 
 
 class CustomInfo(NamedTuple):
     """A single `<custom-info>` entry from the FB2 description."""
-    info_type: str = ''
-    text: str = ''
+
+    info_type: str = ""
+    text: str = ""
 
 
 @dataclass
@@ -75,11 +81,12 @@ class BookMetadata:
     EPUB-layer values (epub id, app info, localized genres, description text)
     are supplied separately at the point of use (EpubBuilder / OPF writer).
     """
+
     # nested info blocks (always present, defaulting to empty)
     title_info: TitleInfo = field(default_factory=TitleInfo)
-    src: SourceInfo      = field(default_factory=SourceInfo)
-    doc: DocumentInfo    = field(default_factory=DocumentInfo)
-    pub: PublishInfo     = field(default_factory=PublishInfo)
+    src: SourceInfo = field(default_factory=SourceInfo)
+    doc: DocumentInfo = field(default_factory=DocumentInfo)
+    pub: PublishInfo = field(default_factory=PublishInfo)
 
     # other assets
     custom_info: list[CustomInfo] = field(default_factory=list)
@@ -88,28 +95,40 @@ class BookMetadata:
     # Convenience properties for most widely accessed fields.
     # These are delegating to title_info.
     @property
-    def title(self) -> str: return self.title_info.title
+    def title(self) -> str:
+        return self.title_info.title
+
     @property
-    def author(self) -> str: return self.title_info.author or 'Unknown Author'
+    def author(self) -> str:
+        return self.title_info.author or "Unknown Author"
+
     @property
-    def authors(self) -> list: return self.title_info.authors
+    def authors(self) -> list:
+        return self.title_info.authors
+
     @property
-    def lang(self) -> str: return self.title_info.lang
+    def lang(self) -> str:
+        return self.title_info.lang
+
     @property
-    def genres(self) -> list: return self.title_info.genres
+    def genres(self) -> list:
+        return self.title_info.genres
+
     @property
-    def annotation_el(self) -> 'etree._Element | None': return self.title_info.annotation_el
+    def annotation_el(self) -> "etree._Element | None":
+        return self.title_info.annotation_el
+
     @annotation_el.setter
-    def annotation_el(self, e: 'etree._Element | None'): self.title_info.annotation_el = e
+    def annotation_el(self, e: "etree._Element | None"):
+        self.title_info.annotation_el = e
 
 
 @dataclass
 class EpubMetadata:
     book_meta: BookMetadata
-    epub_id: str    # mandatory
-    app_name: str = ''
-    app_version: str = ''
-    app_url: str = ''
+    epub_id: str  # mandatory
+    app_name: str = ""
+    app_version: str = ""
+    app_url: str = ""
     lang_genres: list[str] = field(default_factory=list)
     description: str | None = None
-   

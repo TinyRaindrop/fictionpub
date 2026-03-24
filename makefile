@@ -1,40 +1,34 @@
 # Development Tasks
 
-.PHONY: install
+.PHONY: install format lint typecheck check build exe clean
+
 install:
 	pip install -e .[dev]
 
-.PHONY: format
-format:
-	ruff check --fix .
-	ruff check --fix fictionpub/
-	ruff format .
+## Code Quality
 
-.PHONY: lint
+format:
+	ruff format .
+	ruff check --fix .
+
 lint:
 	ruff check .
+
+typecheck:
 	mypy .
 
-.PHONY: test
-test:
-	pytest -q
+# only check without modifying files
+check: lint typecheck
 
-.PHONY: testcov
-testcov:
-	pytest --cov=fictionpub --cov-report=term-missing
+## Build
 
-.PHONY: build
 build:
 	python -m build
 
-.PHONY: exe
 exe:
 	python build_exe.py
 
-.PHONY: publish
-publish:
-	twine upload dist/*
+## Cleanup
 
-.PHONY: clean
 clean:
-	rm -rf build/ dist/ .pytest_cache .ruff_cache .mypy_cache
+	rm -rf build/ dist/ .pytest_cache .ruff_cache .mypy_cache __pycache__

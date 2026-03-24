@@ -5,7 +5,6 @@ from PIL import Image
 
 from .loader import _resource_path
 
-
 log = logging.getLogger("fb2_converter")
 
 # TODO: refactor resource loader, separate gui-related resources into its own module
@@ -27,12 +26,13 @@ def load_icon_image(filename: str, size: int):
     Scales down large images to specified size in px.
     """
     from PIL import ImageTk
+
     img = _load_pil_image(ICONS_PACKAGE, filename)
     if img is None:
         log.error(f"Failed to load icon {filename}")
         # Fallback: blank image of required size
         img = Image.new("RGBA", (size, size))
-    
+
     else:
         # Downscale if needed
         max_dimension = max(img.size)
