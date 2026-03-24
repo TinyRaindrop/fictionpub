@@ -341,7 +341,7 @@ class FB2ToHTMLConverter:
         # TODO: section>img as fullscreen
         img_id = element.get(f'{{{NS.XLINK}}}href', '').lstrip('#')
         if not img_id or img_id not in self.binary_map:
-            log.warning(f"Image does not exist. Id={img_id}. Skipping.")
+            log.warning(f"Image {img_id} does not exist. Skipping.")
             return None
 
         binary = self.binary_map[img_id]

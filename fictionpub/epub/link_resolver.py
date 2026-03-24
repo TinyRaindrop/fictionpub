@@ -202,6 +202,7 @@ class LinkResolver:
         if a.get('id') is None:
             count = self._note_ref_counters.get(target_id, 0) + 1
             self._note_ref_counters[target_id] = count
+            # note backlink points to 'ref', which is the first reference
             suffix = '' if count == 1 else f'-{count}'
             a.set('id', f'{target_id}-ref{suffix}')
 
@@ -226,7 +227,10 @@ class LinkResolver:
         Removes href from broken links to avoid Epubcheck errors. 
         Marks the element with 'broken-link' class.
         """
-        log.warning(f"Broken internal link: target id='{target_id}' not found in any document.")
+        if 'backlink' in a.attrib.get('class' ,''):
+            log.warning(f"Note id='{target_id.rstrip('-ref')}' exists, but is never refenced.")
+        else:
+            log.warning(f"Broken internal link: target id='{target_id}' not found in any document.")
         xu.add_class(a, 'broken-link')
         xu.remove_attr(a, 'href')
         a.set('data-target', target_id)
