@@ -117,25 +117,36 @@ class EpubBuilder:
         """
         for doc in converted_docs:
             if doc.body_type == BodyType.MAIN:
-                self._add_main_doc(doc)
+                file_info = self._process_main_doc(doc)
             else:
                 # BodyType.NOTE and BodyType.COMMENT
-                self._add_note_doc(doc)
+                file_info = self._process_note_doc(doc)
+            
+            if file_info:
+                self.doc_list.append(file_info)
 
-    def _add_main_doc(self, doc: ConvertedBody):
-        """
-        Receives a converted document, wraps body in a full HTML document.
-                Adds it to doc_list.
-        """
+    def _process_main_doc(self, doc: ConvertedBody) -> FileInfo | None:
+        """Receives a converted body and wraps it in a full HTML document."""
         html, body = self._create_html(doc.file_id, doc.title)
+        # Copy all children from converted body to new html
         body.extend(list(doc.body))
-        # TODO: remove div.halftitle if equal to metadata.title / metadata.author
+        
+        # Remove div.halftitle if it contains nothing more than Author/Title
+        combinations = (
+                self.metadata.title,
+                self.metadata.author,
+            )
+        halftitle: etree._Element | None = xu.get_halftitle(body)
+        if halftitle is not None and xu.match_halftitle(halftitle, combinations):
+            body.remove(halftitle)
+            log.debug(f"Doc id={doc.file_id}: Removing halftitle.")
+            if len(body) == 0:
+                log.debug(f"Doc id={doc.file_id} is now empty. Skipping.")
+                return None
+        
+        return FileInfo(doc.file_id, doc.title, html, body_type=doc.body_type)
 
-        # Move all children from converted body to new html
-        file_info = FileInfo(doc.file_id, doc.title, html, body_type=doc.body_type)
-        self.doc_list.append(file_info)
-
-    def _add_note_doc(self, doc: ConvertedBody) -> None:
+    def _process_note_doc(self, doc: ConvertedBody) -> FileInfo | None:
         """
         Wraps a converted note body in a full HTML document with an h1 title.
 
@@ -146,43 +157,39 @@ class EpubBuilder:
         """
         if len(doc.body) == 0:
             log.warning(f"Note body with id '{doc.file_id}' is empty. Skipping.")
-            return
+            return None
 
         # start with the converter-supplied title if available,
         # otherwise fall back to a localized heading based on the body name
         local_title = self.local_terms.get_heading(doc.file_id)
         all_local_titles = self.local_terms.get_all_headings(doc.file_id)
         html, body = self._create_html(doc.file_id, local_title)
-        # Move all children from converted body to new html
+        # Copy all children from converted body to new html
         body.extend(list(doc.body))
 
         h1 = etree.Element("h1")
         h1.text = local_title
 
-        # div.halftitle is always a direct child of body (placed there by the converter)
-        halftitle: etree._Element | None = next(
-            (el for el in body if "halftitle" in (el.get("class") or "")), None
-        )
+        halftitle: etree._Element | None = xu.get_halftitle(body)
 
         if halftitle is not None:
-            extracted_text: str = xu.itertext(halftitle).capitalize()  # type: ignore
-            if extracted_text and extracted_text not in all_local_titles:
-                h1.text = extracted_text
+            ht_text = xu.itertext(halftitle).capitalize()
+            if ht_text and ht_text not in all_local_titles:
+                h1.text = ht_text
             body.replace(halftitle, h1)
+            log.debug(f"Doc id={doc.file_id}: Using '{ht_text}' as a title.")
             # Ensure the H1 is the first child
             if body.index(h1) != 0:
                 body.remove(h1)
                 body.insert(0, h1)
-                log.warning(f"Note body '{doc.file_id}': h1 is not the 1st child of body.")
+                log.warning(f"Note body '{doc.file_id}': h1 was not the 1st child of body. Fixed.")
 
         else:
             # No original title existed, so inject a new H1 at the very top
             body.insert(0, h1)
+            log.debug(f"Doc id={doc.file_id}: Using '{local_title}' as a title.")
 
-        file_info = FileInfo(
-            doc.file_id, local_title, html, body_type=doc.body_type, is_note=True
-        )
-        self.doc_list.append(file_info)
+        return FileInfo(doc.file_id, local_title, html, body_type=doc.body_type)
 
     def build(self) -> None:
         """
@@ -325,11 +332,10 @@ class EpubBuilder:
     def _create_docinfo_page(self) -> FileInfo | None:
         """Creates Docinfo.xhtml"""
         info_sections = {
+            "Book Info": self.metadata.title_info.todict(),
             "Publication Info": self.metadata.pub._asdict(),
             "Original Publication": self.metadata.src._asdict(),
             "Document Info": self.metadata.doc._asdict(),
-            # TODO: display 'title-info' values?
-            "Book Info": {},  # title-info keys are now top-level on BookMetadata
             "Converter": {
                 "Program used": f"{self.epub_meta.app_name} {self.epub_meta.app_version}",
                 "URL": self.epub_meta.app_url,

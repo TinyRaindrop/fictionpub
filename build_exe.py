@@ -132,9 +132,6 @@ PLUGIN_EXCLUDES_CLI = [
 ]
 
 exclude_options = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
-
-# TODO: Remove tkinter and PIL from CLI build
-# Breaks loader.py which does `from PIL import Image, ImageTk` at top level
 exclude_options_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
 
 

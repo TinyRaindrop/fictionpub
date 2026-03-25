@@ -224,6 +224,7 @@ class FB2Book:
             seq_num = seq.get("number", "")
             if seq_num and seq_num.isdigit():
                 ti.sequence_number = int(seq_num)
+        log.debug(f"Title: {ti.title}, Authors: {ti.authors}.")
         return ti
 
     @staticmethod

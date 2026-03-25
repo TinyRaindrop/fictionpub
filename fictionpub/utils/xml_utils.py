@@ -1,3 +1,5 @@
+import re
+
 from lxml import etree
 
 from ..models import namespaces as NS
@@ -23,6 +25,29 @@ def elem_findall(
 def elem_findtext(element: etree._Element, tag, namespaces=NS.FB2_MAP, default="") -> str:
     """Helper to find all elements of <tag> using a namespace."""
     return element.findtext(tag, default, namespaces)
+
+
+def get_halftitle(body: etree._Element) -> etree._Element | None:
+    """Helper to find `div.halftitle` in a converted body."""
+    # div.halftitle is always a direct child of body (placed there by the converter)
+    return next(
+        (el for el in body if "halftitle" in (el.get("class") or "")), None
+    )
+
+
+def match_halftitle(halftitle: etree._Element | None, combinations: tuple) -> bool:
+    if halftitle is not None:
+        ht_text = itertext(halftitle)
+        ht = ht_text.lower()
+        
+        for part in combinations:
+            if part.lower() in ht:
+                ht = ht.replace(part.lower(), "").strip()
+        # if ht_text is now empty or contains only punctuation, remove halftitle
+        pattern = re.compile(r"\w", re.UNICODE)
+        if not pattern.search(ht):
+            return True
+    return False
 
 
 # -------------------------------
@@ -105,21 +130,20 @@ def remove_attr(element: etree._Element, name: str) -> None:
 # Text extraction
 
 
-def itertext(el: etree._Element) -> str | None:
+def itertext(el: etree._Element) -> str:
     """Returns all text content in the element subtree as a string."""
     if el is None:
-        return None
-    result = " ".join(t.strip() for t in el.itertext() if t.strip())  # type: ignore
-    return result or None
+        return ""
+    return " ".join(t.strip() for t in el.itertext() if t.strip())  # type: ignore
 
 
-def itertext_separated(el: etree._Element | None) -> str | None:
+def itertext_separated(el: etree._Element | None) -> str:
     """
     Returns text content in the element subtree, separated by newlines.
     Accepts both FB2 XML and converted XHTML elements.
     """
     if el is None:
-        return None
+        return ""
 
     # FB2 / XHTML tags which would be separated by a newline.
     block_tags = {
@@ -170,7 +194,7 @@ def itertext_separated(el: etree._Element | None) -> str | None:
             clean_lines.append(clean_line)
 
     # Join with one newline
-    return "\n".join(clean_lines) or None
+    return "\n".join(clean_lines)
 
 
 # -------------------------------

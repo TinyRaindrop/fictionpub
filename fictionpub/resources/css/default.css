@@ -355,7 +355,6 @@ a.broken-link {
     margin: 0.5rem 1rem;
     text-align: center;
     text-indent: 0;
-    font-weight: bold;
     font-family: serif;
 }
 
@@ -366,11 +365,11 @@ a.broken-link {
     margin-bottom: 1.5em;
 }
 
-/* TODO: middle paragraphs would be styled differently? */
 /* The last paragraph is usually the book title */
-.halftitle p:last-child {
+.halftitle p:not(:first-child) {
     font-size: 1.5rem;
     margin-top: 0;
+    font-weight: bold;
 }
 
 .titlepage-wrap p,

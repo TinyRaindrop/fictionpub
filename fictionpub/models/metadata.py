@@ -33,6 +33,20 @@ class TitleInfo:
     def author(self) -> str:
         """First author name, or empty string."""
         return self.authors[0] if self.authors else ""
+    
+    def todict(self):
+        """For debugging purposes."""
+        return {
+            "title": self.title,
+            "authors": self.authors,
+            "translators": self.translators,
+            "lang": self.lang,
+            "genres": self.genres,
+            "keywords": self.keywords,
+            "date": self.date,
+            "sequence": self.sequence,
+            "sequence_number": self.sequence_number,
+        }
 
 
 class SourceInfo(NamedTuple):
