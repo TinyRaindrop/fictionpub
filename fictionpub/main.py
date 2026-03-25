@@ -43,7 +43,8 @@ def main(mode: AppMode = AppMode.AUTO) -> None:
 
     elif mode == AppMode.GUI:
         try:
-            from .gui import run_gui
+            # from .gui import run_gui
+            from .pyside6 import run_gui
 
             log.info("No input file provided, launching GUI...")
             run_gui()
