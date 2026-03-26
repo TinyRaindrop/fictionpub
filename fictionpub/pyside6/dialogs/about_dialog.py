@@ -1,17 +1,22 @@
 """
 Non-modal About dialog.
 Pulls app name, version and URL from the top-level app_info module.
+
+Listener cleanup
+----------------
+register_listener uses WeakMethod, so when this dialog is closed and
+garbage-collected (WA_DeleteOnClose), the listener is silently dropped
+on the next set_language call — no manual unregister required.
 """
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QDesktopServices, QFont
+from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QLabel,
     QVBoxLayout,
 )
-from PySide6.QtCore import QUrl
 
 from ... import app_info
 from ..i18n import register_listener, t
@@ -58,7 +63,9 @@ class AboutDialog(QDialog):
         # Description
         self._desc_label = QLabel()
         self._desc_label.setWordWrap(True)
-        self._desc_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self._desc_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
         layout.addWidget(self._desc_label)
 
         # Tech stack

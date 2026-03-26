@@ -1,7 +1,14 @@
 """
 Top toolbar containing file management and settings actions.
-All user actions are exposed as Qt signals; the widget holds no business logic.
-Supports runtime language switching via register_listener / _retranslate_ui.
+
+Selection toggle
+----------------
+The two former "✓ All" / "✗ None" buttons are replaced by a single
+QPushButton whose label always shows the current selection count.
+Clicking it alternates between "select all" and "deselect all":
+  - if every file is already checked  → deselect all
+  - otherwise (none or partial)       → select all
+The current state is tracked via update_selection_count().
 """
 
 from PySide6.QtCore import Signal
@@ -34,7 +41,7 @@ class ToolbarWidget(QWidget):
     removeAllRequested       = Signal()
     removeCompletedRequested = Signal()
 
-    # Selection
+    # Selection — single toggle emits whichever is appropriate
     selectAllRequested   = Signal()
     deselectAllRequested = Signal()
 
@@ -46,6 +53,7 @@ class ToolbarWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._all_selected = False  # tracks whether all files are currently checked
         self._build_ui()
         register_listener(self._retranslate_ui)
 
@@ -67,35 +75,26 @@ class ToolbarWidget(QWidget):
 
         layout.addWidget(_vsep())
 
-        # Selection
-        self._sel_all  = QPushButton()
-        self._sel_none = QPushButton()
-        layout.addWidget(self._sel_all)
-        layout.addWidget(self._sel_none)
-
-        # Selection counter
-        self._count_label = QLabel()
-        self._count_label.setContentsMargins(6, 0, 6, 0)
-        layout.addWidget(self._count_label)
+        # Single select-toggle button
+        self._select_toggle = QPushButton()
+        self._select_toggle.setMinimumWidth(130)
+        layout.addWidget(self._select_toggle)
 
         # Spacer
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer)
 
-        # Right group: conversion settings | app settings | logs | about
+        # Right group
         self._conv_settings = QPushButton()
-
-        self._app_settings = QPushButton()
+        self._app_settings  = QPushButton()
         self._app_settings.setFixedWidth(32)
+        self._logs          = QPushButton()
 
-        self._logs = QPushButton()
-
-        # About button — uses Qt's built-in information icon so it works
-        # on every platform without bundling an extra image file.
         self._about = QPushButton()
-        style = QApplication.style()
-        info_icon = style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+        info_icon = QApplication.style().standardIcon(
+            QStyle.StandardPixmap.SP_MessageBoxInformation
+        )
         self._about.setIcon(info_icon)
         self._about.setFixedWidth(32)
 
@@ -103,20 +102,25 @@ class ToolbarWidget(QWidget):
                   _vsep(), self._logs, _vsep(), self._about):
             layout.addWidget(w)
 
-        # Wire signals
+        # Signals
         self._add_files.clicked.connect(self.addFilesRequested)
         self._add_folder.clicked.connect(self.addFolderRequested)
         self._remove.clicked.connect(self.removeSelectedRequested)
         self._remove_all.clicked.connect(self.removeAllRequested)
         self._remove_done.clicked.connect(self.removeCompletedRequested)
-        self._sel_all.clicked.connect(self.selectAllRequested)
-        self._sel_none.clicked.connect(self.deselectAllRequested)
+        self._select_toggle.clicked.connect(self._on_select_toggle)
         self._conv_settings.clicked.connect(self.conversionSettingsRequested)
         self._app_settings.clicked.connect(self.appSettingsRequested)
         self._logs.clicked.connect(self.logsRequested)
         self._about.clicked.connect(self.aboutRequested)
 
         self._retranslate_ui()
+
+    def _on_select_toggle(self) -> None:
+        if self._all_selected:
+            self.deselectAllRequested.emit()
+        else:
+            self.selectAllRequested.emit()
 
     def _retranslate_ui(self) -> None:
         self._add_files.setText(t("toolbar.add_files"))
@@ -129,10 +133,6 @@ class ToolbarWidget(QWidget):
         self._remove_all.setToolTip(t("tooltip.remove_all"))
         self._remove_done.setText(t("toolbar.remove_done"))
         self._remove_done.setToolTip(t("tooltip.remove_done"))
-        self._sel_all.setText(t("toolbar.select_all"))
-        self._sel_all.setToolTip(t("tooltip.select_all"))
-        self._sel_none.setText(t("toolbar.select_none"))
-        self._sel_none.setToolTip(t("tooltip.select_none"))
         self._conv_settings.setText(t("toolbar.settings"))
         self._conv_settings.setToolTip(t("tooltip.settings"))
         self._app_settings.setText(t("toolbar.app_settings"))
@@ -140,21 +140,29 @@ class ToolbarWidget(QWidget):
         self._logs.setText(t("toolbar.logs"))
         self._logs.setToolTip(t("tooltip.logs"))
         self._about.setToolTip(t("tooltip.about"))
-        self._count_label.setText(
-            t("toolbar.n_of_m_selected", checked=0, total=0)
+        self._select_toggle.setToolTip(t("tooltip.select_toggle"))
+        # Re-render count label with current counts
+        self._refresh_toggle_label()
+
+    def _refresh_toggle_label(self) -> None:
+        checked = getattr(self, "_last_checked", 0)
+        total   = getattr(self, "_last_total",   0)
+        self._select_toggle.setText(
+            t("toolbar.select_toggle", checked=checked, total=total)
         )
 
     # ------------------------------------------------------------------
-    # Public API called by MainWindow
+    # Public API
     # ------------------------------------------------------------------
 
     def set_busy(self, busy: bool) -> None:
         for w in (self._add_files, self._add_folder,
                   self._remove, self._remove_all, self._remove_done,
-                  self._sel_all, self._sel_none):
+                  self._select_toggle):
             w.setEnabled(not busy)
 
     def update_selection_count(self, checked: int, total: int) -> None:
-        self._count_label.setText(
-            t("toolbar.n_of_m_selected", checked=checked, total=total)
-        )
+        self._last_checked   = checked
+        self._last_total     = total
+        self._all_selected   = (total > 0 and checked == total)
+        self._refresh_toggle_label()
