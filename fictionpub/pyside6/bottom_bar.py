@@ -92,7 +92,7 @@ class BottomBarWidget(QWidget):
         self._convert.setText(t("bar.convert"))
 
     # ------------------------------------------------------------------
-    # State transitions
+    # State transitions — all called from MainWindow on the main thread
     # ------------------------------------------------------------------
 
     def set_idle(self, message: str | None = None) -> None:
@@ -117,6 +117,11 @@ class BottomBarWidget(QWidget):
         self._cancel.setEnabled(True)
         self._counters.hide()
 
+    def set_cancelling(self) -> None:
+        """Called after the user clicks Cancel; disables the button to avoid double-fire."""
+        self._status.setText(t("bar.cancelling"))
+        self._cancel.setEnabled(False)
+
     def update_progress(self, completed: int, total: int,
                         success: int, warnings: int, failures: int) -> None:
         self._progress.setValue(completed)
@@ -137,3 +142,5 @@ class BottomBarWidget(QWidget):
         self._convert.setEnabled(True)
         self._counters.setText(f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}")
         self._counters.show()
+
+

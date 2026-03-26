@@ -7,8 +7,8 @@ Usage:
     label.setText(t("toolbar.add_files"))
 
 To add a new string: add it to both _EN and _UK dicts with the same key.
-Widgets that need to react to language changes implement retranslate_ui()
-and connect it to AppState.language_changed.
+Widgets that need to react to language changes implement _retranslate_ui()
+and connect it to register_listener().
 """
 
 from typing import Callable
@@ -31,6 +31,7 @@ _EN: dict[str, str] = {
     "toolbar.settings":          "⚙ Settings",
     "toolbar.app_settings":      "🔧",
     "toolbar.logs":              "📋 Logs",
+    "toolbar.about":             "ℹ About",
     "toolbar.n_of_m_selected":   "{checked} of {total} selected",
 
     # Toolbar tooltips
@@ -44,9 +45,11 @@ _EN: dict[str, str] = {
     "tooltip.settings":          "Configure conversion options",
     "tooltip.app_settings":      "Application preferences",
     "tooltip.logs":              "Open the logs directory",
+    "tooltip.about":             "About this application",
 
     # Tree header
-    "tree.col_name":   "Status / Filename",
+    "tree.col_name":   "Filename",
+    "tree.col_status": "Status",
     "tree.col_author": "Author",
     "tree.col_title":  "Title",
     "tree.col_date":   "Date",
@@ -60,6 +63,7 @@ _EN: dict[str, str] = {
     "bar.converting_progress":   "Converting… {done}/{total}",
     "bar.done":                  "Done — {total} file(s) processed.",
     "bar.cancelled":             "Cancelled.",
+    "bar.cancelling":            "Cancelling…",
     "bar.logs_folder":           "📂 Logs folder",
     "bar.last_log":              "📋 Last log",
     "bar.convert":               "Convert",
@@ -111,6 +115,18 @@ _EN: dict[str, str] = {
     "appsettings.theme_light":   "Light",
     "appsettings.theme_dark":    "Dark",
     "appsettings.language":      "Language:",
+
+    # About dialog
+    "about.title":       "About FictionPub",
+    "about.description": (
+        "FictionPub converts FB2 e-books to the EPUB 3 format. "
+        "It supports batch processing, parallel conversion, custom stylesheets, "
+        "and typography post-processing."
+    ),
+    "about.built_with": (
+        "<b>Built with:</b> Python 3 · PySide6 / Qt 6 · "
+        "concurrent.futures (ProcessPoolExecutor)"
+    ),
 
     # Log viewer
     "logviewer.title_file":      "Log — {name}",
@@ -165,6 +181,7 @@ _UK: dict[str, str] = {
     "toolbar.settings":          "⚙ Налаштування",
     "toolbar.app_settings":      "🔧",
     "toolbar.logs":              "📋 Журнали",
+    "toolbar.about":             "ℹ Про програму",
     "toolbar.n_of_m_selected":   "{checked} з {total} вибрано",
 
     # Toolbar tooltips
@@ -178,9 +195,11 @@ _UK: dict[str, str] = {
     "tooltip.settings":          "Налаштування конвертації",
     "tooltip.app_settings":      "Налаштування програми",
     "tooltip.logs":              "Відкрити директорію журналів",
+    "tooltip.about":             "Про цю програму",
 
     # Tree header
-    "tree.col_name":   "Статус / Назва файлу",
+    "tree.col_name":   "Назва файлу",
+    "tree.col_status": "Статус",
     "tree.col_author": "Автор",
     "tree.col_title":  "Назва",
     "tree.col_date":   "Дата",
@@ -194,6 +213,7 @@ _UK: dict[str, str] = {
     "bar.converting_progress":   "Конвертація… {done}/{total}",
     "bar.done":                  "Готово — оброблено {total} файл(ів).",
     "bar.cancelled":             "Скасовано.",
+    "bar.cancelling":            "Скасування…",
     "bar.logs_folder":           "📂 Папка журналів",
     "bar.last_log":              "📋 Останній журнал",
     "bar.convert":               "Конвертувати",
@@ -224,7 +244,7 @@ _UK: dict[str, str] = {
     "settings.remove_images":    "Видалити невикористані зображення",
     "settings.remove_images_tip":"Видалити зображення, на які немає посилань у тексті.",
     "settings.typography":       "Покращити типографіку",
-    "settings.typography_tip":   "Увімкнути постобробку: нерозривні пробіли, span.nobreak тощо.",
+    "settings.typography_tip":   "Увімкнути постобробку: нерозривні пробіни, span.nobreak тощо.",
     "settings.nbsp_range":       "Діапазон довжини слів для NBSP:",
     "settings.nobr_range":       "Діапазон довжини слів для nobreak:",
     "settings.output":           "Виведення",
@@ -245,6 +265,18 @@ _UK: dict[str, str] = {
     "appsettings.theme_light":   "Світла",
     "appsettings.theme_dark":    "Темна",
     "appsettings.language":      "Мова:",
+
+    # About dialog
+    "about.title":       "Про FictionPub",
+    "about.description": (
+        "FictionPub конвертує електронні книги у форматі FB2 до формату EPUB 3. "
+        "Підтримує пакетну обробку, паралельну конвертацію, власні таблиці стилів "
+        "та постобробку типографіки."
+    ),
+    "about.built_with": (
+        "<b>Створено за допомогою:</b> Python 3 · PySide6 / Qt 6 · "
+        "concurrent.futures (ProcessPoolExecutor)"
+    ),
 
     # Log viewer
     "logviewer.title_file":      "Журнал — {name}",
@@ -314,7 +346,7 @@ def set_language(lang: str) -> None:
     if lang not in _BUNDLES:
         lang = "en"
     _LANG = lang
-    for fn in _listeners:
+    for fn in list(_listeners):
         fn()
 
 
@@ -329,7 +361,6 @@ def register_listener(fn: Callable[[], None]) -> None:
 
 
 def unregister_listener(fn: Callable[[], None]) -> None:
-    _listeners.discard(fn) if hasattr(_listeners, "discard") else None
     try:
         _listeners.remove(fn)
     except ValueError:

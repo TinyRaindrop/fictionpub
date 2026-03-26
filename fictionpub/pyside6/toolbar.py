@@ -1,16 +1,18 @@
 """
 Top toolbar containing file management and settings actions.
 All user actions are exposed as Qt signals; the widget holds no business logic.
-Supports runtime language switching via register_listener / retranslate_ui.
+Supports runtime language switching via register_listener / _retranslate_ui.
 """
 
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QSizePolicy,
+    QStyle,
     QWidget,
 )
 
@@ -40,6 +42,7 @@ class ToolbarWidget(QWidget):
     conversionSettingsRequested = Signal()
     appSettingsRequested        = Signal()
     logsRequested               = Signal()
+    aboutRequested              = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -71,7 +74,7 @@ class ToolbarWidget(QWidget):
         layout.addWidget(self._sel_none)
 
         # Selection counter
-        self._count_label = QLabel("0 of 0 selected")
+        self._count_label = QLabel()
         self._count_label.setContentsMargins(6, 0, 6, 0)
         layout.addWidget(self._count_label)
 
@@ -80,13 +83,24 @@ class ToolbarWidget(QWidget):
         spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer)
 
-        # Right group — settings / logs
+        # Right group: conversion settings | app settings | logs | about
         self._conv_settings = QPushButton()
-        self._app_settings  = QPushButton()
-        self._app_settings.setFixedWidth(32)
-        self._logs          = QPushButton()
 
-        for w in (self._conv_settings, self._app_settings, _vsep(), self._logs):
+        self._app_settings = QPushButton()
+        self._app_settings.setFixedWidth(32)
+
+        self._logs = QPushButton()
+
+        # About button — uses Qt's built-in information icon so it works
+        # on every platform without bundling an extra image file.
+        self._about = QPushButton()
+        style = QApplication.style()
+        info_icon = style.standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+        self._about.setIcon(info_icon)
+        self._about.setFixedWidth(32)
+
+        for w in (self._conv_settings, self._app_settings,
+                  _vsep(), self._logs, _vsep(), self._about):
             layout.addWidget(w)
 
         # Wire signals
@@ -100,6 +114,7 @@ class ToolbarWidget(QWidget):
         self._conv_settings.clicked.connect(self.conversionSettingsRequested)
         self._app_settings.clicked.connect(self.appSettingsRequested)
         self._logs.clicked.connect(self.logsRequested)
+        self._about.clicked.connect(self.aboutRequested)
 
         self._retranslate_ui()
 
@@ -124,6 +139,10 @@ class ToolbarWidget(QWidget):
         self._app_settings.setToolTip(t("tooltip.app_settings"))
         self._logs.setText(t("toolbar.logs"))
         self._logs.setToolTip(t("tooltip.logs"))
+        self._about.setToolTip(t("tooltip.about"))
+        self._count_label.setText(
+            t("toolbar.n_of_m_selected", checked=0, total=0)
+        )
 
     # ------------------------------------------------------------------
     # Public API called by MainWindow
@@ -136,4 +155,6 @@ class ToolbarWidget(QWidget):
             w.setEnabled(not busy)
 
     def update_selection_count(self, checked: int, total: int) -> None:
-        self._count_label.setText(t("toolbar.n_of_m_selected", checked=checked, total=total))
+        self._count_label.setText(
+            t("toolbar.n_of_m_selected", checked=checked, total=total)
+        )

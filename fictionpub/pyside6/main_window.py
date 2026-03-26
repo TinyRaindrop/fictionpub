@@ -1,6 +1,5 @@
 """
 MainWindow — top-level window that wires all components together.
-
 Responsibilities:
   - Create and own the model, toolbar, file panel, bottom bar
   - Start / stop scan and batch workers
@@ -12,7 +11,7 @@ import logging
 import os
 import platform
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QThreadPool, Qt
@@ -28,10 +27,12 @@ from .. import app_info
 from ..models.conversion import ConversionConfig, ConversionResult, ConversionStatus
 from ..utils.logger import LOG_DIR
 from .bottom_bar import BottomBarWidget
+from .dialogs.about_dialog import AboutDialog
 from .dialogs.app_settings_dialog import AppSettingsDialog
 from .dialogs.log_viewer_dialog import LogViewerDialog
 from .dialogs.settings_dialog import SettingsDialog
 from .file_panel import FileTreeView
+from .i18n import register_listener, t
 from .models.file_node import FileNode, FolderNode
 from .models.file_tree_model import FileTreeModel
 from .state.settings import AppSettings
@@ -44,16 +45,16 @@ log = logging.getLogger("fb2_converter")
 
 
 # ---------------------------------------------------------------------------
-# Conversion session — lightweight tracking object
+# Conversion session
 # ---------------------------------------------------------------------------
 
 @dataclass
 class ConversionSession:
-    total: int
-    completed: int = 0
-    success:   int = 0
-    warnings:  int = 0
-    failures:  int = 0
+    total:     int
+    completed: int  = 0
+    success:   int  = 0
+    warnings:  int  = 0
+    failures:  int  = 0
     cancelled: bool = False
 
     def update(self, result: ConversionResult) -> None:
@@ -77,14 +78,15 @@ class MainWindow(QMainWindow):
         self._scan_worker:  ScanWorker  | None = None
         self._batch_worker: BatchWorker | None = None
 
-        # Thread pool for metadata parsing (max 8 concurrent)
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
 
-        self.setWindowTitle(f"{app_info.APP_NAME} {app_info.VERSION}")
         self._build_ui()
         self._connect_signals()
         self._apply_stylesheet()
+
+        register_listener(self._retranslate_ui)
+        self._retranslate_ui()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -118,6 +120,7 @@ class MainWindow(QMainWindow):
         tb.conversionSettingsRequested.connect(self._on_conversion_settings)
         tb.appSettingsRequested.connect(self._on_app_settings)
         tb.logsRequested.connect(self._on_open_logs)
+        tb.aboutRequested.connect(self._on_about)
 
         self._model.selectionCountChanged.connect(self._toolbar.update_selection_count)
 
@@ -125,6 +128,9 @@ class MainWindow(QMainWindow):
         fv.statusClicked.connect(self._on_status_clicked)
         fv.fileDoubleClicked.connect(self._on_file_double_clicked)
         fv.folderDoubleClicked.connect(self._on_folder_double_clicked)
+        fv.openEpubRequested.connect(self._on_open_epub)
+        fv.openFb2Requested.connect(self._on_open_fb2)
+        fv.openFolderRequested.connect(self._on_open_folder)
         fv.selectionRemoveRequested.connect(self._on_remove_selected)
 
         bb = self._bottom_bar
@@ -134,7 +140,6 @@ class MainWindow(QMainWindow):
         bb.openLastLogRequested.connect(self._on_open_last_log)
 
     def _apply_stylesheet(self) -> None:
-        """Apply a minimal stylesheet that highlights the Convert button."""
         self.setStyleSheet("""
             QPushButton#convertButton {
                 background-color: #2980b9;
@@ -152,6 +157,9 @@ class MainWindow(QMainWindow):
             }
         """)
 
+    def _retranslate_ui(self) -> None:
+        self.setWindowTitle(f"{app_info.APP_NAME} {app_info.VERSION}")
+
     # ------------------------------------------------------------------
     # Toolbar action handlers
     # ------------------------------------------------------------------
@@ -159,22 +167,23 @@ class MainWindow(QMainWindow):
     def _on_add_files(self) -> None:
         paths, _ = QFileDialog.getOpenFileNames(
             self,
-            "Select FB2 Files",
+            t("toolbar.add_files"),
             "",
-            "FB2 Files (*.fb2 *.fb2.zip);;All Files (*)",
+            f"{t('filter.fb2')};;{t('filter.all')}",
         )
         if paths:
             self._start_scan([Path(p) for p in paths])
 
     def _on_add_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, "Select Folder")
+        folder = QFileDialog.getExistingDirectory(self, t("toolbar.add_folder"))
         if folder:
             self._start_scan([Path(folder)])
 
     def _on_remove_selected(self) -> None:
         if self._is_converting():
             return
-        indices = self._file_view.selectedModelIndices()
+        # Use selectedSourceIndices() — already mapped through the proxy
+        indices = self._file_view.selectedSourceIndices()
         if indices:
             self._model.removeNodes(indices)
 
@@ -184,8 +193,9 @@ class MainWindow(QMainWindow):
         if not self._model.rowCount():
             return
         reply = QMessageBox.question(
-            self, "Remove All",
-            "Remove all files from the list?",
+            self,
+            t("msg.remove_all_title"),
+            t("msg.remove_all_text"),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
@@ -209,48 +219,82 @@ class MainWindow(QMainWindow):
             self._settings.set_conversion_config(self._config)
 
     def _on_app_settings(self) -> None:
-        dlg = AppSettingsDialog(self._settings, self)
-        dlg.exec()
+        AppSettingsDialog(self._settings, self).exec()
 
     def _on_open_logs(self) -> None:
         if LOG_DIR.exists():
             _open_path(LOG_DIR)
         else:
-            QMessageBox.information(self, "Logs", "No log directory found yet.")
+            QMessageBox.information(self, t("msg.no_logs_title"), t("msg.no_logs_dir"))
 
     def _on_open_last_log(self) -> None:
         if not LOG_DIR.exists():
-            QMessageBox.information(self, "Logs", "No log directory found yet.")
+            QMessageBox.information(self, t("msg.no_logs_title"), t("msg.no_logs_dir"))
             return
         logs = sorted(LOG_DIR.glob("converter_*.log"), key=lambda p: p.stat().st_mtime)
         if not logs:
-            QMessageBox.information(self, "Logs", "No log files found.")
+            QMessageBox.information(self, t("msg.no_logs_title"), t("msg.no_logs_files"))
             return
-        dlg = LogViewerDialog.from_file(logs[-1], parent=self)
-        dlg.show()
+        LogViewerDialog.from_file(logs[-1], parent=self).show()
+
+    def _on_about(self) -> None:
+        AboutDialog(self).show()
 
     # ------------------------------------------------------------------
     # File view action handlers
     # ------------------------------------------------------------------
 
     def _on_status_clicked(self, node: FileNode) -> None:
-        """Open the per-file log viewer when the user clicks a status icon."""
         if node.log_output:
-            title = f"Log — {node.path.name}"
-            dlg = LogViewerDialog(node.log_output, title=title, parent=self)
-            dlg.show()
+            LogViewerDialog(
+                node.log_output,
+                title=t("logviewer.title_file", name=node.path.name),
+                parent=self,
+            ).show()
 
     def _on_file_double_clicked(self, path: Path) -> None:
-        """Double-click a converted file → open it; not converted → show log."""
         node = self._model._path_to_node.get(path)
         if node and node.status is not None:
             self._on_status_clicked(node)
-        # Opening the output .epub file is complex (output path depends on config);
-        # log viewer is the safest and most useful response here.
 
     def _on_folder_double_clicked(self, path: Path) -> None:
         if path.exists():
             _open_path(path)
+
+    def _on_open_epub(self, source_path: Path) -> None:
+        epub = self._epub_path_for(source_path)
+        if epub.exists():
+            _open_path(epub)
+        else:
+            QMessageBox.warning(
+                self,
+                t("msg.no_epub_title"),
+                t("msg.no_epub_text", path=str(epub)),
+            )
+
+    def _on_open_fb2(self, path: Path) -> None:
+        if path.exists():
+            _open_path(path)
+
+    def _on_open_folder(self, path: Path) -> None:
+        target = path if path.is_dir() else path.parent
+        if target.exists():
+            _open_path(target)
+
+    # ------------------------------------------------------------------
+    # EPUB path resolution
+    # ------------------------------------------------------------------
+
+    def _epub_path_for(self, source: Path) -> Path:
+        name = source.name
+        if name.endswith(".fb2.zip"):
+            stem = name[:-8]
+        elif name.endswith(".fb2"):
+            stem = name[:-4]
+        else:
+            stem = source.stem
+        out_dir = self._config.output_path or source.parent
+        return out_dir / f"{stem}.epub"
 
     # ------------------------------------------------------------------
     # Scanning
@@ -268,25 +312,21 @@ class MainWindow(QMainWindow):
         self._scan_worker.start()
 
     def _on_scan_complete(self, found: list[Path]) -> None:
-        added = self._model.addFiles(found)
+        self._model.addFiles(found)
         self._file_view.expandAll()
 
-        # Kick off metadata parsing for each new file
         for path in found:
             node = self._model._path_to_node.get(path)
             if node and node.meta_loading:
                 signals = MetaSignals(self)
                 signals.metaParsed.connect(self._model.updateMeta)
                 signals.metaFailed.connect(self._model.updateMetaError)
-                worker = MetaWorker(path, signals)
-                self._meta_pool.start(worker)
-
-        # Status update is handled in _on_scan_finished
+                self._meta_pool.start(MetaWorker(path, signals))
 
     def _on_scan_finished(self) -> None:
         self._toolbar.set_busy(False)
         total = sum(len(f.children) for f in self._model._folders)
-        self._bottom_bar.set_idle(f"Ready — {total} file(s) in list")
+        self._bottom_bar.set_idle(t("bar.ready_n_files", n=total))
 
     # ------------------------------------------------------------------
     # Conversion
@@ -299,33 +339,30 @@ class MainWindow(QMainWindow):
         files = self._model.checkedFilePaths()
         if not files:
             QMessageBox.information(
-                self, "No Files Selected",
-                "Please check at least one file before converting."
+                self, t("msg.no_files_title"), t("msg.no_files_text")
             )
             return
 
         session = ConversionSession(total=len(files))
-
         self._toolbar.set_busy(True)
         self._bottom_bar.set_converting(len(files))
 
+        # Fresh worker instance — _cancel_requested is always False at start
         self._batch_worker = BatchWorker(self._config, files, session, parent=self)
         self._batch_worker.progressUpdate.connect(self._on_progress_update)
-        self._batch_worker.finished.connect(self._on_batch_finished)
+        self._batch_worker.batchFinished.connect(self._on_batch_finished)
         self._batch_worker.errorOccurred.connect(self._on_batch_error)
         self._batch_worker.start()
 
     def _on_cancel(self) -> None:
         if self._batch_worker and self._batch_worker.isRunning():
             self._batch_worker.requestCancel()
-            self._bottom_bar._status.setText("Cancelling…")
-            self._bottom_bar._cancel.setEnabled(False)
+            self._bottom_bar.set_cancelling()
 
     def _on_progress_update(self, result: ConversionResult) -> None:
         self._model.setFileResult(result.path, result)
-        worker = self._batch_worker
-        if worker:
-            s = worker._session
+        if self._batch_worker:
+            s = self._batch_worker._session
             self._bottom_bar.update_progress(
                 s.completed, s.total, s.success, s.warnings, s.failures
             )
@@ -343,8 +380,8 @@ class MainWindow(QMainWindow):
 
     def _on_batch_error(self, message: str) -> None:
         self._toolbar.set_busy(False)
-        self._bottom_bar.set_idle("Conversion failed.")
-        QMessageBox.critical(self, "Conversion Error", message)
+        self._bottom_bar.set_idle(t("bar.ready"))
+        QMessageBox.critical(self, app_info.APP_NAME, message)
 
     # ------------------------------------------------------------------
     # Helpers
@@ -361,8 +398,8 @@ class MainWindow(QMainWindow):
         if self._is_converting():
             reply = QMessageBox.question(
                 self,
-                "Conversion in Progress",
-                "A conversion is still running. Cancel it and quit?",
+                t("msg.close_title"),
+                t("msg.close_text"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
@@ -370,7 +407,6 @@ class MainWindow(QMainWindow):
                 return
             self._batch_worker.requestCancel()
 
-        # Wait for workers to finish cleanly
         if self._scan_worker:
             self._scan_worker.quit()
             self._scan_worker.wait(2000)
@@ -390,7 +426,7 @@ class MainWindow(QMainWindow):
 def _open_path(path: Path) -> None:
     try:
         if platform.system() == "Windows":
-            os.startfile(path)
+            os.startfile(path)          # type: ignore[attr-defined]
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:

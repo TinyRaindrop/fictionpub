@@ -1,14 +1,26 @@
 """
 Two-level tree model: FolderNode (top) → FileNode (children).
 
+Column layout
+-------------
+COL_NAME   0  filename + checkbox (no status icon here)
+COL_STATUS 1  status icon only; UserRole returns an int sort key
+COL_AUTHOR 2
+COL_TITLE  3
+COL_DATE   4
+COL_LANG   5
+
+Status sort keys (ascending = worst first):
+  None (not converted) → 0
+  FAILURE              → 1
+  WARNING              → 2
+  SUCCESS              → 3
+
 Internal pointer strategy:
-  - FolderNode indices:  createIndex(row, col, folder_node)
-  - FileNode indices:    createIndex(row, col, file_node)
+  FolderNode indices:  createIndex(row, col, folder_node)
+  FileNode indices:    createIndex(row, col, file_node)
 
-node type is determined via isinstance() in data() / parent() etc.
-A _path_to_node dict enables O(1) lookup for metadata and result updates.
-
-IMPORTANT: Icons are created in __init__() — NOT at module import time —
+Icons are created in __init__() — NOT at module import time —
 to avoid the "Must construct a QGuiApplication before a QPixmap" error.
 """
 
@@ -29,16 +41,30 @@ from .file_node import FileNode, FolderNode
 
 # Column indices — plain ints, no Qt objects at import time
 COL_NAME   = 0
-COL_AUTHOR = 1
-COL_TITLE  = 2
-COL_DATE   = 3
-COL_LANG   = 4
-COLUMNS    = 5
+COL_STATUS = 1
+COL_AUTHOR = 2
+COL_TITLE  = 3
+COL_DATE   = 4
+COL_LANG   = 5
+COLUMNS    = 6
 
 _HEADER_KEYS = [
-    "tree.col_name", "tree.col_author",
-    "tree.col_title", "tree.col_date", "tree.col_lang",
+    "tree.col_name",
+    "tree.col_status",
+    "tree.col_author",
+    "tree.col_title",
+    "tree.col_date",
+    "tree.col_lang",
 ]
+
+# Sort priority: lower = shown first in ascending sort.
+# Failures are most important to see first.
+_STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
+    None:                    0,
+    ConversionStatus.FAILURE: 1,
+    ConversionStatus.WARNING: 2,
+    ConversionStatus.SUCCESS: 3,
+}
 
 
 def _make_icon(symbol: str, color: str, size: int = 14) -> QIcon:
@@ -246,9 +272,14 @@ class FileTreeModel(QAbstractItemModel):
         node.error      = str(result.error) if result.error else None
         idx = self._index_for_node(node)
         if idx.isValid():
+            # Status column carries both the icon (DecorationRole) and sort key (UserRole)
+            status_idx = self.createIndex(idx.row(), COL_STATUS, node)
             self.dataChanged.emit(
-                idx, idx,
-                [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.ToolTipRole],
+                idx, idx, [Qt.ItemDataRole.ToolTipRole]
+            )
+            self.dataChanged.emit(
+                status_idx, status_idx,
+                [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.UserRole],
             )
 
     def removeNodes(self, indices: list[QModelIndex]) -> None:
@@ -381,22 +412,12 @@ class FileTreeModel(QAbstractItemModel):
         return None
 
     def _file_data(self, node: FileNode, col: int, role: int):
-        if role == Qt.ItemDataRole.DisplayRole:
-            if col == COL_NAME:
-                return node.path.name
-            meta = node.metadata
-            if meta is None:
-                return "…" if node.meta_loading else ""
-            if col == COL_AUTHOR: return getattr(meta, "author", "") or ""
-            if col == COL_TITLE:  return getattr(meta, "title",  "") or ""
-            if col == COL_DATE:   return getattr(meta, "date",   "") or ""
-            if col == COL_LANG:   return getattr(meta, "lang",   "") or ""
-
+        # --- Name column ---
         if col == COL_NAME:
+            if role == Qt.ItemDataRole.DisplayRole:
+                return node.path.name
             if role == Qt.ItemDataRole.CheckStateRole:
                 return node.check_state.value
-            if role == Qt.ItemDataRole.DecorationRole:
-                return self._status_icons.get(node.status)
             if role == Qt.ItemDataRole.ToolTipRole:
                 if node.status == ConversionStatus.FAILURE and node.error:
                     return node.error
@@ -405,6 +426,26 @@ class FileTreeModel(QAbstractItemModel):
             if role == Qt.ItemDataRole.ForegroundRole:
                 if node.check_state == Qt.CheckState.Unchecked:
                     return QBrush(QColor("#888888"))
+
+        # --- Status column ---
+        elif col == COL_STATUS:
+            if role == Qt.ItemDataRole.DecorationRole:
+                return self._status_icons.get(node.status)
+            if role == Qt.ItemDataRole.UserRole:
+                # Integer sort key used by QSortFilterProxyModel
+                return _STATUS_SORT_KEY.get(node.status, 0)
+            if role == Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignCenter
+
+        # --- Metadata columns ---
+        elif role == Qt.ItemDataRole.DisplayRole:
+            meta = node.metadata
+            if meta is None:
+                return "…" if node.meta_loading else ""
+            if col == COL_AUTHOR: return getattr(meta, "author", "") or ""
+            if col == COL_TITLE:  return getattr(meta, "title",  "") or ""
+            if col == COL_DATE:   return getattr(meta, "date",   "") or ""
+            if col == COL_LANG:   return getattr(meta, "lang",   "") or ""
 
         return None
 
