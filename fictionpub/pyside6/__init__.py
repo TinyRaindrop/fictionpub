@@ -12,6 +12,7 @@ import sys
 from PySide6.QtWidgets import QApplication
 
 from ..utils.logger import setup_main_logger
+from .i18n import set_language
 from .main_window import MainWindow
 from .state.settings import AppSettings
 from .themes import apply_theme
@@ -27,6 +28,7 @@ def run_gui() -> None:
     app.setStyle("Fusion")
 
     settings = AppSettings()
+    set_language(settings.language())
     apply_theme(app, settings.theme())
 
     window = MainWindow(settings)

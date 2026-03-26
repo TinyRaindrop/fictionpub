@@ -7,6 +7,9 @@ Internal pointer strategy:
 
 node type is determined via isinstance() in data() / parent() etc.
 A _path_to_node dict enables O(1) lookup for metadata and result updates.
+
+IMPORTANT: Icons are created in __init__() — NOT at module import time —
+to avoid the "Must construct a QGuiApplication before a QPixmap" error.
 """
 
 from pathlib import Path
@@ -14,19 +17,32 @@ from pathlib import Path
 from PySide6.QtCore import (
     QAbstractItemModel,
     QModelIndex,
+    QRect,
     Qt,
     Signal,
 )
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPixmap
 
 from ...models.conversion import ConversionStatus
+from ..i18n import t
 from .file_node import FileNode, FolderNode
 
-# ---------------------------------------------------------------------------
-# Status icons — created once at import time
-# ---------------------------------------------------------------------------
+# Column indices — plain ints, no Qt objects at import time
+COL_NAME   = 0
+COL_AUTHOR = 1
+COL_TITLE  = 2
+COL_DATE   = 3
+COL_LANG   = 4
+COLUMNS    = 5
+
+_HEADER_KEYS = [
+    "tree.col_name", "tree.col_author",
+    "tree.col_title", "tree.col_date", "tree.col_lang",
+]
+
 
 def _make_icon(symbol: str, color: str, size: int = 14) -> QIcon:
+    """Build a small icon from a Unicode symbol. QApplication must already exist."""
     px = QPixmap(size, size)
     px.fill(Qt.GlobalColor.transparent)
     p = QPainter(px)
@@ -35,21 +51,9 @@ def _make_icon(symbol: str, color: str, size: int = 14) -> QIcon:
     font = p.font()
     font.setPixelSize(size - 1)
     p.setFont(font)
-    from PySide6.QtCore import QRect
     p.drawText(QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, symbol)
     p.end()
     return QIcon(px)
-
-
-# Column indices
-COL_NAME   = 0
-COL_AUTHOR = 1
-COL_TITLE  = 2
-COL_DATE   = 3
-COL_LANG   = 4
-COLUMNS    = 5
-
-_HEADERS = ["Status / Filename", "Author", "Title", "Date", "Lang"]
 
 
 class FileTreeModel(QAbstractItemModel):
@@ -67,12 +71,13 @@ class FileTreeModel(QAbstractItemModel):
         self._folders: list[FolderNode] = []
         self._path_to_node: dict[Path, FileNode] = {}
 
-        self._status_icons = {
+        # Icons created here — QGuiApplication exists at this point
+        self._status_icons: dict[ConversionStatus, QIcon] = {
             ConversionStatus.SUCCESS: _make_icon("✓", "#27ae60"),
             ConversionStatus.WARNING: _make_icon("⚠", "#e67e22"),
             ConversionStatus.FAILURE: _make_icon("✗", "#e74c3c"),
-            # ConversionStatus.LOADING: _ICON_LOADING = _make_icon("…", "#95a5a6"),
         }
+
     # ------------------------------------------------------------------
     # QAbstractItemModel interface
     # ------------------------------------------------------------------
@@ -81,7 +86,6 @@ class FileTreeModel(QAbstractItemModel):
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         if not parent.isValid():
-            # Top-level: folder nodes
             if row < len(self._folders):
                 return self.createIndex(row, column, self._folders[row])
         else:
@@ -123,15 +127,15 @@ class FileTreeModel(QAbstractItemModel):
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
-            return _HEADERS[section]
+            if 0 <= section < len(_HEADER_KEYS):
+                return t(_HEADER_KEYS[section])
         return None
 
     def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         node = index.internalPointer()
-        col = index.column()
-
+        col  = index.column()
         if isinstance(node, FolderNode):
             return self._folder_data(node, col, role)
         if isinstance(node, FileNode):
@@ -141,13 +145,12 @@ class FileTreeModel(QAbstractItemModel):
     def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid() or role != Qt.ItemDataRole.CheckStateRole:
             return False
-        node = index.internalPointer()
+        node  = index.internalPointer()
         state = Qt.CheckState(value)
 
         if isinstance(node, FolderNode):
             node.check_state = state
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
-            # Propagate to children (only Checked / Unchecked)
             if state != Qt.CheckState.PartiallyChecked and node.children:
                 for child in node.children:
                     child.check_state = state
@@ -158,7 +161,6 @@ class FileTreeModel(QAbstractItemModel):
         elif isinstance(node, FileNode):
             node.check_state = state
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
-            # Update parent tri-state
             parent_idx = self.parent(index)
             if parent_idx.isValid():
                 folder = parent_idx.internalPointer()
@@ -172,13 +174,9 @@ class FileTreeModel(QAbstractItemModel):
     # ------------------------------------------------------------------
 
     def addFiles(self, paths: list[Path]) -> int:
-        """
-        Add new file paths to the model, grouped by parent directory.
-        Duplicate paths (already in model) are silently skipped.
-        Returns the number of files actually added.
-        """
-        existing = set(self._path_to_node.keys())
-        folder_lookup: dict[Path, FolderNode] = {f.path: f for f in self._folders}
+        """Add new file paths grouped by parent directory. Returns count added."""
+        existing      = set(self._path_to_node.keys())
+        folder_lookup = {f.path: f for f in self._folders}
 
         new_by_folder: dict[Path, list[Path]] = {}
         for p in paths:
@@ -198,13 +196,13 @@ class FileTreeModel(QAbstractItemModel):
                 folder_lookup[folder_path] = folder
                 self.endInsertRows()
 
-            folder = folder_lookup[folder_path]
+            folder     = folder_lookup[folder_path]
             folder_row = self._folders.index(folder)
-            folder_index = self.createIndex(folder_row, 0, folder)
+            folder_idx = self.createIndex(folder_row, 0, folder)
 
             start = len(folder.children)
-            end = start + len(file_paths) - 1
-            self.beginInsertRows(folder_index, start, end)
+            end   = start + len(file_paths) - 1
+            self.beginInsertRows(folder_idx, start, end)
             for p in file_paths:
                 node = FileNode(path=p, meta_loading=True)
                 folder.children.append(node)
@@ -216,11 +214,10 @@ class FileTreeModel(QAbstractItemModel):
         return added
 
     def updateMeta(self, path: Path, meta) -> None:
-        """Called from the meta worker when metadata parsing succeeds."""
         node = self._path_to_node.get(path)
         if not node:
             return
-        node.metadata = meta
+        node.metadata     = meta
         node.meta_loading = False
         idx = self._index_for_node(node)
         if idx.isValid():
@@ -228,13 +225,12 @@ class FileTreeModel(QAbstractItemModel):
             right = self.createIndex(idx.row(), COL_LANG,   node)
             self.dataChanged.emit(left, right, [Qt.ItemDataRole.DisplayRole])
 
-    def updateMetaError(self, path: Path, error: str) -> None:
-        """Called from the meta worker when metadata parsing fails."""
+    def updateMetaError(self, path: Path, _error: str) -> None:
         node = self._path_to_node.get(path)
         if not node:
             return
         node.meta_loading = False
-        node.metadata = None
+        node.metadata     = None
         idx = self._index_for_node(node)
         if idx.isValid():
             left  = self.createIndex(idx.row(), COL_AUTHOR, node)
@@ -242,7 +238,6 @@ class FileTreeModel(QAbstractItemModel):
             self.dataChanged.emit(left, right, [Qt.ItemDataRole.DisplayRole])
 
     def setFileResult(self, path: Path, result) -> None:
-        """Update a node's conversion status. result is ConversionResult."""
         node = self._path_to_node.get(path)
         if not node:
             return
@@ -257,9 +252,8 @@ class FileTreeModel(QAbstractItemModel):
             )
 
     def removeNodes(self, indices: list[QModelIndex]) -> None:
-        """Remove the given indices (folders or files) from the model."""
         folders_to_delete: set[FolderNode] = set()
-        files_by_folder: dict[FolderNode, set[FileNode]] = {}
+        files_by_folder:   dict[FolderNode, set[FileNode]] = {}
 
         for idx in indices:
             if not idx.isValid():
@@ -269,13 +263,12 @@ class FileTreeModel(QAbstractItemModel):
                 folders_to_delete.add(node)
             elif isinstance(node, FileNode):
                 parent_idx = self.parent(idx)
-                folder = parent_idx.internalPointer() if parent_idx.isValid() else None
+                folder     = parent_idx.internalPointer() if parent_idx.isValid() else None
                 if isinstance(folder, FolderNode) and folder not in folders_to_delete:
                     files_by_folder.setdefault(folder, set()).add(node)
 
-        # Remove individual files first
         for folder, files in files_by_folder.items():
-            folder_row = self._folders.index(folder)
+            folder_row   = self._folders.index(folder)
             folder_index = self.createIndex(folder_row, 0, folder)
             rows = sorted(
                 [i for i, c in enumerate(folder.children) if c in files],
@@ -289,7 +282,6 @@ class FileTreeModel(QAbstractItemModel):
             if not folder.children:
                 folders_to_delete.add(folder)
 
-        # Remove folders
         folder_rows = sorted(
             [i for i, f in enumerate(self._folders) if f in folders_to_delete],
             reverse=True,
@@ -313,11 +305,10 @@ class FileTreeModel(QAbstractItemModel):
         self._emit_selection_count()
 
     def removeCompleted(self) -> None:
-        """Remove all files with SUCCESS status; prune empty folders."""
         for folder in list(self._folders):
             if folder not in self._folders:
                 continue
-            folder_row = self._folders.index(folder)
+            folder_row   = self._folders.index(folder)
             folder_index = self.createIndex(folder_row, 0, folder)
             rows = sorted(
                 [i for i, c in enumerate(folder.children)
@@ -342,7 +333,6 @@ class FileTreeModel(QAbstractItemModel):
         self._emit_selection_count()
 
     def setAllChecked(self, state: Qt.CheckState) -> None:
-        """Check or uncheck every node at once (used by Select All toggle)."""
         for folder in self._folders:
             folder.check_state = state
             for child in folder.children:
@@ -369,7 +359,7 @@ class FileTreeModel(QAbstractItemModel):
             if node.check_state == Qt.CheckState.Checked
         ]
 
-    def nodeForIndex(self, index: QModelIndex) -> FileNode | FolderNode | None:
+    def nodeForIndex(self, index: QModelIndex) -> "FileNode | FolderNode | None":
         if not index.isValid():
             return None
         return index.internalPointer()
@@ -397,10 +387,10 @@ class FileTreeModel(QAbstractItemModel):
             meta = node.metadata
             if meta is None:
                 return "…" if node.meta_loading else ""
-            if col == COL_AUTHOR: return getattr(meta, "author", "")
-            if col == COL_TITLE:  return getattr(meta, "title",  "")
-            if col == COL_DATE:   return getattr(meta, "date",   "")
-            if col == COL_LANG:   return getattr(meta, "lang",   "")
+            if col == COL_AUTHOR: return getattr(meta, "author", "") or ""
+            if col == COL_TITLE:  return getattr(meta, "title",  "") or ""
+            if col == COL_DATE:   return getattr(meta, "date",   "") or ""
+            if col == COL_LANG:   return getattr(meta, "lang",   "") or ""
 
         if col == COL_NAME:
             if role == Qt.ItemDataRole.CheckStateRole:
@@ -411,7 +401,7 @@ class FileTreeModel(QAbstractItemModel):
                 if node.status == ConversionStatus.FAILURE and node.error:
                     return node.error
                 if node.status == ConversionStatus.WARNING:
-                    return "Conversion finished with warnings — check logs for details."
+                    return t("tooltip.warning_status")
             if role == Qt.ItemDataRole.ForegroundRole:
                 if node.check_state == Qt.CheckState.Unchecked:
                     return QBrush(QColor("#888888"))
@@ -438,8 +428,7 @@ class FileTreeModel(QAbstractItemModel):
     def _emit_selection_count(self) -> None:
         total   = sum(len(f.children) for f in self._folders)
         checked = sum(
-            1
-            for f in self._folders
+            1 for f in self._folders
             for c in f.children
             if c.check_state == Qt.CheckState.Checked
         )

@@ -4,9 +4,15 @@ QThread that wraps BatchProcessor.run().
 Progress is forwarded to the main thread via Qt signals (QueuedConnection
 is the default for cross-thread connections, so this is thread-safe).
 
-Cancellation is "soft": we stop emitting UI signals but cannot immediately
-halt the ProcessPoolExecutor without modifying BatchProcessor. The worker
-thread finishes naturally but silently after cancel is requested.
+IMPORTANT: The signal is named `batchFinished` (not `finished`) to avoid
+shadowing QThread's built-in `finished()` signal which Qt emits internally
+when the thread ends. A name collision causes unpredictable signal delivery.
+
+Cancellation: sets a flag that stops progress signal emission. The
+ProcessPoolExecutor inside BatchProcessor continues to its natural end —
+we do not forcibly kill child processes. Any remaining results are discarded.
+Since BatchWorker is re-created for each run, the cancel flag is always
+fresh on the next conversion.
 """
 
 from pathlib import Path
@@ -19,7 +25,7 @@ from ...models.conversion import ConversionConfig, ConversionResult
 
 class BatchWorker(QThread):
     progressUpdate = Signal(object)   # ConversionResult
-    finished       = Signal(object)   # ConversionSession (dataclass from main_window)
+    batchFinished  = Signal(object)   # ConversionSession
     errorOccurred  = Signal(str)
 
     def __init__(
@@ -30,12 +36,16 @@ class BatchWorker(QThread):
         parent=None,
     ):
         super().__init__(parent)
-        self._config  = config
-        self._files   = files
-        self._session = session
-        self._cancel_requested = False
+        self._config           = config
+        self._files            = files
+        self._session          = session
+        self._cancel_requested = False   # always False on a fresh instance
 
     def requestCancel(self) -> None:
+        """
+        Signal that the user wants to stop. Safe to call from the main thread.
+        The flag is checked inside _callback (runs on this thread).
+        """
         self._cancel_requested = True
 
     def run(self) -> None:
@@ -47,9 +57,10 @@ class BatchWorker(QThread):
                 self.errorOccurred.emit(str(e))
         finally:
             self._session.cancelled = self._cancel_requested
-            self.finished.emit(self._session)
+            self.batchFinished.emit(self._session)
 
     def _callback(self, result: ConversionResult) -> None:
+        """Called by BatchProcessor for each completed file (on this thread)."""
         if self._cancel_requested:
             return
         self._session.update(result)

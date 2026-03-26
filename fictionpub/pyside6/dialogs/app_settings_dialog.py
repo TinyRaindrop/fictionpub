@@ -1,9 +1,8 @@
 """
-Modal dialog for application preferences (theme, etc.).
-Emits settingsChanged so MainWindow can apply changes immediately.
+Modal dialog for application preferences.
+Language and theme changes are applied immediately on OK.
 """
 
-from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -13,49 +12,102 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from ..i18n import get_language, register_listener, set_language, t
 from ..state.settings import AppSettings
 from ..themes import apply_theme
 
 
 class AppSettingsDialog(QDialog):
-    settingsChanged = Signal()
-
     def __init__(self, app_settings: AppSettings, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Application Settings")
-        self.setFixedWidth(320)
         self._settings = app_settings
+        self.setFixedWidth(340)
         self._build_ui()
+        register_listener(self._retranslate_ui)
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
 
-        appearance = QGroupBox("Appearance")
-        form = QFormLayout(appearance)
+        self._appearance_group = QGroupBox()
+        form = QFormLayout(self._appearance_group)
 
+        # Theme selector
+        self._theme_label_text = ""   # set in retranslate
         self._theme = QComboBox()
-        self._theme.addItems(["System", "Light", "Dark"])
-        current = self._settings.theme().capitalize()
-        idx = self._theme.findText(current)
-        if idx >= 0:
-            self._theme.setCurrentIndex(idx)
-        form.addRow("Theme:", self._theme)
+        # Use internal keys; display text set in retranslate_ui
+        self._theme.addItem("", "system")
+        self._theme.addItem("", "light")
+        self._theme.addItem("", "dark")
+        current_theme = self._settings.theme()
+        for i in range(self._theme.count()):
+            if self._theme.itemData(i) == current_theme:
+                self._theme.setCurrentIndex(i)
+                break
+        self._theme_row = form.addRow("", self._theme)
 
-        outer.addWidget(appearance)
+        # Language selector
+        self._lang = QComboBox()
+        self._lang.addItem("English", "en")
+        self._lang.addItem("Українська", "uk")
+        current_lang = get_language()
+        for i in range(self._lang.count()):
+            if self._lang.itemData(i) == current_lang:
+                self._lang.setCurrentIndex(i)
+                break
+        form.addRow("", self._lang)
+        self._lang_row_label = form.labelForField(self._lang)
 
-        buttons = QDialogButtonBox(
+        outer.addWidget(self._appearance_group)
+
+        self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self._on_ok)
-        buttons.rejected.connect(self.reject)
-        outer.addWidget(buttons)
+        self._buttons.accepted.connect(self._on_ok)
+        self._buttons.rejected.connect(self.reject)
+        outer.addWidget(self._buttons)
+
+        self._retranslate_ui()
+
+    def _retranslate_ui(self) -> None:
+        self.setWindowTitle(t("appsettings.title"))
+        self._appearance_group.setTitle(t("appsettings.appearance"))
+
+        # Update theme combo display text
+        labels = [
+            t("appsettings.theme_system"),
+            t("appsettings.theme_light"),
+            t("appsettings.theme_dark"),
+        ]
+        for i, label in enumerate(labels):
+            self._theme.setItemText(i, label)
+
+        # Update form labels — find them by field widget
+        from PySide6.QtWidgets import QFormLayout
+        layout = self._appearance_group.layout()
+        if isinstance(layout, QFormLayout):
+            for row in range(layout.rowCount()):
+                field = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                label = layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+                if field and label:
+                    widget = field.widget()
+                    lw = label.widget()
+                    if lw:
+                        if widget is self._theme:
+                            lw.setText(t("appsettings.theme"))
+                        elif widget is self._lang:
+                            lw.setText(t("appsettings.language"))
 
     def _on_ok(self) -> None:
-        theme = self._theme.currentText().lower()
-        self._settings.set_theme(theme)
-
         from PySide6.QtWidgets import QApplication
-        apply_theme(QApplication.instance(), theme)
 
-        self.settingsChanged.emit()
+        # Apply theme
+        new_theme = self._theme.currentData()
+        self._settings.set_theme(new_theme)
+        apply_theme(QApplication.instance(), new_theme)
+
+        # Apply language
+        new_lang = self._lang.currentData()
+        self._settings.set_language(new_lang)
+        set_language(new_lang)   # notifies all registered listeners
+
         self.accept()

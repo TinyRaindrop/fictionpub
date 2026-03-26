@@ -1,6 +1,7 @@
 """
 Modal dialog for editing ConversionConfig.
 Returns the new config via .result after exec().
+Supports runtime language switching.
 """
 
 import dataclasses
@@ -22,66 +23,58 @@ from PySide6.QtWidgets import (
 )
 
 from ...models.conversion import ConversionConfig
+from ..i18n import register_listener, t
 
 
 class SettingsDialog(QDialog):
     def __init__(self, config: ConversionConfig, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Conversion Settings")
-        self.setFixedWidth(440)
+        self.setFixedWidth(460)
         self._config = config
         self.result: ConversionConfig | None = None
         self._build_ui()
         self._load(config)
+        register_listener(self._retranslate_ui)
 
     # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
-        outer.setSpacing(12)
+        outer.setSpacing(10)
 
-        # --- Structure group ---
-        struct = QGroupBox("Document Structure")
-        form = QFormLayout(struct)
-        form.setSpacing(8)
+        # --- Structure ---
+        self._struct_group = QGroupBox()
+        self._struct_form  = QFormLayout(self._struct_group)
+        self._struct_form.setSpacing(8)
 
         self._toc_depth = QSpinBox()
         self._toc_depth.setRange(1, 6)
-        self._toc_depth.setToolTip("Maximum heading level to include in the table of contents.")
-        form.addRow("TOC depth (1–6):", self._toc_depth)
+        self._struct_form.addRow("", self._toc_depth)
 
         self._split_level = QSpinBox()
         self._split_level.setRange(1, 6)
-        self._split_level.setToolTip("Split the EPUB into separate files at this heading level.")
-        form.addRow("Split level (1–6):", self._split_level)
+        self._struct_form.addRow("", self._split_level)
 
         self._split_size = QSpinBox()
         self._split_size.setRange(0, 99999)
-        self._split_size.setSpecialValueText("Disabled")
-        self._split_size.setSuffix(" KB")
-        self._split_size.setToolTip("Raise split level if XHTML files exceed this size. 0 = disabled.")
-        form.addRow("Max file size:", self._split_size)
+        self._struct_form.addRow("", self._split_size)
 
-        outer.addWidget(struct)
+        outer.addWidget(self._struct_group)
 
-        # --- Processing group ---
-        proc = QGroupBox("Processing")
-        proc_layout = QVBoxLayout(proc)
+        # --- Processing ---
+        self._proc_group  = QGroupBox()
+        proc_layout = QVBoxLayout(self._proc_group)
 
-        self._remove_images = QCheckBox("Remove unused images")
-        self._remove_images.setToolTip("Strip images that are not referenced in the text.")
+        self._remove_images = QCheckBox()
         proc_layout.addWidget(self._remove_images)
 
-        self._typography = QCheckBox("Improve typography")
-        self._typography.setToolTip(
-            "Enable post-processing: non-breaking spaces, no-break spans, etc."
-        )
+        self._typography = QCheckBox()
         proc_layout.addWidget(self._typography)
 
-        # Typography sub-options (enabled only when typography is checked)
         nbsp_row = QHBoxLayout()
         nbsp_row.addSpacing(20)
-        nbsp_row.addWidget(QLabel("NBSP word length range:"))
+        self._nbsp_label = QLabel()
+        nbsp_row.addWidget(self._nbsp_label)
         self._nbsp_min = QSpinBox(); self._nbsp_min.setRange(1, 20); self._nbsp_min.setFixedWidth(55)
         self._nbsp_max = QSpinBox(); self._nbsp_max.setRange(1, 20); self._nbsp_max.setFixedWidth(55)
         nbsp_row.addWidget(self._nbsp_min)
@@ -92,7 +85,8 @@ class SettingsDialog(QDialog):
 
         nobr_row = QHBoxLayout()
         nobr_row.addSpacing(20)
-        nobr_row.addWidget(QLabel("No-break word length range:"))
+        self._nobr_label = QLabel()
+        nobr_row.addWidget(self._nobr_label)
         self._nobr_min = QSpinBox(); self._nobr_min.setRange(1, 20); self._nobr_min.setFixedWidth(55)
         self._nobr_max = QSpinBox(); self._nobr_max.setRange(1, 20); self._nobr_max.setFixedWidth(55)
         nobr_row.addWidget(self._nobr_min)
@@ -106,54 +100,99 @@ class SettingsDialog(QDialog):
         self._typography.toggled.connect(self._nobr_min.setEnabled)
         self._typography.toggled.connect(self._nobr_max.setEnabled)
 
-        outer.addWidget(proc)
+        outer.addWidget(self._proc_group)
 
-        # --- Output group ---
-        out = QGroupBox("Output")
-        out_form = QFormLayout(out)
+        # --- Output ---
+        self._out_group = QGroupBox()
+        out_form = QFormLayout(self._out_group)
         out_form.setSpacing(8)
 
         css_row = QHBoxLayout()
         self._css = QLineEdit()
-        self._css.setPlaceholderText("Use built-in stylesheet")
         self._css.setClearButtonEnabled(True)
         css_browse = QPushButton("…")
         css_browse.setFixedWidth(28)
         css_browse.clicked.connect(self._browse_css)
         css_row.addWidget(self._css)
         css_row.addWidget(css_browse)
-        out_form.addRow("Custom CSS:", css_row)
+        out_form.addRow("", css_row)
+        self._css_label = out_form.labelForField(css_row.itemAt(0).widget() if css_row.count() else self._css)
 
         out_path_row = QHBoxLayout()
         self._out_path = QLineEdit()
-        self._out_path.setPlaceholderText("Same folder as input file")
         self._out_path.setClearButtonEnabled(True)
         out_browse = QPushButton("…")
         out_browse.setFixedWidth(28)
         out_browse.clicked.connect(self._browse_output)
         out_path_row.addWidget(self._out_path)
         out_path_row.addWidget(out_browse)
-        out_form.addRow("Output folder:", out_path_row)
+        out_form.addRow("", out_path_row)
 
-        outer.addWidget(out)
+        outer.addWidget(self._out_group)
 
         # --- Performance ---
-        perf = QGroupBox("Performance")
-        perf_form = QFormLayout(perf)
+        self._perf_group = QGroupBox()
+        perf_form = QFormLayout(self._perf_group)
         self._threads = QSpinBox()
         self._threads.setRange(0, 64)
-        self._threads.setSpecialValueText("Auto")
-        self._threads.setToolTip("Number of parallel worker processes. 0 = auto-detect.")
-        perf_form.addRow("Worker threads (0=auto):", self._threads)
-        outer.addWidget(perf)
+        perf_form.addRow("", self._threads)
+        outer.addWidget(self._perf_group)
 
         # --- Buttons ---
-        buttons = QDialogButtonBox(
+        self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.accepted.connect(self._on_ok)
-        buttons.rejected.connect(self.reject)
-        outer.addWidget(buttons)
+        self._buttons.accepted.connect(self._on_ok)
+        self._buttons.rejected.connect(self.reject)
+        outer.addWidget(self._buttons)
+
+        self._retranslate_ui()
+
+    def _retranslate_ui(self) -> None:
+        self.setWindowTitle(t("settings.title"))
+        self._struct_group.setTitle(t("settings.structure"))
+        self._proc_group.setTitle(t("settings.processing"))
+        self._out_group.setTitle(t("settings.output"))
+        self._perf_group.setTitle(t("settings.performance"))
+
+        self._toc_depth.setToolTip(t("settings.toc_depth_tip"))
+        self._split_level.setToolTip(t("settings.split_level_tip"))
+        self._split_size.setToolTip(t("settings.split_size_tip"))
+        self._split_size.setSpecialValueText(t("settings.split_size_off"))
+        self._split_size.setSuffix(t("settings.split_size_unit"))
+        self._remove_images.setText(t("settings.remove_images"))
+        self._remove_images.setToolTip(t("settings.remove_images_tip"))
+        self._typography.setText(t("settings.typography"))
+        self._typography.setToolTip(t("settings.typography_tip"))
+        self._nbsp_label.setText(t("settings.nbsp_range"))
+        self._nobr_label.setText(t("settings.nobr_range"))
+        self._css.setPlaceholderText(t("settings.css_placeholder"))
+        self._out_path.setPlaceholderText(t("settings.output_placeholder"))
+        self._threads.setToolTip(t("settings.threads_tip"))
+        self._threads.setSpecialValueText(t("settings.threads_auto"))
+
+        # Update form row labels
+        def _update_form_labels(group: QGroupBox, label_map: dict):
+            form = group.layout()
+            if not isinstance(form, QFormLayout):
+                return
+            for row in range(form.rowCount()):
+                field_item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                label_item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
+                if field_item and label_item:
+                    fw = field_item.widget()
+                    lw = label_item.widget()
+                    if fw and lw and fw in label_map:
+                        lw.setText(label_map[fw])
+
+        _update_form_labels(self._struct_group, {
+            self._toc_depth:   t("settings.toc_depth"),
+            self._split_level: t("settings.split_level"),
+            self._split_size:  t("settings.split_size"),
+        })
+        _update_form_labels(self._perf_group, {
+            self._threads: t("settings.threads"),
+        })
 
     def _load(self, cfg: ConversionConfig) -> None:
         self._toc_depth.setValue(cfg.toc_depth)
@@ -169,7 +208,6 @@ class SettingsDialog(QDialog):
         self._out_path.setText(str(cfg.output_path) if cfg.output_path else "")
         self._threads.setValue(cfg.num_threads)
 
-        # Sync sub-option enabled state
         typ_on = cfg.improve_typography
         for w in (self._nbsp_min, self._nbsp_max, self._nobr_min, self._nobr_max):
             w.setEnabled(typ_on)
@@ -194,12 +232,13 @@ class SettingsDialog(QDialog):
 
     def _browse_css(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, "Select CSS File", "", "CSS Files (*.css);;All Files (*)"
+            self, t("settings.custom_css"), "",
+            f"{t('filter.css')};;{t('filter.all')}"
         )
         if path:
             self._css.setText(path)
 
     def _browse_output(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, "Select Output Folder")
+        path = QFileDialog.getExistingDirectory(self, t("settings.output_folder"))
         if path:
             self._out_path.setText(path)

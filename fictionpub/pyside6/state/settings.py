@@ -29,6 +29,12 @@ class AppSettings:
     def set_theme(self, value: str) -> None:
         self._s.setValue("app/theme", value)
 
+    def language(self) -> str:
+        return str(self._s.value("app/language", "en"))
+
+    def set_language(self, value: str) -> None:
+        self._s.setValue("app/language", value)
+
     def geometry(self) -> QByteArray | None:
         raw = self._s.value("app/geometry")
         return raw if isinstance(raw, QByteArray) else None
