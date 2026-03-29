@@ -13,7 +13,7 @@ symptom where some areas update and others do not.
 """
 
 from PySide6.QtGui import QColor, QPalette
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtWidgets import QApplication
 
 
 def _light_palette() -> QPalette:
@@ -110,15 +110,30 @@ def apply_theme(app: QApplication, theme: str) -> None:
 
 def _force_repaint(app: QApplication) -> None:
     """
-    Cycle every widget through unpolish → polish → update so that all
-    cached style / palette values are discarded and recomputed.
+    Push the new application palette to every widget and cycle them through
+    the style engine so all cached colour values are replaced immediately.
 
-    This is needed because QPalette changes propagate lazily in Qt — widgets
-    that have already been painted retain their old cached colours until
-    forced through the style engine.
+    Why explicit setPalette() is necessary
+    ---------------------------------------
+    QAbstractScrollArea (and therefore QTreeView) internally calls
+    setPalette() on its viewport child during construction, marking it with
+    WA_SetPalette = True.  A widget with an explicit palette ignores the
+    application palette change that app.setPalette() sends; it keeps its own
+    cached colours regardless of unpolish/polish calls.
+
+    Calling widget.setPalette(new_palette) on every widget — including those
+    viewports — overwrites the stale cached palette with the new one, after
+    which unpolish/polish/update() forces the style engine to recompute all
+    derived brush values (alternating row colours, text colours, borders).
+
+    Widgets styled exclusively via QSS (e.g. the Convert button) are
+    unaffected because Qt evaluates QSS after the palette, so their
+    appearance is determined by the stylesheet, not the palette.
     """
+    new_palette = app.palette()
     style = app.style()
     for widget in app.allWidgets():
+        widget.setPalette(new_palette)
         style.unpolish(widget)
         style.polish(widget)
         widget.update()

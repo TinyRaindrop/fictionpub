@@ -4,18 +4,46 @@ Drop-in replacement for the Tkinter gui.py module:
 
     from fictionpub.pyside6 import run_gui
     run_gui()
+
+Language bootstrap order
+------------------------
+1. If the user has previously saved a language preference it is loaded from
+   QSettings and used as-is.
+2. On the very first launch (no saved preference) the OS locale is inspected
+   via QLocale.system().  If it resolves to a supported language ('en' or
+   'uk') that language is pre-selected.  Otherwise 'en' is the fallback.
 """
 
 import logging
 import sys
 
+from PySide6.QtCore import QLocale
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
 from ..utils.logger import setup_main_logger
+from ..resources.loader_gui import get_icon_path
 from .i18n import set_language
 from .main_window import MainWindow
 from .state.settings import AppSettings
 from .themes import apply_theme
+
+_SUPPORTED_LANGS = {"en", "uk"}
+_SETTINGS_LANG_KEY_SENTINEL = "__unset__"   # value stored when no preference exists yet
+
+
+def _detect_os_language() -> str:
+    """
+    Return the best supported language code based on the OS locale.
+    Uses Qt's QLocale so it is consistent with Qt's own locale handling
+    across all platforms (Windows, macOS, Linux).
+
+    QLocale.system().name() returns e.g. "uk_UA", "en_GB", "de_DE".
+    We take the first two characters as the ISO 639-1 code.
+    """
+    locale_name = QLocale.system().name()          # e.g. "uk_UA"
+    code = locale_name[:2].lower() if locale_name else "en"
+    return code if code in _SUPPORTED_LANGS else "en"
 
 
 def run_gui() -> None:
@@ -24,13 +52,38 @@ def run_gui() -> None:
     app = QApplication(sys.argv)
     app.setApplicationName("fb2converter")
     app.setOrganizationName("fictionpub")
-    # Fusion renders identically on all platforms and supports custom palettes.
+    # Fusion renders identically on all platforms and works with custom palettes.
     app.setStyle("Fusion")
 
+    # App icon — set on the QApplication so every window (including dialogs)
+    # inherits it automatically.  QIcon handles .ico on all platforms.
+    icon_path = get_icon_path("app.ico")
+    if icon_path:
+        app.setWindowIcon(QIcon(str(icon_path)))
+
     settings = AppSettings()
-    set_language(settings.language())
+
+    # --- Language resolution ---
+    # AppSettings.language() returns "en" as the default when nothing is saved.
+    # We distinguish "explicitly saved as en" from "never set" by checking
+    # whether the key exists in QSettings at all.
+    raw_lang = settings._s.value("app/language", _SETTINGS_LANG_KEY_SENTINEL)
+    if raw_lang == _SETTINGS_LANG_KEY_SENTINEL:
+        # First launch — detect from OS and persist so it's not re-detected
+        # on every subsequent run.
+        lang = _detect_os_language()
+        settings.set_language(lang)
+    else:
+        lang = str(raw_lang)
+        if lang not in _SUPPORTED_LANGS:
+            lang = "en"
+
+    set_language(lang)
+
+    # --- Theme ---
     apply_theme(app, settings.theme())
 
+    # --- Main window ---
     window = MainWindow(settings)
 
     geometry = settings.geometry()
