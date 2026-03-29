@@ -1,18 +1,23 @@
 """
 Theme utilities.
-apply_theme() must be called after QApplication is constructed.
-Both 'light' and 'dark' use explicit QPalette definitions so the result
-is predictable on every platform regardless of the system palette.
-'system' defers to the OS default palette (no override).
+apply_theme() must be called after QApplication.setStyle('Fusion').
+
+After setting the application palette, we force every widget through the
+style engine's unpolish / polish cycle.  This is the Qt-recommended way to
+make already-rendered widgets pick up palette changes immediately.
+
+Without this step, widgets like QTreeView that cache palette-derived brush
+values at paint time (alternating row colours, text colours) will not update
+until the next natural repaint event — producing the "partial theme change"
+symptom where some areas update and others do not.
 """
 
 from PySide6.QtGui import QColor, QPalette
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QWidget
 
 
 def _light_palette() -> QPalette:
     p = QPalette()
-
     window     = QColor(240, 240, 240)
     window_alt = QColor(248, 248, 248)
     base       = QColor(255, 255, 255)
@@ -44,10 +49,7 @@ def _light_palette() -> QPalette:
     p.setColor(QPalette.ColorRole.Dark,            QColor(160, 160, 160))
     p.setColor(QPalette.ColorRole.Shadow,          QColor(100, 100, 100))
 
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text,       dim)
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, dim)
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, dim)
-
+    _set_disabled(p, dim)
     return p
 
 
@@ -79,17 +81,21 @@ def _dark_palette() -> QPalette:
     p.setColor(QPalette.ColorRole.Dark,            QColor(30,  30,  30))
     p.setColor(QPalette.ColorRole.Shadow,          QColor(10,  10,  10))
 
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text,       dim)
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, dim)
-    p.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, dim)
-
+    _set_disabled(p, dim)
     return p
+
+
+def _set_disabled(p: QPalette, dim: QColor) -> None:
+    for role in (QPalette.ColorRole.Text,
+                 QPalette.ColorRole.ButtonText,
+                 QPalette.ColorRole.WindowText):
+        p.setColor(QPalette.ColorGroup.Disabled, role, dim)
 
 
 def apply_theme(app: QApplication, theme: str) -> None:
     """
-    Apply 'light', 'dark', or 'system' palette to the application.
-    Must be called after QApplication.setStyle('Fusion').
+    Apply 'light', 'dark', or 'system' palette and force a full re-paint
+    of every widget so the change takes effect immediately.
     """
     if theme == "dark":
         app.setPalette(_dark_palette())
@@ -98,3 +104,21 @@ def apply_theme(app: QApplication, theme: str) -> None:
     else:
         # 'system': restore the style's unmodified default palette
         app.setPalette(app.style().standardPalette())
+
+    _force_repaint(app)
+
+
+def _force_repaint(app: QApplication) -> None:
+    """
+    Cycle every widget through unpolish → polish → update so that all
+    cached style / palette values are discarded and recomputed.
+
+    This is needed because QPalette changes propagate lazily in Qt — widgets
+    that have already been painted retain their old cached colours until
+    forced through the style engine.
+    """
+    style = app.style()
+    for widget in app.allWidgets():
+        style.unpolish(widget)
+        style.polish(widget)
+        widget.update()
