@@ -1,46 +1,55 @@
 """
+fictionpub/pyside6/i18n/core.py
+
 i18n core: language state, lookup, and listener registry.
 
-Listener registry uses weakref.WeakMethod so that bound methods registered
-by widgets are automatically dropped when the widget is garbage-collected.
-This means dialogs with WA_DeleteOnClose never need to manually unregister —
-once the C++ side is deleted and the Python object is GC'd, the weak
-reference returns None and the entry is pruned on the next set_language call.
+String data is loaded from lang.json (same directory) via the shared
+resource loader.  Internally a TermLookup instance handles all
+key + lang → text resolution with EN fallback.
 
-Plain callables (lambdas, module-level functions) are stored as weakref.ref.
+Listener registry
+-----------------
+Uses weakref.WeakMethod for bound methods so that dialogs with
+WA_DeleteOnClose are automatically de-registered when GC'd — no manual
+unregister required.  Plain callables are stored as weakref.ref.
+Dead references are pruned on each set_language() call.
 """
+
+from __future__ import annotations
 
 import weakref
 from typing import Callable
 
-from .lang_en import STRINGS as _EN
-from .lang_uk import STRINGS as _UK
+from ...resources.loader import load_json
+from ...utils.term_lookup import TermLookup
 
-_BUNDLES: dict[str, dict[str, str]] = {
-    "en": _EN,
-    "uk": _UK,
-}
+# ---------------------------------------------------------------------------
+# Load translation data once at import time.
+# lang.json lives alongside this file in the fictionpub.pyside6.i18n package.
+# ---------------------------------------------------------------------------
 
-SUPPORTED_LANGS: frozenset[str] = frozenset(_BUNDLES)
+_raw: dict[str, dict[str, str]] = load_json("fictionpub.pyside6.i18n", "lang.json")
+_lookup = TermLookup(_raw, default_lang="en")
+
+SUPPORTED_LANGS: frozenset[str] = _lookup.languages()
 
 _LANG: str = "en"
 
-# Each entry is a weakref.WeakMethod or weakref.ref.
-# Using a list; order is preserved (registration order = notification order).
+# Listener list: each entry is weakref.WeakMethod or weakref.ref
 _listeners: list[weakref.ref] = []
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Public API  (unchanged from previous version)
 # ---------------------------------------------------------------------------
 
 def t(key: str, **kwargs) -> str:
     """
-    Look up a UI string by key in the current language, falling back to English.
-    Supports .format() substitutions:  t("bar.ready_n_files", n=5)
+    Return the UI string for *key* in the current language.
+    Falls back to English when the key is missing in the active language.
+    Supports named .format() substitutions:  t("bar.ready_n_files", n=5)
     """
-    bundle = _BUNDLES.get(_LANG, _EN)
-    text   = bundle.get(key) or _EN.get(key, key)
+    text = _lookup.get(key, _LANG, default=key)
     if kwargs:
         try:
             text = text.format(**kwargs)
@@ -55,7 +64,7 @@ def set_language(lang: str) -> None:
     Dead weak references are pruned during this call.
     """
     global _LANG
-    _LANG = lang if lang in _BUNDLES else "en"
+    _LANG = lang if lang in SUPPORTED_LANGS else "en"
 
     live: list[weakref.ref] = []
     for ref in _listeners:
@@ -72,20 +81,17 @@ def get_language() -> str:
 
 def register_listener(fn: Callable[[], None]) -> None:
     """
-    Register a callable to be invoked on every set_language() call.
-    Bound methods are stored as WeakMethod; plain callables as weakref.ref.
+    Register a zero-arg callable to be called on every set_language().
+    Bound methods → WeakMethod; plain callables → weakref.ref.
     Re-registering the same callable is a no-op.
     """
-    # Prune dead refs first
     _listeners[:] = [ref for ref in _listeners if ref() is not None]
 
-    # Build the weak reference
     try:
-        new_ref: weakref.ref = weakref.WeakMethod(fn)  # type: ignore[assignment]
+        new_ref: weakref.ref = weakref.WeakMethod(fn)   # type: ignore[assignment]
     except TypeError:
         new_ref = weakref.ref(fn)
 
-    # Deduplicate: don't add if the same live callable is already registered
     for ref in _listeners:
         if ref() is fn:
             return
