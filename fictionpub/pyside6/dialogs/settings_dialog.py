@@ -47,17 +47,20 @@ class SettingsDialog(QDialog):
         self._struct_form  = QFormLayout(self._struct_group)
         self._struct_form.setSpacing(8)
 
+        self._toc_depth_label = QLabel()
         self._toc_depth = QSpinBox()
         self._toc_depth.setRange(1, 6)
-        self._struct_form.addRow("", self._toc_depth)
+        self._struct_form.addRow(self._toc_depth_label, self._toc_depth)
 
+        self._split_level_label = QLabel()
         self._split_level = QSpinBox()
         self._split_level.setRange(1, 6)
-        self._struct_form.addRow("", self._split_level)
+        self._struct_form.addRow(self._split_level_label, self._split_level)
 
+        self._split_size_label = QLabel()
         self._split_size = QSpinBox()
         self._split_size.setRange(0, 99999)
-        self._struct_form.addRow("", self._split_size)
+        self._struct_form.addRow(self._split_size_label, self._split_size)
 
         outer.addWidget(self._struct_group)
 
@@ -107,6 +110,7 @@ class SettingsDialog(QDialog):
         out_form = QFormLayout(self._out_group)
         out_form.setSpacing(8)
 
+        self._css_label = QLabel()
         css_row = QHBoxLayout()
         self._css = QLineEdit()
         self._css.setClearButtonEnabled(True)
@@ -115,9 +119,9 @@ class SettingsDialog(QDialog):
         css_browse.clicked.connect(self._browse_css)
         css_row.addWidget(self._css)
         css_row.addWidget(css_browse)
-        out_form.addRow("", css_row)
-        self._css_label = out_form.labelForField(css_row.itemAt(0).widget() if css_row.count() else self._css)
+        out_form.addRow(self._css_label, css_row)
 
+        self._out_path_label = QLabel()
         out_path_row = QHBoxLayout()
         self._out_path = QLineEdit()
         self._out_path.setClearButtonEnabled(True)
@@ -126,16 +130,17 @@ class SettingsDialog(QDialog):
         out_browse.clicked.connect(self._browse_output)
         out_path_row.addWidget(self._out_path)
         out_path_row.addWidget(out_browse)
-        out_form.addRow("", out_path_row)
+        out_form.addRow(self._out_path_label, out_path_row)
 
         outer.addWidget(self._out_group)
 
         # --- Performance ---
         self._perf_group = QGroupBox()
         perf_form = QFormLayout(self._perf_group)
+        self._threads_label = QLabel()
         self._threads = QSpinBox()
         self._threads.setRange(0, 64)
-        perf_form.addRow("", self._threads)
+        perf_form.addRow(self._threads_label, self._threads)
         outer.addWidget(self._perf_group)
 
         # --- Buttons ---
@@ -155,44 +160,34 @@ class SettingsDialog(QDialog):
         self._out_group.setTitle(t("settings.output"))
         self._perf_group.setTitle(t("settings.performance"))
 
+        # Structure labels and tooltips
+        self._toc_depth_label.setText(t("settings.toc_depth"))
         self._toc_depth.setToolTip(t("settings.toc_depth_tip"))
+        self._split_level_label.setText(t("settings.split_level"))
         self._split_level.setToolTip(t("settings.split_level_tip"))
+        self._split_size_label.setText(t("settings.split_size"))
         self._split_size.setToolTip(t("settings.split_size_tip"))
         self._split_size.setSpecialValueText(t("settings.split_size_off"))
         self._split_size.setSuffix(t("settings.split_size_unit"))
+
+        # Processing
         self._remove_images.setText(t("settings.remove_images"))
         self._remove_images.setToolTip(t("settings.remove_images_tip"))
         self._typography.setText(t("settings.typography"))
         self._typography.setToolTip(t("settings.typography_tip"))
         self._nbsp_label.setText(t("settings.nbsp_range"))
         self._nobr_label.setText(t("settings.nobr_range"))
+
+        # Output
+        self._css_label.setText(t("settings.custom_css"))
         self._css.setPlaceholderText(t("settings.css_placeholder"))
+        self._out_path_label.setText(t("settings.output_folder"))
         self._out_path.setPlaceholderText(t("settings.output_placeholder"))
+
+        # Performance
+        self._threads_label.setText(t("settings.threads"))
         self._threads.setToolTip(t("settings.threads_tip"))
         self._threads.setSpecialValueText(t("settings.threads_auto"))
-
-        # Update form row labels
-        def _update_form_labels(group: QGroupBox, label_map: dict):
-            form = group.layout()
-            if not isinstance(form, QFormLayout):
-                return
-            for row in range(form.rowCount()):
-                field_item = form.itemAt(row, QFormLayout.ItemRole.FieldRole)
-                label_item = form.itemAt(row, QFormLayout.ItemRole.LabelRole)
-                if field_item and label_item:
-                    fw = field_item.widget()
-                    lw = label_item.widget()
-                    if fw and lw and fw in label_map:
-                        lw.setText(label_map[fw])
-
-        _update_form_labels(self._struct_group, {
-            self._toc_depth:   t("settings.toc_depth"),
-            self._split_level: t("settings.split_level"),
-            self._split_size:  t("settings.split_size"),
-        })
-        _update_form_labels(self._perf_group, {
-            self._threads: t("settings.threads"),
-        })
 
     def _load(self, cfg: ConversionConfig) -> None:
         self._toc_depth.setValue(cfg.toc_depth)
