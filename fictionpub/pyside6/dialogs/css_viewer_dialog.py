@@ -55,7 +55,7 @@ class CSSViewerDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumSize(740, 560)
-        self.resize(820, 640)
+        self.resize(820, 720)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self._path     = path

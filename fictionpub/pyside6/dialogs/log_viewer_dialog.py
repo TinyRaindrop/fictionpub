@@ -58,7 +58,8 @@ class LogViewerDialog(QDialog):
     def __init__(self, content: str, title: str = "Log Viewer", parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.setMinimumSize(780, 500)
+        self.setMinimumSize(740, 560)
+        self.resize(960, 720)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self._full_content = content
 
@@ -184,6 +185,7 @@ class LogViewerDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _on_wrap_toggled(self, checked: bool) -> None:
+        # TODO: save wrap toggle state
         mode = (
             QPlainTextEdit.LineWrapMode.WidgetWidth
             if checked

@@ -115,6 +115,7 @@ class FileTreeModel(QAbstractItemModel):
     Hierarchical model: folders at the root, files as their children.
     Files start checked; folder tri-state is derived from children.
     """
+    # TODO: support nested folders
 
     # Emitted whenever any CheckState changes.
     # Args: (checked_file_count, total_file_count)
