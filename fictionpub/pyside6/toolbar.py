@@ -73,17 +73,23 @@ class ToolbarWidget(QWidget):
                   self._remove, self._remove_all, self._remove_done):
             layout.addWidget(w)
 
-        layout.addWidget(_vsep())
+        # layout.addWidget(_vsep())
 
+        spacer1 = QWidget()
+        spacer1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        layout.addWidget(spacer1)
+        
         # Single select-toggle button
         self._select_toggle = QPushButton()
+        self._select_toggle.setCheckable(True)
+        self._select_toggle.setChecked(False)
         self._select_toggle.setMinimumWidth(130)
         layout.addWidget(self._select_toggle)
 
         # Spacer
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        layout.addWidget(spacer)
+        spacer2 = QWidget()
+        spacer2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        layout.addWidget(spacer2)
 
         # Right group
         self._conv_settings = QPushButton()
@@ -142,14 +148,15 @@ class ToolbarWidget(QWidget):
         self._about.setToolTip(t("tooltip.about"))
         self._select_toggle.setToolTip(t("tooltip.select_toggle"))
         # Re-render count label with current counts
-        self._refresh_toggle_label()
+        self._refresh_select_toggle()
 
-    def _refresh_toggle_label(self) -> None:
+    def _refresh_select_toggle(self) -> None:
         checked = getattr(self, "_last_checked", 0)
         total   = getattr(self, "_last_total",   0)
         self._select_toggle.setText(
             t("toolbar.select_toggle", checked=checked, total=total)
         )
+        self._select_toggle.setChecked(self._all_selected)
 
     # ------------------------------------------------------------------
     # Public API
@@ -165,4 +172,4 @@ class ToolbarWidget(QWidget):
         self._last_checked   = checked
         self._last_total     = total
         self._all_selected   = (total > 0 and checked == total)
-        self._refresh_toggle_label()
+        self._refresh_select_toggle()

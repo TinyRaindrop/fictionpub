@@ -25,10 +25,12 @@ to avoid the "Must construct a QGuiApplication before a QPixmap" error.
 """
 
 from pathlib import Path
+from typing import Union
 
 from PySide6.QtCore import (
     QAbstractItemModel,
     QModelIndex,
+    QPersistentModelIndex,
     QRect,
     Qt,
     Signal,
@@ -38,6 +40,8 @@ from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPixmap
 from ...models.conversion import ConversionStatus
 from ..i18n import t
 from .file_node import FileNode, FolderNode
+
+IndexType = Union[QModelIndex, QPersistentModelIndex]
 
 # Column indices — plain ints, no Qt objects at import time
 COL_NAME   = 0
@@ -108,7 +112,7 @@ class FileTreeModel(QAbstractItemModel):
     # QAbstractItemModel interface
     # ------------------------------------------------------------------
 
-    def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+    def index(self, row: int, column: int, parent: IndexType = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         if not parent.isValid():
@@ -120,7 +124,7 @@ class FileTreeModel(QAbstractItemModel):
                 return self.createIndex(row, column, ptr.children[row])
         return QModelIndex()
 
-    def parent(self, index: QModelIndex) -> QModelIndex:  # type: ignore[override]
+    def parent(self, index: IndexType) -> QModelIndex:  # type: ignore[override]
         if not index.isValid():
             return QModelIndex()
         node = index.internalPointer()
@@ -132,7 +136,7 @@ class FileTreeModel(QAbstractItemModel):
                     return self.createIndex(i, 0, folder)
         return QModelIndex()
 
-    def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def rowCount(self, parent: IndexType = QModelIndex()) -> int:
         if not parent.isValid():
             return len(self._folders)
         ptr = parent.internalPointer()
@@ -140,10 +144,10 @@ class FileTreeModel(QAbstractItemModel):
             return len(ptr.children)
         return 0
 
-    def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
+    def columnCount(self, parent: IndexType = QModelIndex()) -> int:
         return COLUMNS
 
-    def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+    def flags(self, index: IndexType) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
@@ -157,7 +161,7 @@ class FileTreeModel(QAbstractItemModel):
                 return t(_HEADER_KEYS[section])
         return None
 
-    def data(self, index: QModelIndex, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(self, index: IndexType, role: int = Qt.ItemDataRole.DisplayRole):
         if not index.isValid():
             return None
         node = index.internalPointer()
@@ -168,7 +172,7 @@ class FileTreeModel(QAbstractItemModel):
             return self._file_data(node, col, role)
         return None
 
-    def setData(self, index: QModelIndex, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
+    def setData(self, index: IndexType, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
         if not index.isValid() or role != Qt.ItemDataRole.CheckStateRole:
             return False
         node  = index.internalPointer()
@@ -363,7 +367,8 @@ class FileTreeModel(QAbstractItemModel):
 
         self._emit_selection_count()
 
-    def setAllChecked(self, state: Qt.CheckState) -> None:
+    def setAllChecked(self, is_checked: bool) -> None:
+        state: Qt.CheckState = Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked
         for folder in self._folders:
             folder.check_state = state
             for child in folder.children:

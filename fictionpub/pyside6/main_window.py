@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QThreadPool, Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
@@ -83,6 +84,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._connect_signals()
+        self._apply_shortcuts()
         self._apply_stylesheet()
 
         register_listener(self._retranslate_ui)
@@ -138,6 +140,12 @@ class MainWindow(QMainWindow):
         bb.cancelRequested.connect(self._on_cancel)
         bb.openLogsDirRequested.connect(self._on_open_logs)
         bb.openLastLogRequested.connect(self._on_open_last_log)
+
+    def _apply_shortcuts(self) -> None:
+        QShortcut(QKeySequence.StandardKey.Delete, self._file_view).activated.connect(self._on_remove_selected)
+        QShortcut(QKeySequence.StandardKey.SelectAll, self).activated.connect(
+            lambda: self._model.setAllChecked(True)
+        )
 
     def _apply_stylesheet(self) -> None:
         self.setStyleSheet("""
@@ -207,10 +215,10 @@ class MainWindow(QMainWindow):
             self._model.removeCompleted()
 
     def _on_select_all(self) -> None:
-        self._model.setAllChecked(Qt.CheckState.Checked)
+        self._model.setAllChecked(True)
 
     def _on_deselect_all(self) -> None:
-        self._model.setAllChecked(Qt.CheckState.Unchecked)
+        self._model.setAllChecked(False)
 
     def _on_conversion_settings(self) -> None:
         dlg = SettingsDialog(self._config, self)
