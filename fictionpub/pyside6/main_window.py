@@ -288,6 +288,13 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _epub_path_for(self, source: Path) -> Path:
+        """
+        Resolve the expected output EPUB path for a given source file.
+
+        Mirrors the logic in EpubBuilder._zip_epub() so the GUI opens
+        the correct file after conversion.
+        """
+        # TODO: remove duplicate logic, ensure SINGLE source of truth for epub paths
         name = source.name
         if name.endswith(".fb2.zip"):
             stem = name[:-8]
@@ -295,7 +302,15 @@ class MainWindow(QMainWindow):
             stem = name[:-4]
         else:
             stem = source.stem
-        out_dir = self._config.output_path or source.parent
+
+        if self._config.output_path:
+            if self._config.retain_folder_structure:
+                out_dir = self._config.output_path / source.parent.name
+            else:
+                out_dir = self._config.output_path
+        else:
+            out_dir = source.parent
+
         return out_dir / f"{stem}.epub"
 
     # ------------------------------------------------------------------

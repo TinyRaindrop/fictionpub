@@ -27,6 +27,7 @@ from .i18n import register_listener, t
 
 # Stylesheet applied to every toolbar button for a clearly visible hover/press.
 # Uses palette() roles so it works on both light and dark themes.
+# TODO: merge with MainWindow._apply_stylesheet()
 _TOOLBAR_BTN_QSS = """
 QPushButton {
     border: 1px solid transparent;

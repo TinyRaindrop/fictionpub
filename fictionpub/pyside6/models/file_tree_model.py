@@ -57,7 +57,6 @@ COLUMNS    = 6
 _HEADER_KEYS = [
     "tree.col_name",
     "tree.col_status",
-    "tree.col_name",
     "tree.col_author",
     "tree.col_title",
     "tree.col_date",

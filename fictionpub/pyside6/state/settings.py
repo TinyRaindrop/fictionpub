@@ -1,6 +1,14 @@
 """
+fictionpub/pyside6/state/settings.py
+
 Typed wrapper around QSettings.
 Provides persistence for app preferences and ConversionConfig.
+
+Persisted ConversionConfig fields
+----------------------------------
+output_path and custom_stylesheet are session-specific and are NOT
+persisted across runs.  retain_folder_structure IS persisted because it
+is a structural preference the user is unlikely to change per session.
 """
 
 from pathlib import Path
@@ -44,13 +52,14 @@ class AppSettings:
 
     # ------------------------------------------------------------------
     # ConversionConfig persistence
-    # Each field is stored individually so the format survives dataclass changes.
-    # output_path and custom_stylesheet are session-specific; not persisted.
     # ------------------------------------------------------------------
 
     def conversion_config(self) -> ConversionConfig:
         s = self._s
         return ConversionConfig(
+            # output_path / custom_stylesheet are session-only — not loaded
+            # TODO: save and load/validate CSS and output paths
+            retain_folder_structure = self._bool("conv/retain_folder_structure", False),
             toc_depth               = int(s.value("conv/toc_depth",          4)),
             split_level             = int(s.value("conv/split_level",         2)),
             split_size_kb           = int(s.value("conv/split_size_kb",       0)),
@@ -63,14 +72,21 @@ class AppSettings:
 
     def set_conversion_config(self, cfg: ConversionConfig) -> None:
         s = self._s
-        s.setValue("conv/toc_depth",              cfg.toc_depth)
-        s.setValue("conv/split_level",            cfg.split_level)
-        s.setValue("conv/split_size_kb",          cfg.split_size_kb)
-        s.setValue("conv/remove_unused_images",   cfg.remove_unused_images)
-        s.setValue("conv/improve_typography",     cfg.improve_typography)
-        s.setValue("conv/word_len_nbsp_range",    f"{cfg.word_len_nbsp_range[0]},{cfg.word_len_nbsp_range[1]}")
-        s.setValue("conv/word_len_nobreak_range", f"{cfg.word_len_nobreak_range[0]},{cfg.word_len_nobreak_range[1]}")
-        s.setValue("conv/num_threads",            cfg.num_threads)
+        s.setValue("conv/retain_folder_structure", cfg.retain_folder_structure)
+        s.setValue("conv/toc_depth",               cfg.toc_depth)
+        s.setValue("conv/split_level",             cfg.split_level)
+        s.setValue("conv/split_size_kb",           cfg.split_size_kb)
+        s.setValue("conv/remove_unused_images",    cfg.remove_unused_images)
+        s.setValue("conv/improve_typography",      cfg.improve_typography)
+        s.setValue(
+            "conv/word_len_nbsp_range",
+            f"{cfg.word_len_nbsp_range[0]},{cfg.word_len_nbsp_range[1]}",
+        )
+        s.setValue(
+            "conv/word_len_nobreak_range",
+            f"{cfg.word_len_nobreak_range[0]},{cfg.word_len_nobreak_range[1]}",
+        )
+        s.setValue("conv/num_threads",             cfg.num_threads)
 
     def sync(self) -> None:
         self._s.sync()

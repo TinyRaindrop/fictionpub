@@ -247,13 +247,17 @@
         "en": "Remove All",
         "uk": "Видалити всі"
     },
+    "settings.css_custom": {
+        "en": "Custom stylesheet:",
+        "uk": "Власна таблиця стилів:"
+    },
+    "settings.css_default": {
+        "en": "Use default stylesheet",
+        "uk": "Використовувати вбудовану таблицю стилів"
+    },
     "settings.css_path_hint": {
         "en": "Path to custom CSS file…",
         "uk": "Шлях до власного CSS файлу…"
-    },
-    "settings.css_placeholder": {
-        "en": "Use built-in stylesheet",
-        "uk": "Використовувати вбудовану таблицю стилів"
     },
     "settings.custom_css": {
         "en": "Custom CSS:",
@@ -267,6 +271,14 @@
         "en": "No-break word length range:",
         "uk": "Діапазон довжини слів для nobreak:"
     },
+    "settings.out_same_folder": {
+        "en": "Same folder as source file",
+        "uk": "В тій же папці, що й вихідний файл"
+    },
+    "settings.out_to_folder": {
+        "en": "All outputs to folder:",
+        "uk": "Усі файли до папки:"
+    },
     "settings.output": {
         "en": "Output",
         "uk": "Виведення"
@@ -276,8 +288,8 @@
         "uk": "Папка виведення:"
     },
     "settings.output_placeholder": {
-        "en": "Same folder as input file",
-        "uk": "В тій же папці, що й вхідний файл"
+        "en": "Select output folder…",
+        "uk": "Оберіть папку виведення…"
     },
     "settings.performance": {
         "en": "Performance",
@@ -294,6 +306,10 @@
     "settings.remove_images_tip": {
         "en": "Strip images that are not referenced in the text.",
         "uk": "Видалити зображення, на які немає посилань у тексті."
+    },
+    "settings.retain_structure": {
+        "en": "Retain original folder structure",
+        "uk": "Зберігати оригінальну структуру папок"
     },
     "settings.split_level": {
         "en": "Split level (1–6):",
@@ -323,6 +339,10 @@
         "en": "Document Structure",
         "uk": "Структура документа"
     },
+    "settings.stylesheet_group": {
+        "en": "Stylesheet",
+        "uk": "Таблиця стилів"
+    },
     "settings.threads": {
         "en": "Worker threads (0=auto):",
         "uk": "Робочих потоків (0=авто):"
@@ -351,13 +371,13 @@
         "en": "Improve typography",
         "uk": "Покращити типографіку"
     },
-    "settings.typography_tip": {
-        "en": "Enable post-processing: non-breaking spaces, no-break spans, etc.",
-        "uk": "Увімкнути постобробку: нерозривні пробіли, span.nobreak тощо."
-    },
     "settings.typography_off": {
         "en": "Off",
         "uk": "Вимкнено"
+    },
+    "settings.typography_tip": {
+        "en": "Enable post-processing: non-breaking spaces, no-break spans, etc.",
+        "uk": "Увімкнути постобробку: нерозривні пробіли, span.nobreak тощо."
     },
     "settings.typography_wip": {
         "en": "In development",
@@ -367,10 +387,6 @@
         "en": "Typography post-processing is under development and not yet available.",
         "uk": "Постобробка типографіки знаходиться в розробці і поки недоступна."
     },
-    "settings.use_default_css": {
-        "en": "Use default stylesheet",
-        "uk": "Використовувати вбудовану таблицю стилів"
-    },
     "settings.view_default_css": {
         "en": "View Default",
         "uk": "Переглянути стандартний"
@@ -378,6 +394,10 @@
     "settings.view_edit_css": {
         "en": "View / Edit",
         "uk": "Переглянути / Змінити"
+    },
+    "settings.wrap_lines": {
+        "en": "Wrap lines",
+        "uk": "Переносити рядки"
     },
     "toolbar.about": {
         "en": "ℹ About",
@@ -439,6 +459,10 @@
         "en": "Application preferences",
         "uk": "Налаштування програми"
     },
+    "tooltip.css_default": {
+        "en": "Use the built-in stylesheet for all conversions",
+        "uk": "Використовувати вбудовану таблицю стилів для всіх конвертацій"
+    },
     "tooltip.last_log": {
         "en": "View the log from the most recent run",
         "uk": "Переглянути журнал останнього запуску"
@@ -463,6 +487,10 @@
         "en": "Remove all successfully converted files",
         "uk": "Видалити всі успішно конвертовані файли"
     },
+    "tooltip.retain_structure": {
+        "en": "Mirror the source file's parent folder name under the output directory.\ne.g. /books/fantasy/book.fb2 → /output/fantasy/book.epub",
+        "uk": "Відтворити назву батьківської папки вихідного файлу в папці виведення.\nНаприклад: /books/fantasy/book.fb2 → /output/fantasy/book.epub"
+    },
     "tooltip.select_toggle": {
         "en": "Click to select all / deselect all",
         "uk": "Клікніть, щоб вибрати всі / зняти вибір"
@@ -471,17 +499,13 @@
         "en": "Configure conversion options",
         "uk": "Налаштування конвертації"
     },
-    "tooltip.use_default_css": {
-        "en": "When checked, the built-in stylesheet is used and no custom CSS is applied.",
-        "uk": "Якщо позначено, використовується вбудована таблиця стилів без власного CSS."
-    },
     "tooltip.view_default_css": {
         "en": "Inspect the built-in default stylesheet (read-only)",
         "uk": "Переглянути вбудовану таблицю стилів (тільки читання)"
     },
     "tooltip.view_edit_css": {
-        "en": "Open the selected CSS file in an editor",
-        "uk": "Відкрити вибраний CSS файл в редакторі"
+        "en": "Open the selected CSS file to view or edit it",
+        "uk": "Відкрити вибраний CSS файл для перегляду або редагування"
     },
     "tooltip.warning_status": {
         "en": "Conversion finished with warnings — check logs for details.",

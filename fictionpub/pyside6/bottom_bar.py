@@ -77,6 +77,9 @@ class BottomBarWidget(QWidget):
         layout.setContentsMargins(8, 4, 8, 4)
         layout.setSpacing(8)
 
+        # TODO: add output path hint:
+        # "EPUBs will be saved alongside source files" or "Output path: {dir}"
+        
         # Status — left-aligned, takes available space
         self._status = QLabel()
         self._status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)

@@ -666,27 +666,62 @@ class EpubBuilder:
                 self._write_html(doc.html, filepath)
 
     def _zip_epub(self) -> None:
-        """Creates the final .epub archive."""
-        epub_path = self.config.output_path
+        """
+        Creates the final .epub archive.
 
-        if not epub_path:
-            epub_path = self.source_path.with_suffix(".epub")
+        Output path resolution
+        ----------------------
+        config.output_path is treated as a DIRECTORY (not a file path).
+
+        1. output_path is None
+           → place the .epub next to the source file.
+
+        2. output_path is set, retain_folder_structure is False
+           → output_path / stem.epub
+
+        3. output_path is set, retain_folder_structure is True
+           → output_path / <source_parent_name> / stem.epub
+           This replicates the source file's immediate parent directory
+           under the output root, e.g.:
+             /books/fantasy/book.fb2  →  /output/fantasy/book.epub
+
+        The output directory is created (mkdir -p) if it does not exist.
+        """
+        # TODO: retain full relative path from the closest common ancestor
+        # Compute the stem, stripping the .fb2 / .fb2.zip extension cleanly.
+        src_name = self.source_path.name
+        if src_name.endswith(".fb2.zip"):
+            stem = src_name[:-8]
+        elif src_name.endswith(".fb2"):
+            stem = src_name[:-4]
+        else:
+            stem = self.source_path.stem
+
+        output_base = self.config.output_path
+        if output_base:
+            if self.config.retain_folder_structure:
+                out_dir = output_base / self.source_path.parent.name
+            else:
+                out_dir = output_base
+            out_dir.mkdir(parents=True, exist_ok=True)
+            epub_path = out_dir / f"{stem}.epub"
+        else:
+            epub_path = self.source_path.parent / f"{stem}.epub"
 
         with zipfile.ZipFile(epub_path, "w", zipfile.ZIP_DEFLATED) as zf:
-            # The mimetype file must be the first and uncompressed
-            mimetype_content = "application/epub+zip"
-            zf.writestr("mimetype", mimetype_content, compress_type=zipfile.ZIP_STORED)
+            # mimetype must be first and uncompressed (EPUB spec requirement)
+            zf.writestr("mimetype", "application/epub+zip",
+                        compress_type=zipfile.ZIP_STORED)
 
-            # Walk through the temp directory and add all other files
             for root, _, filenames in os.walk(self.paths.root):
                 for file in filenames:
                     if file == "mimetype":
                         continue
                     filepath = Path(root) / file
-                    arcname = filepath.relative_to(self.paths.root)
+                    arcname  = filepath.relative_to(self.paths.root)
                     zf.write(filepath, str(arcname))
 
-            log.info(f"✅ Success! EPUB file created at: {epub_path}")
+        log.info(f"✅ Success! EPUB file created at: {epub_path}")
 
     def _create_html(
         self,

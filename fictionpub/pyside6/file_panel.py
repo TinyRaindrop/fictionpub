@@ -2,8 +2,8 @@
 FileTreeView — QTreeView configured for the file list.
 
 Column layout (matches COL_* constants in file_tree_model.py)
-  0  Status    icon (sortable, narrow)
-  1  Filename  + checkbox
+  0  Filename  + checkbox
+  1  Status    icon (sortable, narrow)
   2  Author
   3  Title
   4  Date
@@ -98,6 +98,7 @@ class FileTreeView(QTreeView):
         h.resizeSection(5,           50)   # Lang
 
         # Sort by status ascending by default (failures on top)
+        # TODO: why sort now? files/folders should be in alphabetical order
         self.sortByColumn(COL_STATUS, Qt.SortOrder.AscendingOrder)
 
     # ------------------------------------------------------------------

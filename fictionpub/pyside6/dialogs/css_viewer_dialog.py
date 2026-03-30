@@ -1,15 +1,25 @@
 """
-CSS viewer / editor dialog.
+fictionpub/pyside6/dialogs/css_viewer_dialog.py
 
-Two modes:
-  editable=False  Read-only view of the built-in default stylesheet.
-  editable=True   Editable view of a user-supplied custom CSS file,
-                  with a Save button that writes changes back to disk.
+Non-modal CSS viewer / editor dialog.
 
-The dialog is non-modal (show() not exec()) so the user can keep it open
-while tweaking the settings dialog.  WA_DeleteOnClose ensures it is
-garbage-collected on close; WeakMethod in the i18n listener registry
-means no manual unregister is required.
+Two modes
+---------
+editable=False  Read-only view of the built-in default stylesheet.
+                A grey italic notice confirms that edits are not saved.
+editable=True   Fully editable view of a user-supplied file, with a
+                Save button that writes changes back to disk.
+
+Both modes share:
+  • CssSyntaxHighlighter for /* comments */, @rules, properties, strings,
+    hex colours, numbers+units, and !important
+  • "Wrap lines" checkbox
+  • "Copy All" button
+  • Monospace font
+
+The dialog is non-modal (show(), not exec()) so the user can keep it
+open alongside the settings dialog.  WA_DeleteOnClose + WeakMethod in
+the i18n registry mean no manual cleanup is required.
 """
 
 from pathlib import Path
@@ -17,6 +27,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
     QHBoxLayout,
     QLabel,
@@ -27,6 +38,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..i18n import register_listener, t
+from .highlighters import CssSyntaxHighlighter
 
 
 class CSSViewerDialog(QDialog):
@@ -39,15 +51,15 @@ class CSSViewerDialog(QDialog):
         editable: bool = False,
         title: str = "CSS Viewer",
         parent=None,
-    ):
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
         self.setMinimumSize(740, 560)
-        self.resize(800, 620)
+        self.resize(820, 640)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
         self._path     = path
-        self._editable = editable and path is not None  # can't edit without a path
+        self._editable = editable and path is not None
 
         self._build_ui()
         self._load_content()
@@ -62,46 +74,57 @@ class CSSViewerDialog(QDialog):
         layout.setSpacing(6)
         layout.setContentsMargins(8, 8, 8, 8)
 
-        # File-path banner
+        # ── File path banner ────────────────────────────────────────────
         self._path_label = QLabel()
         self._path_label.setWordWrap(True)
         self._path_label.setStyleSheet(
-            "font-family: monospace; font-size: 10px; color: palette(mid);"
+            "font-size: 10px; color: palette(mid);"
         )
         layout.addWidget(self._path_label)
 
-        # Read-only notice (default stylesheet only)
+        # ── Read-only notice (built-in stylesheet only) ──────────────────
         if not self._editable:
             self._ro_label = QLabel()
-            self._ro_label.setStyleSheet("color: palette(mid); font-style: italic;")
+            self._ro_label.setStyleSheet(
+                "color: palette(mid); font-style: italic; font-size: 10px;"
+            )
             layout.addWidget(self._ro_label)
 
-        # CSS content
+        # ── Editor ──────────────────────────────────────────────────────
         self._editor = QPlainTextEdit()
         self._editor.setReadOnly(not self._editable)
-        font = QFont("Courier New", 9)
+        font = QFont("Courier New", 11)
         font.setStyleHint(QFont.StyleHint.Monospace)
         self._editor.setFont(font)
         self._editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         layout.addWidget(self._editor)
 
-        # Button row
-        btn_row = QHBoxLayout()
-        btn_row.addStretch()
+        # Attach syntax highlighter to the editor's document
+        self._highlighter = CssSyntaxHighlighter(self._editor.document())
+
+        # ── Bottom row ──────────────────────────────────────────────────
+        bottom = QHBoxLayout()
+
+        self._wrap_cb = QCheckBox()
+        self._wrap_cb.toggled.connect(self._on_wrap_toggled)
+        bottom.addWidget(self._wrap_cb)
+
+        bottom.addStretch()
 
         self._copy_btn = QPushButton()
         self._copy_btn.clicked.connect(self._copy_all)
-        btn_row.addWidget(self._copy_btn)
+        bottom.addWidget(self._copy_btn)
 
         if self._editable:
             self._save_btn = QPushButton()
             self._save_btn.clicked.connect(self._save)
-            btn_row.addWidget(self._save_btn)
+            bottom.addWidget(self._save_btn)
 
         self._close_btn = QPushButton()
         self._close_btn.clicked.connect(self.close)
-        btn_row.addWidget(self._close_btn)
-        layout.addLayout(btn_row)
+        bottom.addWidget(self._close_btn)
+
+        layout.addLayout(bottom)
 
         self._retranslate_ui()
 
@@ -109,17 +132,17 @@ class CSSViewerDialog(QDialog):
         self._path_label.setText(
             str(self._path) if self._path else t("cssviewer.no_file")
         )
-
         if not self._editable and hasattr(self, "_ro_label"):
             self._ro_label.setText(t("cssviewer.readonly_note"))
 
+        self._wrap_cb.setText(t("settings.wrap_lines"))
         self._copy_btn.setText(t("dlg.copy"))
         if self._editable and hasattr(self, "_save_btn"):
             self._save_btn.setText(t("dlg.save"))
         self._close_btn.setText(t("dlg.close"))
 
     # ------------------------------------------------------------------
-    # Content helpers
+    # Content
     # ------------------------------------------------------------------
 
     def _load_content(self) -> None:
@@ -135,6 +158,14 @@ class CSSViewerDialog(QDialog):
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
+
+    def _on_wrap_toggled(self, checked: bool) -> None:
+        mode = (
+            QPlainTextEdit.LineWrapMode.WidgetWidth
+            if checked
+            else QPlainTextEdit.LineWrapMode.NoWrap
+        )
+        self._editor.setLineWrapMode(mode)
 
     def _copy_all(self) -> None:
         from PySide6.QtWidgets import QApplication
