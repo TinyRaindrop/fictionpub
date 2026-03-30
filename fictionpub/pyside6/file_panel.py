@@ -1,18 +1,16 @@
 """
 FileTreeView — QTreeView configured for the file list.
 
-Column resize strategy (definitive)
-------------------------------------
-All columns are Interactive — every resize handle moves exactly the column
-whose right edge it is, and nothing else.  This is standard Qt behaviour;
-the only thing we add is auto-filling column 0 when the *window* is resized
-(not when the user drags a separator).
+Column layout (matches COL_* constants in file_tree_model.py)
+  0  Status    icon (sortable, narrow)
+  1  Filename  + checkbox
+  2  Author
+  3  Title
+  4  Date
+  5  Lang
 
-  • window resize  → col 0 absorbs the delta via resizeEvent
-  • user drags col N handle → col N changes, col 0 is untouched
-
-blockSignals() is used around the programmatic resizeSection call so that
-the automatic resize is never mistaken for a user action.
+Column 0 (Filename) auto-fills the remaining viewport width on window
+resize; all other columns are freely draggable (Interactive mode).
 
 Sorting
 -------
@@ -21,13 +19,11 @@ sortRole = Qt.UserRole so the status column sorts on its integer key rather
 than on display text.  All source-model indices are mapped through the proxy
 before being returned to callers.
 
-Column layout (matches COL_* constants in file_tree_model.py)
-  0  Filename  + checkbox
-  1  Status    icon (sortable)
-  2  Author
-  3  Title
-  4  Date
-  5  Lang
+Click behaviour
+---------------
+Single click on COL_STATUS  → open log viewer (any status)
+Double click on file row    → open EPUB if SUCCESS/WARNING; log viewer if FAILURE
+Double click on folder row  → open folder in file manager
 """
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, Signal
@@ -35,9 +31,13 @@ from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QMenu, QTreeView
 
 from .i18n import register_listener, t
 from .models.file_node import FileNode, FolderNode
-from .models.file_tree_model import COLUMNS, COL_NAME, COL_STATUS, FileTreeModel
+from .models.file_tree_model import (
+    COLUMNS, COL_NAME, COL_STATUS,
+    FileTreeModel,
+)
+from ..models.conversion import ConversionStatus
 
-_COL0_MIN = 120   # px — col 0 is never auto-shrunk below this
+_COL_NAME_MIN = 120   # px — filename col is never auto-shrunk below this
 
 
 class FileTreeView(QTreeView):
@@ -97,7 +97,7 @@ class FileTreeView(QTreeView):
         h.resizeSection(4,           70)   # Date
         h.resizeSection(5,           50)   # Lang
 
-        # Sort by status descending by default (failures on top)
+        # Sort by status ascending by default (failures on top)
         self.sortByColumn(COL_STATUS, Qt.SortOrder.AscendingOrder)
 
     # ------------------------------------------------------------------
@@ -109,10 +109,13 @@ class FileTreeView(QTreeView):
         self._fill_name_column()
 
     def _fill_name_column(self) -> None:
-        h         = self.header()
-        vp_width  = self.viewport().width()
-        other_sum = sum(h.sectionSize(c) for c in range(1, COLUMNS))
-        new_w     = max(_COL0_MIN, vp_width - other_sum)
+        h = self.header()
+        vp_width = self.viewport().width()
+        # Sum all columns except COL_NAME (which absorbs the remaining space)
+        other_sum = sum(
+            h.sectionSize(c) for c in range(COLUMNS) if c != COL_NAME
+        )
+        new_w = max(_COL_NAME_MIN, vp_width - other_sum)
 
         # blockSignals prevents the programmatic resize from being treated as
         # a user drag and from triggering any connected sectionResized slots.
@@ -135,17 +138,28 @@ class FileTreeView(QTreeView):
     # ------------------------------------------------------------------
 
     def _on_clicked(self, proxy_index: QModelIndex) -> None:
-        col  = proxy_index.column()
+        """Single click on the status icon column opens the log viewer."""
+        if proxy_index.column() != COL_STATUS:
+            return
         node = self._node_for_proxy(proxy_index)
-        # Status icon click OR name click both open the log viewer
-        if col in (COL_NAME, COL_STATUS):
-            if isinstance(node, FileNode) and node.status is not None:
-                self.statusClicked.emit(node)
+        if isinstance(node, FileNode) and node.status is not None:
+            self.statusClicked.emit(node)
 
     def _on_double_clicked(self, proxy_index: QModelIndex) -> None:
+        """
+        File double-click:
+          SUCCESS / WARNING → open the output EPUB
+          FAILURE           → open log viewer
+          not yet converted → no action
+        Folder double-click → open directory.
+        """
         node = self._node_for_proxy(proxy_index)
         if isinstance(node, FileNode):
-            self.fileDoubleClicked.emit(node.path)
+            if node.status in (ConversionStatus.SUCCESS, ConversionStatus.WARNING):
+                self.openEpubRequested.emit(node.path)
+            elif node.status == ConversionStatus.FAILURE:
+                self.statusClicked.emit(node)
+            # no action if status is None (not yet converted)
         elif isinstance(node, FolderNode):
             self.folderDoubleClicked.emit(node.path)
 

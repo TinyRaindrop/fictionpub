@@ -20,8 +20,10 @@ Internal pointer strategy:
   FolderNode indices:  createIndex(row, col, folder_node)
   FileNode indices:    createIndex(row, col, file_node)
 
-Icons are created in __init__() — NOT at module import time —
-to avoid the "Must construct a QGuiApplication before a QPixmap" error.
+Icons are loaded from resources/icons/*.png in __init__() so that
+QApplication already exists and no "Must construct a QGuiApplication
+before a QPixmap" error occurs.  A small fallback glyph icon is used
+if the PNG file cannot be found.
 """
 
 from pathlib import Path
@@ -55,6 +57,7 @@ COLUMNS    = 6
 _HEADER_KEYS = [
     "tree.col_name",
     "tree.col_status",
+    "tree.col_name",
     "tree.col_author",
     "tree.col_title",
     "tree.col_date",
@@ -62,7 +65,6 @@ _HEADER_KEYS = [
 ]
 
 # Sort priority: lower = shown first in ascending sort.
-# Failures are most important to see first.
 _STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
     None:                    0,
     ConversionStatus.FAILURE: 1,
@@ -70,9 +72,32 @@ _STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
     ConversionStatus.SUCCESS: 3,
 }
 
+_ICON_SIZE = 16   # px — icons are 64×64 source, downscaled to fit row height
 
-def _make_icon(symbol: str, color: str, size: int = 14) -> QIcon:
-    """Build a small icon from a Unicode symbol. QApplication must already exist."""
+
+def _load_png_icon(filename: str, size: int = _ICON_SIZE) -> QIcon | None:
+    """
+    Load a status icon from resources/icons/ via loader_gui.
+    Returns None if the file cannot be found so callers can fall back.
+    """
+    try:
+        from ...resources.loader_gui import get_icon_path
+        path = get_icon_path(filename)
+        if path and path.is_file():
+            px = QPixmap(str(path))
+            if not px.isNull():
+                return QIcon(px.scaled(
+                    size, size,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                ))
+    except Exception:
+        pass
+    return None
+
+
+def _make_fallback_icon(symbol: str, color: str, size: int = _ICON_SIZE) -> QIcon:
+    """Glyph icon used when the PNG resource is unavailable."""
     px = QPixmap(size, size)
     px.fill(Qt.GlobalColor.transparent)
     p = QPainter(px)
@@ -101,11 +126,20 @@ class FileTreeModel(QAbstractItemModel):
         self._folders: list[FolderNode] = []
         self._path_to_node: dict[Path, FileNode] = {}
 
-        # Icons created here — QGuiApplication exists at this point
+        # Load PNG status icons; fall back to glyph icons if unavailable
         self._status_icons: dict[ConversionStatus, QIcon] = {
-            ConversionStatus.SUCCESS: _make_icon("✓", "#27ae60"),
-            ConversionStatus.WARNING: _make_icon("⚠", "#e67e22"),
-            ConversionStatus.FAILURE: _make_icon("✗", "#e74c3c"),
+            ConversionStatus.SUCCESS: (
+                _load_png_icon("mark_success.png") or
+                _make_fallback_icon("✓", "#27ae60")
+            ),
+            ConversionStatus.WARNING: (
+                _load_png_icon("mark_warning.png") or
+                _make_fallback_icon("⚠", "#e67e22")
+            ),
+            ConversionStatus.FAILURE: (
+                _load_png_icon("mark_error.png") or
+                _make_fallback_icon("✗", "#e74c3c")
+            ),
         }
 
     # ------------------------------------------------------------------

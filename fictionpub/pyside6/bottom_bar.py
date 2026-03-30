@@ -94,7 +94,7 @@ class BottomBarWidget(QWidget):
         # Counters — always visible, fixed minimum width to prevent reflow
         self._counters = QLabel()
         self._counters.setMinimumWidth(130)
-        self._counters.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self._counters.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
         self._counters.hide()
         layout.addWidget(self._counters)
 
