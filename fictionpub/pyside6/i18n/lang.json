@@ -87,6 +87,38 @@
         "en": "Scanning…",
         "uk": "Сканування…"
     },
+    "cssviewer.error_text": {
+        "en": "Could not save the file:\n{error}",
+        "uk": "Не вдалося зберегти файл:\n{error}"
+    },
+    "cssviewer.error_title": {
+        "en": "Save Error",
+        "uk": "Помилка збереження"
+    },
+    "cssviewer.no_file": {
+        "en": "No file selected",
+        "uk": "Файл не вибрано"
+    },
+    "cssviewer.readonly_note": {
+        "en": "This is the built-in stylesheet — changes are not saved.",
+        "uk": "Це вбудована таблиця стилів — зміни не зберігаються."
+    },
+    "cssviewer.saved_text": {
+        "en": "CSS file saved to:\n{path}",
+        "uk": "CSS файл збережено до:\n{path}"
+    },
+    "cssviewer.saved_title": {
+        "en": "Saved",
+        "uk": "Збережено"
+    },
+    "cssviewer.title_custom": {
+        "en": "Custom Stylesheet — {name}",
+        "uk": "Власна таблиця стилів — {name}"
+    },
+    "cssviewer.title_default": {
+        "en": "Default Stylesheet (read-only)",
+        "uk": "Стандартна таблиця стилів (тільки читання)"
+    },
     "ctx.open_epub": {
         "en": "Open EPUB",
         "uk": "Відкрити EPUB"
@@ -126,6 +158,10 @@
     "dlg.ok": {
         "en": "OK",
         "uk": "OK"
+    },
+    "dlg.save": {
+        "en": "Save",
+        "uk": "Зберегти"
     },
     "dlg.yes": {
         "en": "Yes",
@@ -210,6 +246,10 @@
     "msg.remove_all_title": {
         "en": "Remove All",
         "uk": "Видалити всі"
+    },
+    "settings.css_path_hint": {
+        "en": "Path to custom CSS file…",
+        "uk": "Шлях до власного CSS файлу…"
     },
     "settings.css_placeholder": {
         "en": "Use built-in stylesheet",
@@ -315,6 +355,30 @@
         "en": "Enable post-processing: non-breaking spaces, no-break spans, etc.",
         "uk": "Увімкнути постобробку: нерозривні пробіли, span.nobreak тощо."
     },
+    "settings.typography_off": {
+        "en": "Off",
+        "uk": "Вимкнено"
+    },
+    "settings.typography_wip": {
+        "en": "In development",
+        "uk": "В розробці"
+    },
+    "settings.typography_wip_tip": {
+        "en": "Typography post-processing is under development and not yet available.",
+        "uk": "Постобробка типографіки знаходиться в розробці і поки недоступна."
+    },
+    "settings.use_default_css": {
+        "en": "Use default stylesheet",
+        "uk": "Використовувати вбудовану таблицю стилів"
+    },
+    "settings.view_default_css": {
+        "en": "View Default",
+        "uk": "Переглянути стандартний"
+    },
+    "settings.view_edit_css": {
+        "en": "View / Edit",
+        "uk": "Переглянути / Змінити"
+    },
     "toolbar.about": {
         "en": "ℹ About",
         "uk": "ℹ Про програму"
@@ -330,6 +394,10 @@
     "toolbar.app_settings": {
         "en": "🔧",
         "uk": "🔧"
+    },
+    "toolbar.app_settings_label": {
+        "en": "🔧 Preferences",
+        "uk": "🔧 Параметри"
     },
     "toolbar.logs": {
         "en": "📋 Logs",
@@ -403,6 +471,18 @@
         "en": "Configure conversion options",
         "uk": "Налаштування конвертації"
     },
+    "tooltip.use_default_css": {
+        "en": "When checked, the built-in stylesheet is used and no custom CSS is applied.",
+        "uk": "Якщо позначено, використовується вбудована таблиця стилів без власного CSS."
+    },
+    "tooltip.view_default_css": {
+        "en": "Inspect the built-in default stylesheet (read-only)",
+        "uk": "Переглянути вбудовану таблицю стилів (тільки читання)"
+    },
+    "tooltip.view_edit_css": {
+        "en": "Open the selected CSS file in an editor",
+        "uk": "Відкрити вибраний CSS файл в редакторі"
+    },
     "tooltip.warning_status": {
         "en": "Conversion finished with warnings — check logs for details.",
         "uk": "Конвертацію завершено з попередженнями — перевірте журнали."
@@ -430,21 +510,5 @@
     "tree.col_title": {
         "en": "Title",
         "uk": "Назва"
-    },
-    "toolbar.app_settings_label": {
-        "en": "🔧 Preferences",
-        "uk": "🔧 Параметри"
-    },
-    "settings.typography_off": {
-        "en": "Off",
-        "uk": "Вимкнено"
-    },
-    "settings.typography_wip": {
-        "en": "In development",
-        "uk": "В розробці"
-    },
-    "settings.typography_wip_tip": {
-        "en": "Typography post-processing is under development and not yet available.",
-        "uk": "Постобробка типографіки знаходиться в розробці і поки недоступна."
     }
 }

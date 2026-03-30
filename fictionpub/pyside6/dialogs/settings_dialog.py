@@ -2,6 +2,14 @@
 Modal dialog for editing ConversionConfig.
 Returns the new config via .result after exec().
 Supports runtime language switching.
+
+CSS section
+-----------
+A "Use default stylesheet" checkbox controls whether the custom-path row
+is shown.  When the checkbox is checked the built-in stylesheet is used
+(custom_stylesheet = None).  A "View Default" button is always available
+so the user can inspect (read-only) the built-in CSS.  When using a
+custom file, a "View / Edit" button opens the file in an editable viewer.
 """
 
 import dataclasses
@@ -9,7 +17,6 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -21,10 +28,13 @@ from PySide6.QtWidgets import (
     QPushButton,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from ...models.conversion import ConversionConfig
+from ...resources.loader import get_css_path
 from ..i18n import register_listener, t
+from .css_viewer_dialog import CSSViewerDialog
 
 
 class SettingsDialog(QDialog):
@@ -38,12 +48,14 @@ class SettingsDialog(QDialog):
         register_listener(self._retranslate_ui)
 
     # ------------------------------------------------------------------
+    # UI construction
+    # ------------------------------------------------------------------
 
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
         outer.setSpacing(10)
 
-        # --- Structure ---
+        # --- Document Structure ---
         self._struct_group = QGroupBox()
         self._struct_form  = QFormLayout(self._struct_group)
         self._struct_form.setSpacing(8)
@@ -66,20 +78,19 @@ class SettingsDialog(QDialog):
         outer.addWidget(self._struct_group)
 
         # --- Processing ---
-        self._proc_group  = QGroupBox()
+        self._proc_group = QGroupBox()
         proc_layout = QVBoxLayout(self._proc_group)
 
         self._remove_images = QCheckBox()
         proc_layout.addWidget(self._remove_images)
 
         # Typography — in-development placeholder
-        # Shown as a disabled QComboBox so it's clearly not yet selectable
+        from PySide6.QtWidgets import QComboBox
         typ_row = QHBoxLayout()
         self._typography_label = QLabel()
         typ_row.addWidget(self._typography_label)
         self._typography_combo = QComboBox()
         self._typography_combo.setEnabled(False)
-        self._typography_combo.setToolTip("")   # set in _retranslate_ui
         typ_row.addWidget(self._typography_combo)
         self._typography_badge = QLabel()
         self._typography_badge.setStyleSheet(
@@ -96,17 +107,51 @@ class SettingsDialog(QDialog):
         out_form = QFormLayout(self._out_group)
         out_form.setSpacing(8)
 
+        # -- CSS sub-section --
         self._css_label = QLabel()
-        css_row = QHBoxLayout()
+
+        # Container that holds both the toggle row and the custom-path row.
+        # Using a single container widget keeps the form-row label aligned
+        # regardless of how many inner rows are visible.
+        css_container = QWidget()
+        css_vbox = QVBoxLayout(css_container)
+        css_vbox.setContentsMargins(0, 0, 0, 0)
+        css_vbox.setSpacing(3)
+
+        # Row 1: "Use default" checkbox  +  "View Default" button
+        default_row = QHBoxLayout()
+        default_row.setContentsMargins(0, 0, 0, 0)
+        self._use_default_css = QCheckBox()
+        self._view_default_btn = QPushButton()
+        self._view_default_btn.setFixedWidth(110)
+        self._view_default_btn.clicked.connect(self._open_default_css)
+        default_row.addWidget(self._use_default_css)
+        default_row.addStretch()
+        default_row.addWidget(self._view_default_btn)
+        css_vbox.addLayout(default_row)
+
+        # Row 2: custom path field  +  browse  +  view/edit
+        # This whole widget is shown/hidden by the checkbox.
+        self._css_custom_widget = QWidget()
+        custom_row = QHBoxLayout(self._css_custom_widget)
+        custom_row.setContentsMargins(0, 0, 0, 0)
+        custom_row.setSpacing(4)
         self._css = QLineEdit()
         self._css.setClearButtonEnabled(True)
         css_browse = QPushButton("…")
         css_browse.setFixedWidth(28)
         css_browse.clicked.connect(self._browse_css)
-        css_row.addWidget(self._css)
-        css_row.addWidget(css_browse)
-        out_form.addRow(self._css_label, css_row)
+        self._view_edit_btn = QPushButton()
+        self._view_edit_btn.setFixedWidth(110)
+        self._view_edit_btn.clicked.connect(self._open_custom_css)
+        custom_row.addWidget(self._css)
+        custom_row.addWidget(css_browse)
+        custom_row.addWidget(self._view_edit_btn)
+        css_vbox.addWidget(self._css_custom_widget)
 
+        out_form.addRow(self._css_label, css_container)
+
+        # -- Output folder --
         self._out_path_label = QLabel()
         out_path_row = QHBoxLayout()
         self._out_path = QLineEdit()
@@ -129,7 +174,7 @@ class SettingsDialog(QDialog):
         perf_form.addRow(self._threads_label, self._threads)
         outer.addWidget(self._perf_group)
 
-        # --- Buttons ---
+        # --- Dialog buttons ---
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -137,7 +182,15 @@ class SettingsDialog(QDialog):
         self._buttons.rejected.connect(self.reject)
         outer.addWidget(self._buttons)
 
+        # -- Signals --
+        self._use_default_css.toggled.connect(self._on_css_toggle)
+        self._css.textChanged.connect(self._sync_view_edit_btn)
+
         self._retranslate_ui()
+
+    # ------------------------------------------------------------------
+    # i18n
+    # ------------------------------------------------------------------
 
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(t("settings.title"))
@@ -146,7 +199,7 @@ class SettingsDialog(QDialog):
         self._out_group.setTitle(t("settings.output"))
         self._perf_group.setTitle(t("settings.performance"))
 
-        # Structure labels and tooltips
+        # Structure
         self._toc_depth_label.setText(t("settings.toc_depth"))
         self._toc_depth.setToolTip(t("settings.toc_depth_tip"))
         self._split_level_label.setText(t("settings.split_level"))
@@ -159,18 +212,23 @@ class SettingsDialog(QDialog):
         # Processing
         self._remove_images.setText(t("settings.remove_images"))
         self._remove_images.setToolTip(t("settings.remove_images_tip"))
-
-        # Typography — in-development, always disabled
         self._typography_label.setText(t("settings.typography"))
         self._typography_badge.setText(t("settings.typography_wip"))
         self._typography_combo.setToolTip(t("settings.typography_wip_tip"))
-        # Repopulate combo items with translated text each time language changes
         self._typography_combo.clear()
         self._typography_combo.addItem(t("settings.typography_off"))
 
-        # Output
+        # Output — CSS
         self._css_label.setText(t("settings.custom_css"))
-        self._css.setPlaceholderText(t("settings.css_placeholder"))
+        self._use_default_css.setText(t("settings.use_default_css"))
+        self._use_default_css.setToolTip(t("tooltip.use_default_css"))
+        self._view_default_btn.setText(t("settings.view_default_css"))
+        self._view_default_btn.setToolTip(t("tooltip.view_default_css"))
+        self._css.setPlaceholderText(t("settings.css_path_hint"))
+        self._view_edit_btn.setText(t("settings.view_edit_css"))
+        self._view_edit_btn.setToolTip(t("tooltip.view_edit_css"))
+
+        # Output folder
         self._out_path_label.setText(t("settings.output_folder"))
         self._out_path.setPlaceholderText(t("settings.output_placeholder"))
 
@@ -179,49 +237,100 @@ class SettingsDialog(QDialog):
         self._threads.setToolTip(t("settings.threads_tip"))
         self._threads.setSpecialValueText(t("settings.threads_auto"))
 
+    # ------------------------------------------------------------------
+    # Load / save config
+    # ------------------------------------------------------------------
+
     def _load(self, cfg: ConversionConfig) -> None:
         self._toc_depth.setValue(cfg.toc_depth)
         self._split_level.setValue(cfg.split_level)
         self._split_size.setValue(cfg.split_size_kb)
         self._remove_images.setChecked(cfg.remove_unused_images)
-        # self._typography.setChecked(cfg.improve_typography)
-        # self._nbsp_min.setValue(cfg.word_len_nbsp_range[0])
-        # self._nbsp_max.setValue(cfg.word_len_nbsp_range[1])
-        # self._nobr_min.setValue(cfg.word_len_nobreak_range[0])
-        # self._nobr_max.setValue(cfg.word_len_nobreak_range[1])
-        self._css.setText(str(cfg.custom_stylesheet) if cfg.custom_stylesheet else "")
-        self._out_path.setText(str(cfg.output_path) if cfg.output_path else "")
         self._threads.setValue(cfg.num_threads)
+        self._out_path.setText(str(cfg.output_path) if cfg.output_path else "")
 
-        # typ_on = cfg.improve_typography
-        # for w in (self._nbsp_min, self._nbsp_max, self._nobr_min, self._nobr_max):
-            # w.setEnabled(typ_on)
+        # CSS: if no custom stylesheet is configured → use default
+        use_default = cfg.custom_stylesheet is None
+        self._css.setText(str(cfg.custom_stylesheet) if cfg.custom_stylesheet else "")
+        # setChecked triggers toggled → _on_css_toggle, which updates visibility
+        self._use_default_css.setChecked(use_default)
+        self._sync_view_edit_btn()
 
     def _on_ok(self) -> None:
-        css_text = self._css.text().strip()
+        if self._use_default_css.isChecked():
+            css_path: Path | None = None
+        else:
+            css_text = self._css.text().strip()
+            css_path = Path(css_text) if css_text else None
+
         out_text = self._out_path.text().strip()
         self.result = dataclasses.replace(
             self._config,
-            toc_depth              = self._toc_depth.value(),
-            split_level            = self._split_level.value(),
-            split_size_kb          = self._split_size.value(),
-            remove_unused_images   = self._remove_images.isChecked(),
-            improve_typography     = False,    # in-development; always off
-            custom_stylesheet      = Path(css_text) if css_text else None,
-            output_path            = Path(out_text) if out_text else None,
-            num_threads            = self._threads.value(),
+            toc_depth            = self._toc_depth.value(),
+            split_level          = self._split_level.value(),
+            split_size_kb        = self._split_size.value(),
+            remove_unused_images = self._remove_images.isChecked(),
+            improve_typography   = False,   # in-development; always off
+            custom_stylesheet    = css_path,
+            output_path          = Path(out_text) if out_text else None,
+            num_threads          = self._threads.value(),
         )
         self.accept()
 
+    # ------------------------------------------------------------------
+    # CSS toggle & viewer helpers
+    # ------------------------------------------------------------------
+
+    def _on_css_toggle(self, use_default: bool) -> None:
+        """Show/hide the custom-path row based on the checkbox state."""
+        self._css_custom_widget.setVisible(not use_default)
+
+    def _sync_view_edit_btn(self) -> None:
+        """Enable the View/Edit button only when a path has been entered."""
+        self._view_edit_btn.setEnabled(bool(self._css.text().strip()))
+
+    def _open_default_css(self) -> None:
+        """Open the built-in default stylesheet in a read-only viewer."""
+        path = get_css_path("default.css")
+        CSSViewerDialog(
+            path,
+            editable=False,
+            title=t("cssviewer.title_default"),
+            parent=self,
+        ).show()
+
+    def _open_custom_css(self) -> None:
+        """Open the currently configured custom CSS file in an editable viewer."""
+        css_text = self._css.text().strip()
+        if not css_text:
+            return
+        path = Path(css_text)
+        CSSViewerDialog(
+            path,
+            editable=True,
+            title=t("cssviewer.title_custom", name=path.name),
+            parent=self,
+        ).show()
+
+    # ------------------------------------------------------------------
+    # Browse helpers
+    # ------------------------------------------------------------------
+
     def _browse_css(self) -> None:
         path, _ = QFileDialog.getOpenFileName(
-            self, t("settings.custom_css"), "",
-            f"{t('filter.css')};;{t('filter.all')}"
+            self,
+            t("settings.custom_css"),
+            self._css.text() or "",
+            f"{t('filter.css')};;{t('filter.all')}",
         )
         if path:
             self._css.setText(path)
 
     def _browse_output(self) -> None:
-        path = QFileDialog.getExistingDirectory(self, t("settings.output_folder"))
+        path = QFileDialog.getExistingDirectory(
+            self,
+            t("settings.output_folder"),
+            self._out_path.text() or "",
+        )
         if path:
             self._out_path.setText(path)
