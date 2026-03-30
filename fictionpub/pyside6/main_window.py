@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._bottom_bar)
 
     def _connect_signals(self) -> None:
-        tb = self._toolbar
+        tb: ToolbarWidget = self._toolbar
         tb.addFilesRequested.connect(self._on_add_files)
         tb.addFolderRequested.connect(self._on_add_folder)
         tb.removeSelectedRequested.connect(self._on_remove_selected)
@@ -121,21 +121,19 @@ class MainWindow(QMainWindow):
         tb.deselectAllRequested.connect(self._on_deselect_all)
         tb.conversionSettingsRequested.connect(self._on_conversion_settings)
         tb.appSettingsRequested.connect(self._on_app_settings)
-        tb.logsRequested.connect(self._on_open_logs)
         tb.aboutRequested.connect(self._on_about)
 
         self._model.selectionCountChanged.connect(self._toolbar.update_selection_count)
 
-        fv = self._file_view
+        fv: FileTreeView = self._file_view
         fv.statusClicked.connect(self._on_status_clicked)
-        fv.fileDoubleClicked.connect(self._on_file_double_clicked)
         fv.folderDoubleClicked.connect(self._on_folder_double_clicked)
         fv.openEpubRequested.connect(self._on_open_epub)
         fv.openFb2Requested.connect(self._on_open_fb2)
         fv.openFolderRequested.connect(self._on_open_folder)
         fv.selectionRemoveRequested.connect(self._on_remove_selected)
 
-        bb = self._bottom_bar
+        bb: BottomBarWidget = self._bottom_bar
         bb.convertRequested.connect(self._on_convert)
         bb.cancelRequested.connect(self._on_cancel)
         bb.openLogsDirRequested.connect(self._on_open_logs)
@@ -253,17 +251,13 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_status_clicked(self, node: FileNode) -> None:
+        """Single click on status icon → always open log viewer."""
         if node.log_output:
             LogViewerDialog(
                 node.log_output,
                 title=t("logviewer.title_file", name=node.path.name),
                 parent=self,
             ).show()
-
-    def _on_file_double_clicked(self, path: Path) -> None:
-        node = self._model._path_to_node.get(path)
-        if node and node.status is not None:
-            self._on_status_clicked(node)
 
     def _on_folder_double_clicked(self, path: Path) -> None:
         if path.exists():

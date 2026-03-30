@@ -28,6 +28,23 @@ from PySide6.QtWidgets import (
 from .i18n import register_listener, t
 
 
+_LOG_BTN_QSS = """
+QPushButton {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 8px;
+    background: transparent;
+}
+QPushButton:hover {
+    background-color: rgba(128, 128, 128, 0.20);
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}
+QPushButton:pressed {
+    background-color: rgba(128, 128, 128, 0.35);
+}
+"""
+
+
 def _vsep() -> QFrame:
     sep = QFrame()
     sep.setFrameShape(QFrame.Shape.VLine)
@@ -37,7 +54,7 @@ def _vsep() -> QFrame:
 
 def _retain_size(widget: QWidget) -> None:
     """Make the widget keep its layout space even when hidden."""
-    sp = widget.sizePolicy()
+    sp: QSizePolicy = widget.sizePolicy()
     sp.setRetainSizeWhenHidden(True)
     widget.setSizePolicy(sp)
 
@@ -78,18 +95,19 @@ class BottomBarWidget(QWidget):
         self._counters = QLabel()
         self._counters.setMinimumWidth(130)
         self._counters.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self._counters.hide()
         layout.addWidget(self._counters)
 
         layout.addWidget(_vsep())
 
         # Log access
         self._logs_dir = QPushButton()
-        self._logs_dir.setFlat(True)
+        self._logs_dir.setStyleSheet(_LOG_BTN_QSS)
         self._logs_dir.clicked.connect(self.openLogsDirRequested)
         layout.addWidget(self._logs_dir)
 
         self._last_log = QPushButton()
-        self._last_log.setFlat(True)
+        self._last_log.setStyleSheet(_LOG_BTN_QSS)
         self._last_log.clicked.connect(self.openLastLogRequested)
         layout.addWidget(self._last_log)
 
@@ -97,15 +115,16 @@ class BottomBarWidget(QWidget):
 
         # Cancel — always in layout, retains space when hidden
         self._cancel = QPushButton()
+        self._cancel.setMinimumWidth(150)
+        # _retain_size(self._cancel)
         self._cancel.clicked.connect(self.cancelRequested)
-        _retain_size(self._cancel)
         self._cancel.hide()
         layout.addWidget(self._cancel)
 
         # Convert — primary action
         self._convert = QPushButton()
         self._convert.setObjectName("convertButton")
-        self._convert.setMinimumWidth(100)
+        self._convert.setMinimumWidth(150)
         self._convert.clicked.connect(self.convertRequested)
         layout.addWidget(self._convert)
 
@@ -118,6 +137,11 @@ class BottomBarWidget(QWidget):
         self._last_log.setToolTip(t("tooltip.last_log"))
         self._cancel.setText(t("bar.cancel"))
         self._convert.setText(t("bar.convert"))
+
+    def _update_counters_label(self, success, warnings, failures) -> None:
+        self._counters.setText(
+            f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}"
+        )
 
     # ------------------------------------------------------------------
     # State transitions
@@ -140,10 +164,11 @@ class BottomBarWidget(QWidget):
         self._progress.setRange(0, total)
         self._progress.setValue(0)
         self._progress.show()
+        self._counters.show()
+        self._update_counters_label(0,0,0)
         self._convert.hide()
         self._cancel.show()
         self._cancel.setEnabled(True)
-        self._counters.setText("  ✅ 0   ⚠ 0   ❌ 0")
 
     def set_cancelling(self) -> None:
         self._status.setText(t("bar.cancelling"))
@@ -155,7 +180,7 @@ class BottomBarWidget(QWidget):
         self._status.setText(
             t("bar.converting_progress", done=completed, total=total)
         )
-        self._counters.setText(f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}")
+        self._update_counters_label(success, warnings, failures)
 
     def set_done(self, success: int, warnings: int, failures: int,
                  cancelled: bool = False) -> None:
@@ -167,4 +192,4 @@ class BottomBarWidget(QWidget):
         self._cancel.hide()
         self._convert.show()
         self._convert.setEnabled(True)
-        self._counters.setText(f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}")
+        self._update_counters_label(success, warnings, failures)

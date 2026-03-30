@@ -25,12 +25,44 @@ from PySide6.QtWidgets import (
 
 from .i18n import register_listener, t
 
+# Stylesheet applied to every toolbar button for a clearly visible hover/press.
+# Uses palette() roles so it works on both light and dark themes.
+_TOOLBAR_BTN_QSS = """
+QPushButton {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+    background: transparent;
+}
+QPushButton:hover {
+    background-color: rgba(128, 128, 128, 0.20);
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}
+QPushButton:pressed {
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}
+QPushButton:checked {
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}
+QPushButton:disabled {
+    color: palette(mid);
+}
+"""
+
 
 def _vsep() -> QFrame:
     sep = QFrame()
     sep.setFrameShape(QFrame.Shape.VLine)
     sep.setFrameShadow(QFrame.Shadow.Sunken)
     return sep
+
+
+def _btn() -> QPushButton:
+    b = QPushButton()
+    b.setStyleSheet(_TOOLBAR_BTN_QSS)
+    return b
 
 
 class ToolbarWidget(QWidget):
@@ -41,14 +73,13 @@ class ToolbarWidget(QWidget):
     removeAllRequested       = Signal()
     removeCompletedRequested = Signal()
 
-    # Selection — single toggle emits whichever is appropriate
+    # Selection
     selectAllRequested   = Signal()
     deselectAllRequested = Signal()
 
     # App
     conversionSettingsRequested = Signal()
     appSettingsRequested        = Signal()
-    logsRequested               = Signal()
     aboutRequested              = Signal()
 
     def __init__(self, parent=None):
@@ -63,11 +94,11 @@ class ToolbarWidget(QWidget):
         layout.setSpacing(4)
 
         # Left group — file management
-        self._add_files   = QPushButton()
-        self._add_folder  = QPushButton()
-        self._remove      = QPushButton()
-        self._remove_all  = QPushButton()
-        self._remove_done = QPushButton()
+        self._add_files   = _btn()
+        self._add_folder  = _btn()
+        self._remove      = _btn()
+        self._remove_all  = _btn()
+        self._remove_done = _btn()
 
         for w in (self._add_files, self._add_folder, _vsep(),
                   self._remove, self._remove_all, self._remove_done):
@@ -80,7 +111,7 @@ class ToolbarWidget(QWidget):
         layout.addWidget(spacer1)
         
         # Single select-toggle button
-        self._select_toggle = QPushButton()
+        self._select_toggle = _btn()
         self._select_toggle.setCheckable(True)
         self._select_toggle.setChecked(False)
         self._select_toggle.setMinimumWidth(130)
@@ -91,21 +122,19 @@ class ToolbarWidget(QWidget):
         spacer2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer2)
 
-        # Right group
-        self._conv_settings = QPushButton()
-        self._app_settings  = QPushButton()
-        self._app_settings.setFixedWidth(32)
-        self._logs          = QPushButton()
+        # Right group — settings | about
+        self._conv_settings = _btn()
 
-        self._about = QPushButton()
+        self._app_settings = _btn()  # text label set in _retranslate_ui
+
+        self._about = _btn()
         info_icon = QApplication.style().standardIcon(
             QStyle.StandardPixmap.SP_MessageBoxInformation
         )
         self._about.setIcon(info_icon)
         self._about.setFixedWidth(32)
 
-        for w in (self._conv_settings, self._app_settings,
-                  _vsep(), self._logs, _vsep(), self._about):
+        for w in (self._conv_settings, _vsep(), self._app_settings, _vsep(), self._about):
             layout.addWidget(w)
 
         # Signals
@@ -117,7 +146,6 @@ class ToolbarWidget(QWidget):
         self._select_toggle.clicked.connect(self._on_select_toggle)
         self._conv_settings.clicked.connect(self.conversionSettingsRequested)
         self._app_settings.clicked.connect(self.appSettingsRequested)
-        self._logs.clicked.connect(self.logsRequested)
         self._about.clicked.connect(self.aboutRequested)
 
         self._retranslate_ui()
@@ -141,16 +169,13 @@ class ToolbarWidget(QWidget):
         self._remove_done.setToolTip(t("tooltip.remove_done"))
         self._conv_settings.setText(t("toolbar.settings"))
         self._conv_settings.setToolTip(t("tooltip.settings"))
-        self._app_settings.setText(t("toolbar.app_settings"))
+        self._app_settings.setText(t("toolbar.app_settings_label"))
         self._app_settings.setToolTip(t("tooltip.app_settings"))
-        self._logs.setText(t("toolbar.logs"))
-        self._logs.setToolTip(t("tooltip.logs"))
         self._about.setToolTip(t("tooltip.about"))
         self._select_toggle.setToolTip(t("tooltip.select_toggle"))
-        # Re-render count label with current counts
-        self._refresh_select_toggle()
+        self._refresh_toggle_label()
 
-    def _refresh_select_toggle(self) -> None:
+    def _refresh_toggle_label(self) -> None:
         checked = getattr(self, "_last_checked", 0)
         total   = getattr(self, "_last_total",   0)
         self._select_toggle.setText(
@@ -169,7 +194,7 @@ class ToolbarWidget(QWidget):
             w.setEnabled(not busy)
 
     def update_selection_count(self, checked: int, total: int) -> None:
-        self._last_checked   = checked
-        self._last_total     = total
-        self._all_selected   = (total > 0 and checked == total)
-        self._refresh_select_toggle()
+        self._last_checked  = checked
+        self._last_total    = total
+        self._all_selected  = (total > 0 and checked == total)
+        self._refresh_toggle_label()

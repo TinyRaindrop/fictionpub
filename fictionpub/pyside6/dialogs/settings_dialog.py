@@ -9,6 +9,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFileDialog,
@@ -71,37 +72,22 @@ class SettingsDialog(QDialog):
         self._remove_images = QCheckBox()
         proc_layout.addWidget(self._remove_images)
 
-        self._typography = QCheckBox()
-        proc_layout.addWidget(self._typography)
-
-        nbsp_row = QHBoxLayout()
-        nbsp_row.addSpacing(20)
-        self._nbsp_label = QLabel()
-        nbsp_row.addWidget(self._nbsp_label)
-        self._nbsp_min = QSpinBox(); self._nbsp_min.setRange(1, 20); self._nbsp_min.setFixedWidth(55)
-        self._nbsp_max = QSpinBox(); self._nbsp_max.setRange(1, 20); self._nbsp_max.setFixedWidth(55)
-        nbsp_row.addWidget(self._nbsp_min)
-        nbsp_row.addWidget(QLabel("–"))
-        nbsp_row.addWidget(self._nbsp_max)
-        nbsp_row.addStretch()
-        proc_layout.addLayout(nbsp_row)
-
-        nobr_row = QHBoxLayout()
-        nobr_row.addSpacing(20)
-        self._nobr_label = QLabel()
-        nobr_row.addWidget(self._nobr_label)
-        self._nobr_min = QSpinBox(); self._nobr_min.setRange(1, 20); self._nobr_min.setFixedWidth(55)
-        self._nobr_max = QSpinBox(); self._nobr_max.setRange(1, 20); self._nobr_max.setFixedWidth(55)
-        nobr_row.addWidget(self._nobr_min)
-        nobr_row.addWidget(QLabel("–"))
-        nobr_row.addWidget(self._nobr_max)
-        nobr_row.addStretch()
-        proc_layout.addLayout(nobr_row)
-
-        self._typography.toggled.connect(self._nbsp_min.setEnabled)
-        self._typography.toggled.connect(self._nbsp_max.setEnabled)
-        self._typography.toggled.connect(self._nobr_min.setEnabled)
-        self._typography.toggled.connect(self._nobr_max.setEnabled)
+        # Typography — in-development placeholder
+        # Shown as a disabled QComboBox so it's clearly not yet selectable
+        typ_row = QHBoxLayout()
+        self._typography_label = QLabel()
+        typ_row.addWidget(self._typography_label)
+        self._typography_combo = QComboBox()
+        self._typography_combo.setEnabled(False)
+        self._typography_combo.setToolTip("")   # set in _retranslate_ui
+        typ_row.addWidget(self._typography_combo)
+        self._typography_badge = QLabel()
+        self._typography_badge.setStyleSheet(
+            "color: #888; font-style: italic; font-size: 10px;"
+        )
+        typ_row.addWidget(self._typography_badge)
+        typ_row.addStretch()
+        proc_layout.addLayout(typ_row)
 
         outer.addWidget(self._proc_group)
 
@@ -173,10 +159,14 @@ class SettingsDialog(QDialog):
         # Processing
         self._remove_images.setText(t("settings.remove_images"))
         self._remove_images.setToolTip(t("settings.remove_images_tip"))
-        self._typography.setText(t("settings.typography"))
-        self._typography.setToolTip(t("settings.typography_tip"))
-        self._nbsp_label.setText(t("settings.nbsp_range"))
-        self._nobr_label.setText(t("settings.nobr_range"))
+
+        # Typography — in-development, always disabled
+        self._typography_label.setText(t("settings.typography"))
+        self._typography_badge.setText(t("settings.typography_wip"))
+        self._typography_combo.setToolTip(t("settings.typography_wip_tip"))
+        # Repopulate combo items with translated text each time language changes
+        self._typography_combo.clear()
+        self._typography_combo.addItem(t("settings.typography_off"))
 
         # Output
         self._css_label.setText(t("settings.custom_css"))
@@ -194,18 +184,18 @@ class SettingsDialog(QDialog):
         self._split_level.setValue(cfg.split_level)
         self._split_size.setValue(cfg.split_size_kb)
         self._remove_images.setChecked(cfg.remove_unused_images)
-        self._typography.setChecked(cfg.improve_typography)
-        self._nbsp_min.setValue(cfg.word_len_nbsp_range[0])
-        self._nbsp_max.setValue(cfg.word_len_nbsp_range[1])
-        self._nobr_min.setValue(cfg.word_len_nobreak_range[0])
-        self._nobr_max.setValue(cfg.word_len_nobreak_range[1])
+        # self._typography.setChecked(cfg.improve_typography)
+        # self._nbsp_min.setValue(cfg.word_len_nbsp_range[0])
+        # self._nbsp_max.setValue(cfg.word_len_nbsp_range[1])
+        # self._nobr_min.setValue(cfg.word_len_nobreak_range[0])
+        # self._nobr_max.setValue(cfg.word_len_nobreak_range[1])
         self._css.setText(str(cfg.custom_stylesheet) if cfg.custom_stylesheet else "")
         self._out_path.setText(str(cfg.output_path) if cfg.output_path else "")
         self._threads.setValue(cfg.num_threads)
 
-        typ_on = cfg.improve_typography
-        for w in (self._nbsp_min, self._nbsp_max, self._nobr_min, self._nobr_max):
-            w.setEnabled(typ_on)
+        # typ_on = cfg.improve_typography
+        # for w in (self._nbsp_min, self._nbsp_max, self._nobr_min, self._nobr_max):
+            # w.setEnabled(typ_on)
 
     def _on_ok(self) -> None:
         css_text = self._css.text().strip()
@@ -216,9 +206,7 @@ class SettingsDialog(QDialog):
             split_level            = self._split_level.value(),
             split_size_kb          = self._split_size.value(),
             remove_unused_images   = self._remove_images.isChecked(),
-            improve_typography     = self._typography.isChecked(),
-            word_len_nbsp_range    = (self._nbsp_min.value(), self._nbsp_max.value()),
-            word_len_nobreak_range = (self._nobr_min.value(), self._nobr_max.value()),
+            improve_typography     = False,    # in-development; always off
             custom_stylesheet      = Path(css_text) if css_text else None,
             output_path            = Path(out_text) if out_text else None,
             num_threads            = self._threads.value(),

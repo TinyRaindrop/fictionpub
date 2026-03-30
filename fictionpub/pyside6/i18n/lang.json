@@ -430,5 +430,21 @@
     "tree.col_title": {
         "en": "Title",
         "uk": "Назва"
+    },
+    "toolbar.app_settings_label": {
+        "en": "🔧 Preferences",
+        "uk": "🔧 Параметри"
+    },
+    "settings.typography_off": {
+        "en": "Off",
+        "uk": "Вимкнено"
+    },
+    "settings.typography_wip": {
+        "en": "In development",
+        "uk": "В розробці"
+    },
+    "settings.typography_wip_tip": {
+        "en": "Typography post-processing is under development and not yet available.",
+        "uk": "Постобробка типографіки знаходиться в розробці і поки недоступна."
     }
 }
