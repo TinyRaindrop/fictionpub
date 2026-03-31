@@ -1,35 +1,41 @@
 """
 FileTreeView — QTreeView configured for the file list.
 
-Column layout (matches COL_* constants in file_tree_model.py)
-  0  Filename  + checkbox
-  1  Status    icon (sortable, narrow)
+Column layout
+  0  Filename  + checkbox              (auto-fills remaining width)
+  1  Status    icon                    (fixed, non-resizable)
   2  Author
   3  Title
   4  Date
   5  Lang
 
-Column 0 (Filename) auto-fills the remaining viewport width on window
-resize; all other columns are freely draggable (Interactive mode).
+NaturalSortProxyModel
+─────────────────────
+Replaces the plain QSortFilterProxyModel to give:
+  • FolderNodes always appear before FileNodes at the same tree level.
+  • Status column sorted by integer key (UserRole) so failures sort first.
+  • All other columns sorted by natural_collation_key():
+      – digit runs sorted numerically (21 before 200)
+      – Ukrainian ґ ordered after г, not after я
 
-Sorting
--------
-A QSortFilterProxyModel sits between the source FileTreeModel and the view.
-sortRole = Qt.UserRole so the status column sorts on its integer key rather
-than on display text.  All source-model indices are mapped through the proxy
-before being returned to callers.
+Dynamic sort is disabled so the sort order is stable during conversion
+(re-sorts only on header click).
+
+Initial default sort is COL_NAME ascending so the sort indicator is on
+the Name column and there is no ambiguity about the arrow on COL_STATUS.
+COL_STATUS is set to Fixed resize mode so the narrow icon column cannot
+be inadvertently dragged wider.
 
 Click behaviour
----------------
-Single click on COL_STATUS  → open log viewer (any status)
-Double click on file row    → open EPUB if SUCCESS/WARNING; log viewer if FAILURE
-Double click on folder row  → open folder in file manager
+───────────────
+Single click  COL_STATUS → open log viewer
+Double click  FileNode   → open EPUB (SUCCESS/WARNING) or log (FAILURE)
+Double click  FolderNode → open directory in file manager
 
-Selective expand (expandNewFolders)
-------------------------------------
-MainWindow calls expandNewFolders(new_nodes) after each scan so that
-only freshly added root-level FolderNodes are expanded.  Already-visible
-folders keep whatever expand/collapse state the user set.
+Selective expand
+────────────────
+expandNewFolders(nodes) expands only freshly added root FolderNodes;
+existing expand state is preserved.
 """
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, Signal
@@ -37,6 +43,7 @@ from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QMenu, QTreeView
 
 from ..models.conversion import ConversionStatus
 from .i18n import register_listener, t
+from .models.collation import natural_collation_key
 from .models.file_node import FileNode, FolderNode
 from .models.file_tree_model import (
     COL_NAME,
@@ -46,11 +53,54 @@ from .models.file_tree_model import (
 )
 
 _COL_NAME_MIN = 120  # px — filename col is never auto-shrunk below this
+_COL_STATUS_W = 36  # px — fixed status column width
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class NaturalSortProxyModel(QSortFilterProxyModel):
+    """
+    Proxy model with natural + Ukrainian collation sort order.
+
+    lessThan() is fully manual so setSortRole() is irrelevant here; we
+    leave the role at the default DisplayRole but never call the base
+    implementation's data fetch.
+    """
+
+    def lessThan(self, left: QModelIndex, right: QModelIndex) -> bool:  # noqa: N802
+        model = self.sourceModel()
+        col = left.column()
+
+        left_node = model.nodeForIndex(left)
+        right_node = model.nodeForIndex(right)
+
+        # ── Folders always sort before files at the same level ────────────
+        left_folder = isinstance(left_node, FolderNode)
+        right_folder = isinstance(right_node, FolderNode)
+        if left_folder != right_folder:
+            return left_folder  # folder < file  →  True when left is folder
+
+        # ── Status column: integer sort key stored in UserRole ────────────
+        if col == COL_STATUS:
+            lv = model.data(left, Qt.ItemDataRole.UserRole) or 0
+            rv = model.data(right, Qt.ItemDataRole.UserRole) or 0
+            return int(lv) < int(rv)
+
+        # ── All other columns: natural + Ukrainian collation ──────────────
+        ld = model.data(left, Qt.ItemDataRole.DisplayRole) or ""
+        rd = model.data(right, Qt.ItemDataRole.DisplayRole) or ""
+        if isinstance(ld, str) and isinstance(rd, str):
+            return natural_collation_key(ld) < natural_collation_key(rd)
+
+        return super().lessThan(left, right)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 class FileTreeView(QTreeView):
     statusClicked = Signal(object)  # FileNode
-    fileDoubleClicked = Signal(object)  # Path
     folderDoubleClicked = Signal(object)  # Path
     openEpubRequested = Signal(object)  # Path
     openFb2Requested = Signal(object)  # Path
@@ -61,11 +111,9 @@ class FileTreeView(QTreeView):
         super().__init__(parent)
         self._source_model = model
 
-        # Proxy for sorting; UserRole carries the integer sort key for COL_STATUS
-        self._proxy = QSortFilterProxyModel(self)
+        self._proxy = NaturalSortProxyModel(self)
         self._proxy.setSourceModel(model)
-        self._proxy.setSortRole(Qt.ItemDataRole.UserRole)
-        self._proxy.setDynamicSortFilter(False)  # sort only when header clicked
+        self._proxy.setDynamicSortFilter(False)  # re-sort only on header click
 
         self.setModel(self._proxy)
         self.setSortingEnabled(True)
@@ -93,21 +141,25 @@ class FileTreeView(QTreeView):
         h.setStretchLastSection(False)
         h.setMinimumSectionSize(24)
 
-        # All Interactive: user can drag every separator, and only that column moves.
+        # Default: all columns interactive
         for col in range(COLUMNS):
             h.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
 
-        # Initial widths
+        # Status column: fixed width, not user-resizable
+        h.setSectionResizeMode(COL_STATUS, QHeaderView.ResizeMode.Fixed)
+        h.resizeSection(COL_STATUS, _COL_STATUS_W)
+
+        # Initial widths for the other columns
         h.resizeSection(COL_NAME, 320)
-        h.resizeSection(COL_STATUS, 36)
         h.resizeSection(2, 160)  # Author
         h.resizeSection(3, 200)  # Title
         h.resizeSection(4, 70)  # Date
         h.resizeSection(5, 50)  # Lang
 
-        # Sort by status ascending by default (failures on top)
-        # TODO: why sort now? files/folders should be in alphabetical order
-        self.sortByColumn(COL_STATUS, Qt.SortOrder.AscendingOrder)
+        # Sort by Name ascending on startup.
+        # COL_STATUS is NOT used as the default sort to avoid the sort arrow
+        # obscuring the narrow status column header.
+        self.sortByColumn(COL_NAME, Qt.SortOrder.AscendingOrder)
 
     # ------------------------------------------------------------------
     # Window resize: COL_NAME auto-fills remaining viewport width
@@ -136,15 +188,8 @@ class FileTreeView(QTreeView):
 
     def expandNewFolders(self, new_root_nodes: list[FolderNode]) -> None:
         """
-        Expand only the freshly added root-level FolderNodes.
-
-        The expand state of every existing node is left untouched so that
-        a user-collapsed subtree stays collapsed when new files are added
-        alongside it.
-
-        The proxy model is already in a sort order when this is called;
-        mapFromSource() handles the translation correctly regardless of
-        the current sort column.
+        Expand only freshly added root FolderNodes.
+        Existing nodes keep whatever expanded/collapsed state the user set.
         """
         for folder in new_root_nodes:
             src_idx = self._source_model._index_for_node(folder)
@@ -155,7 +200,7 @@ class FileTreeView(QTreeView):
                 self.expand(proxy_idx)
 
     # ------------------------------------------------------------------
-    # Index translation: proxy → source
+    # Index translation helpers
     # ------------------------------------------------------------------
 
     def _source_index(self, proxy_index: QModelIndex) -> QModelIndex:
@@ -205,22 +250,18 @@ class FileTreeView(QTreeView):
                 act.triggered.connect(
                     lambda _=False, p=node.path: self.openEpubRequested.emit(p)
                 )
-
             act = menu.addAction(t("ctx.open_fb2"))
             act.triggered.connect(
                 lambda _=False, p=node.path: self.openFb2Requested.emit(p)
             )
-
             act = menu.addAction(t("ctx.open_folder"))
             act.triggered.connect(
                 lambda _=False, p=node.path.parent: self.openFolderRequested.emit(p)
             )
-
             if node.status is not None:
                 menu.addSeparator()
                 act = menu.addAction(t("ctx.view_log"))
                 act.triggered.connect(lambda _=False, n=node: self.statusClicked.emit(n))
-
             menu.addSeparator()
 
         elif isinstance(node, FolderNode):
