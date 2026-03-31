@@ -1,38 +1,40 @@
 """
 MainWindow — top-level window that wires all components together.
-Responsibilities:
-  - Create and own the model, toolbar, file panel, bottom bar
-  - Start / stop scan and batch workers
-  - Route model signals to UI components
-  - Persist settings on close
+
+Layout (top → bottom inside central widget)
+────────────────────────────────────────────
+  ToolbarWidget
+  FileTreeView  (stretch=1)
+  AppStatusBar  ← persistent output-path hint + future notifications
+  BottomBarWidget
 
 QSS strategy
 ────────────
-All button hover / press / checked / disabled styles live in
-_apply_stylesheet() using descendant selectors:
+All button styles live in _apply_stylesheet() as a single stylesheet
+string on the QMainWindow.  Descendant selectors style buttons inside
+each named container class; the #convertButton ID selector overrides for
+the primary-action button.  No inline QSS in widget files.
 
-    ToolbarWidget  QPushButton { … }
-    BottomBarWidget QPushButton { … }
-    QPushButton#convertButton   { … }   ← overrides the above for Convert
-
-This is the correct Qt pattern: the application owner (MainWindow) is
-responsible for the visual language; individual widget classes just create
-QPushButtons without any inline QSS.  Runtime theme changes (dark ↔ light)
-only need to touch this one method.
+Why this is correct
+───────────────────
+Qt's stylesheet cascade resolves specificity exactly like CSS:
+  • Type+ancestor selector  e.g. "ToolbarWidget QPushButton"
+    specificity = (0, 0, 2) — two type selectors
+  • ID selector  e.g. "QPushButton#convertButton"
+    specificity = (0, 1, 1) — one ID + one type  → wins over the above
+So the Convert button gets the blue primary-action style while every other
+button in ToolbarWidget / BottomBarWidget gets the transparent hover style.
 
 Scan → expand behaviour
 ────────────────────────
-_on_scan_complete() snapshots the set of already-known folder paths before
-calling model.addFiles().  After the add, it passes only the newly created
-root FolderNodes to FileTreeView.expandNewFolders(), which expands those
-nodes through the proxy model.  Existing nodes keep whatever
-expanded/collapsed state the user set — no full expand / reset occurs.
+_on_scan_complete() snapshots the set of already-known root folder paths
+*before* calling model.addFiles(), then expands only the new root nodes.
+Existing expand/collapse state is preserved.
 
 Output-path hint
 ────────────────
-_update_output_hint() is called whenever _config changes.  It sets the
-BottomBar's hint strip text to reflect whether EPUBs go alongside the
-source files or to a custom directory.
+_update_output_hint() pushes a translated hint into AppStatusBar whenever
+the configuration changes (settings dialog OK, language switch).
 """
 
 import logging
@@ -72,6 +74,7 @@ from .i18n import register_listener, t
 from .models.file_node import FileNode
 from .models.file_tree_model import FileTreeModel
 from .state.settings import AppSettings
+from .status_bar import AppStatusBar
 from .toolbar import ToolbarWidget
 from .workers.batch_worker import BatchWorker
 from .workers.meta_worker import MetaSignals, MetaWorker
@@ -106,34 +109,39 @@ class ConversionSession:
 
 
 # ---------------------------------------------------------------------------
-# MainWindow
+# Centralised QSS
 # ---------------------------------------------------------------------------
 
-_BTN_QSS = """
-QPushButton {{
+_WINDOW_QSS = """
+/* ── Toolbar and bottom-bar plain buttons ──────────────────────── */
+ToolbarWidget QPushButton,
+BottomBarWidget QPushButton {
     border: 1px solid transparent;
     border-radius: 4px;
     padding: 3px 8px;
     background: transparent;
-}}
-QPushButton:hover {{
+}
+ToolbarWidget QPushButton:hover,
+BottomBarWidget QPushButton:hover {
     background-color: rgba(128, 128, 128, 0.20);
     border: 1px solid rgba(128, 128, 128, 0.35);
-}}
-QPushButton:pressed {{
+}
+ToolbarWidget QPushButton:pressed,
+BottomBarWidget QPushButton:pressed {
     background-color: rgba(128, 128, 128, 0.35);
     border: 1px solid rgba(128, 128, 128, 0.50);
-}}
-QPushButton:checked {{
+}
+ToolbarWidget QPushButton:checked,
+BottomBarWidget QPushButton:checked {
     background-color: rgba(128, 128, 128, 0.35);
     border: 1px solid rgba(128, 128, 128, 0.50);
-}}
-QPushButton:disabled {{
+}
+ToolbarWidget QPushButton:disabled,
+BottomBarWidget QPushButton:disabled {
     color: palette(mid);
-}}
-"""
+}
 
-_CONVERT_BTN_QSS = """
+/* ── Convert button — primary action (higher specificity via #id) ── */
 QPushButton#convertButton {
     background-color: #2980b9;
     color: white;
@@ -151,6 +159,11 @@ QPushButton#convertButton:disabled {
 """
 
 
+# ---------------------------------------------------------------------------
+# MainWindow
+# ---------------------------------------------------------------------------
+
+
 class MainWindow(QMainWindow):
     def __init__(self, settings: AppSettings, parent=None):
         super().__init__(parent)
@@ -159,7 +172,6 @@ class MainWindow(QMainWindow):
 
         self._scan_worker: ScanWorker | None = None
         self._batch_worker: BatchWorker | None = None
-        # Stored after _on_convert so _epub_path_for resolves identically to EpubBuilder
         self._batch_anchor: BatchAnchor | None = None
 
         self._meta_pool = QThreadPool.globalInstance()
@@ -188,14 +200,16 @@ class MainWindow(QMainWindow):
         self._toolbar = ToolbarWidget()
         self._model = FileTreeModel()
         self._file_view = FileTreeView(self._model)
+        self._status_bar = AppStatusBar()
         self._bottom_bar = BottomBarWidget()
 
         layout.addWidget(self._toolbar)
         layout.addWidget(self._file_view, stretch=1)
+        layout.addWidget(self._status_bar)
         layout.addWidget(self._bottom_bar)
 
     def _connect_signals(self) -> None:
-        tb: ToolbarWidget = self._toolbar
+        tb = self._toolbar
         tb.addFilesRequested.connect(self._on_add_files)
         tb.addFolderRequested.connect(self._on_add_folder)
         tb.removeSelectedRequested.connect(self._on_remove_selected)
@@ -209,7 +223,7 @@ class MainWindow(QMainWindow):
 
         self._model.selectionCountChanged.connect(self._toolbar.update_selection_count)
 
-        fv: FileTreeView = self._file_view
+        fv = self._file_view
         fv.statusClicked.connect(self._on_status_clicked)
         fv.folderDoubleClicked.connect(self._on_folder_double_clicked)
         fv.openEpubRequested.connect(self._on_open_epub)
@@ -217,7 +231,7 @@ class MainWindow(QMainWindow):
         fv.openFolderRequested.connect(self._on_open_folder)
         fv.selectionRemoveRequested.connect(self._on_remove_selected)
 
-        bb: BottomBarWidget = self._bottom_bar
+        bb = self._bottom_bar
         bb.convertRequested.connect(self._on_convert)
         bb.cancelRequested.connect(self._on_cancel)
         bb.openLogsDirRequested.connect(self._on_open_logs)
@@ -233,41 +247,32 @@ class MainWindow(QMainWindow):
 
     def _apply_stylesheet(self) -> None:
         """
-        Central QSS for the whole window.
+        Single stylesheet for the whole window.
 
-        Why here, not in the widgets?
-        ─────────────────────────────
-        Qt's stylesheet cascade lets a parent widget style all matching
-        descendant widgets through selector specificity.  Keeping all QSS
-        here means:
-          • One place to audit / change the visual language.
-          • No string duplication across ToolbarWidget / BottomBarWidget.
-          • A future theme-switch only touches this method.
+        ToolbarWidget QPushButton / BottomBarWidget QPushButton
+            → transparent hover/press for all plain buttons in those panels.
 
-        Descendant selectors used:
-          ToolbarWidget  QPushButton   — hover/press for toolbar buttons
-          BottomBarWidget QPushButton  — hover/press for bar buttons
-          QPushButton#convertButton    — primary-action override (blue)
+        QPushButton#convertButton
+            → blue primary-action override (higher specificity than the above).
         """
-        # Build the descendant rule for both parents from the shared template
-        # TODO: fix ConvertButton style
-        scope = "ToolbarWidget QPushButton, BottomBarWidget QPushButton"
-        scoped_btn_qss = _BTN_QSS.replace("QPushButton", scope, 1).replace(
-            "QPushButton", scope
-        )
-        self.setStyleSheet(scoped_btn_qss + _CONVERT_BTN_QSS)
+        self.setStyleSheet(_WINDOW_QSS)
 
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(f"{app_info.APP_NAME} {app_info.VERSION}")
-        # Re-translate the hint in case a language switch changed the string
         self._update_output_hint()
 
     # ------------------------------------------------------------------
-    # Output-path hint helper
+    # Output-path hint
     # ------------------------------------------------------------------
 
     def _update_output_hint(self) -> None:
-        self._bottom_bar.set_output_hint(self._config.output_path)
+        """Push a translated output-path hint to AppStatusBar."""
+        if self._config.output_path is None:
+            self._status_bar.show_hint(t("bar.hint_same_folder"))
+        else:
+            self._status_bar.show_hint(
+                t("bar.hint_output_dir", path=str(self._config.output_path))
+            )
 
     # ------------------------------------------------------------------
     # Toolbar action handlers
@@ -401,28 +406,18 @@ class MainWindow(QMainWindow):
 
     def _on_scan_complete(self, found: list[tuple[Path, Path]]) -> None:
         """
-        Add scanned files to the model, then expand only the newly created
-        root folders.
+        Add files, then expand only the newly created root FolderNodes.
 
-        Expand strategy
-        ───────────────
-        We snapshot the set of root-level folder paths that already exist
-        in the model before calling addFiles().  After the add, we collect
-        every root FolderNode whose path was NOT in that snapshot — those
-        are the newly created roots — and pass them to
-        FileTreeView.expandNewFolders().  All previously-visible nodes keep
-        their current expanded/collapsed state.
+        Snapshot the current root-folder path set before adding so we can
+        identify which roots are new after the call.
         """
-        existing_root_paths = {f.path for f in self._model._root_folders}
+        existing_roots = {f.path for f in self._model._root_folders}
 
         self._model.addFiles(found)
 
-        new_roots = [
-            f for f in self._model._root_folders if f.path not in existing_root_paths
-        ]
+        new_roots = [f for f in self._model._root_folders if f.path not in existing_roots]
         self._file_view.expandNewFolders(new_roots)
 
-        # Launch metadata workers for every new file
         for _root, file_path in found:
             node = self._model._path_to_node.get(file_path)
             if node and node.meta_loading:
@@ -449,8 +444,6 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, t("msg.no_files_title"), t("msg.no_files_text"))
             return
 
-        # Compute and store the anchor; EpubBuilder uses the same anchor via
-        # BatchProcessor so resolve_epub_path() gives identical results on both sides.
         self._batch_anchor = compute_batch_anchor(files)
 
         session = ConversionSession(total=len(files))
