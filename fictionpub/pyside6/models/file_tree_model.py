@@ -1,30 +1,39 @@
 """
-Two-level tree model: FolderNode (top) → FileNode (children).
+Arbitrary-depth tree model: FolderNode → (FolderNode | FileNode)*
 
 Column layout
--------------
-COL_NAME   0  filename + checkbox (no status icon here)
-COL_STATUS 1  status icon only; UserRole returns an int sort key
+─────────────
+COL_NAME   0  filename + checkbox
+COL_STATUS 1  status icon; UserRole returns int sort key
 COL_AUTHOR 2
 COL_TITLE  3
 COL_DATE   4
 COL_LANG   5
 
-Status sort keys (ascending = worst first):
-  None (not converted) → 0
-  FAILURE              → 1
-  WARNING              → 2
-  SUCCESS              → 3
+Root-level FolderNodes display their full path.
+Nested FolderNodes display only their name (the nesting implies the path).
 
-Internal pointer strategy:
-  FolderNode indices:  createIndex(row, col, folder_node)
-  FileNode indices:    createIndex(row, col, file_node)
+addFiles()
+──────────
+Accepts list[tuple[Path, Path]] where each tuple is (scan_root, file_path).
+scan_root anchors the visible tree top for that file; intermediate folders
+between scan_root and file_path.parent are created automatically.
+If a path already exists in the model (folder or file) it is reused, so
+adding a sub-folder of an already-visible folder merges cleanly.
 
-Icons are loaded from resources/icons/*.png in __init__() so that
-QApplication already exists and no "Must construct a QGuiApplication
-before a QPixmap" error occurs.  A small fallback glyph icon is used
-if the PNG file cannot be found.
+Check-state propagation
+───────────────────────
+• Checking/unchecking a folder cascades to all descendants.
+• Changing a file bubbles up through all ancestor folders, which are
+  recalculated to Checked / Unchecked / PartiallyChecked.
+
+Collapse/expand
+───────────────
+QTreeView handles collapse/expand natively through the expand-arrow on
+every FolderNode.  The model does not force any expansion state.
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 from typing import Union
@@ -45,7 +54,7 @@ from .file_node import FileNode, FolderNode
 
 IndexType = Union[QModelIndex, QPersistentModelIndex]
 
-# Column indices — plain ints, no Qt objects at import time
+# ── Column constants ──────────────────────────────────────────────────────────
 COL_NAME   = 0
 COL_STATUS = 1
 COL_AUTHOR = 2
@@ -65,20 +74,17 @@ _HEADER_KEYS = [
 
 # Sort priority: lower = shown first in ascending sort.
 _STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
-    None:                    0,
+    None:                     0,
     ConversionStatus.FAILURE: 1,
     ConversionStatus.WARNING: 2,
     ConversionStatus.SUCCESS: 3,
 }
 
-_ICON_SIZE = 16   # px — icons are 64×64 source, downscaled to fit row height
+_ICON_SIZE = 16
 
 
 def _load_png_icon(filename: str, size: int = _ICON_SIZE) -> QIcon | None:
-    """
-    Load a status icon from resources/icons/ via loader_gui.
-    Returns None if the file cannot be found so callers can fall back.
-    """
+    # TODO: move to loader_gui
     try:
         from ...resources.loader_gui import get_icon_path
         path = get_icon_path(filename)
@@ -110,48 +116,44 @@ def _make_fallback_icon(symbol: str, color: str, size: int = _ICON_SIZE) -> QIco
     return QIcon(px)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+
 class FileTreeModel(QAbstractItemModel):
     """
-    Hierarchical model: folders at the root, files as their children.
-    Files start checked; folder tri-state is derived from children.
+    Hierarchical file-tree model supporting arbitrary folder nesting.
+    Root entries are FolderNodes; they may contain more FolderNodes and/or
+    FileNodes at any depth.
     """
-    # TODO: support nested folders
 
-    # Emitted whenever any CheckState changes.
-    # Args: (checked_file_count, total_file_count)
+    # (checked_count, total_count)
     selectionCountChanged = Signal(int, int)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        self._folders: list[FolderNode] = []
-        self._path_to_node: dict[Path, FileNode] = {}
+        self._root_folders: list[FolderNode] = []
+        self._path_to_node: dict[Path, FileNode]   = {}
+        self._folder_map:   dict[Path, FolderNode] = {}
 
-        # Load PNG status icons; fall back to glyph icons if unavailable
         self._status_icons: dict[ConversionStatus, QIcon] = {
             ConversionStatus.SUCCESS: (
-                _load_png_icon("mark_success.png") or
-                _make_fallback_icon("✓", "#27ae60")
+                _load_png_icon("status_success.png") or _make_fallback_icon("✓", "#27ae60")
             ),
             ConversionStatus.WARNING: (
-                _load_png_icon("mark_warning.png") or
-                _make_fallback_icon("⚠", "#e67e22")
+                _load_png_icon("status_warning.png") or _make_fallback_icon("⚠", "#e67e22")
             ),
             ConversionStatus.FAILURE: (
-                _load_png_icon("mark_error.png") or
-                _make_fallback_icon("✗", "#e74c3c")
+                _load_png_icon("status_failure.png")   or _make_fallback_icon("✗", "#e74c3c")
             ),
         }
 
-    # ------------------------------------------------------------------
-    # QAbstractItemModel interface
-    # ------------------------------------------------------------------
+    # ── QAbstractItemModel interface ──────────────────────────────────────────
 
     def index(self, row: int, column: int, parent: IndexType = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         if not parent.isValid():
-            if row < len(self._folders):
-                return self.createIndex(row, column, self._folders[row])
+            if row < len(self._root_folders):
+                return self.createIndex(row, column, self._root_folders[row])
         else:
             ptr = parent.internalPointer()
             if isinstance(ptr, FolderNode) and row < len(ptr.children):
@@ -162,21 +164,22 @@ class FileTreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         node = index.internalPointer()
-        if isinstance(node, FolderNode):
+        parent_node: FolderNode | None = node.parent
+        if parent_node is None:
             return QModelIndex()
-        if isinstance(node, FileNode):
-            for i, folder in enumerate(self._folders):
-                if any(child is node for child in folder.children):
-                    return self.createIndex(i, 0, folder)
-        return QModelIndex()
+        # Find parent_node's row within its own parent
+        grandparent = parent_node.parent
+        if grandparent is None:
+            row = self._root_folders.index(parent_node)
+        else:
+            row = grandparent.children.index(parent_node)
+        return self.createIndex(row, 0, parent_node)
 
     def rowCount(self, parent: IndexType = QModelIndex()) -> int:
         if not parent.isValid():
-            return len(self._folders)
+            return len(self._root_folders)
         ptr = parent.internalPointer()
-        if isinstance(ptr, FolderNode):
-            return len(ptr.children)
-        return 0
+        return len(ptr.children) if isinstance(ptr, FolderNode) else 0
 
     def columnCount(self, parent: IndexType = QModelIndex()) -> int:
         return COLUMNS
@@ -189,7 +192,8 @@ class FileTreeModel(QAbstractItemModel):
             base |= Qt.ItemFlag.ItemIsUserCheckable
         return base
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.ItemDataRole.DisplayRole):
+    def headerData(self, section: int, orientation: Qt.Orientation,
+                   role: int = Qt.ItemDataRole.DisplayRole):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if 0 <= section < len(_HEADER_KEYS):
                 return t(_HEADER_KEYS[section])
@@ -215,66 +219,55 @@ class FileTreeModel(QAbstractItemModel):
         if isinstance(node, FolderNode):
             node.check_state = state
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
-            if state != Qt.CheckState.PartiallyChecked and node.children:
-                for child in node.children:
-                    child.check_state = state
-                first = self.index(0, 0, index)
-                last  = self.index(len(node.children) - 1, 0, index)
-                self.dataChanged.emit(first, last, [Qt.ItemDataRole.CheckStateRole])
+            if state != Qt.CheckState.PartiallyChecked:
+                self._cascade_check(node, state, index)
+            # Bubble up to parent folders
+            parent_idx = self.parent(index)
+            if parent_idx.isValid():
+                self._recalc_ancestors(parent_idx.internalPointer(), parent_idx)
 
         elif isinstance(node, FileNode):
             node.check_state = state
             self.dataChanged.emit(index, index, [Qt.ItemDataRole.CheckStateRole])
             parent_idx = self.parent(index)
             if parent_idx.isValid():
-                folder = parent_idx.internalPointer()
-                self._recalc_folder_state(folder, parent_idx)
+                self._recalc_ancestors(parent_idx.internalPointer(), parent_idx)
 
         self._emit_selection_count()
         return True
 
-    # ------------------------------------------------------------------
-    # Public mutation API
-    # ------------------------------------------------------------------
+    # ── Public mutation API ───────────────────────────────────────────────────
 
-    def addFiles(self, paths: list[Path]) -> int:
-        """Add new file paths grouped by parent directory. Returns count added."""
-        existing      = set(self._path_to_node.keys())
-        folder_lookup = {f.path: f for f in self._folders}
+    def addFiles(self, items: list[tuple[Path, Path]]) -> int:
+        """
+        Add files to the model.
 
-        new_by_folder: dict[Path, list[Path]] = {}
-        for p in paths:
-            if p not in existing:
-                new_by_folder.setdefault(p.parent, []).append(p)
+        Parameters
+        ----------
+        items : list of (scan_root, file_path)
+            scan_root becomes the top-level tree entry for its group of files.
+            Intermediate folders between scan_root and file_path.parent are
+            created automatically and nested accordingly.
 
-        if not new_by_folder:
-            return 0
-
+        Returns the number of new files added (duplicates are skipped).
+        """
         added = 0
-        for folder_path, file_paths in new_by_folder.items():
-            if folder_path not in folder_lookup:
-                row = len(self._folders)
-                self.beginInsertRows(QModelIndex(), row, row)
-                folder = FolderNode(path=folder_path)
-                self._folders.append(folder)
-                folder_lookup[folder_path] = folder
-                self.endInsertRows()
+        for scan_root, file_path in items:
+            if file_path in self._path_to_node:
+                continue
 
-            folder     = folder_lookup[folder_path]
-            folder_row = self._folders.index(folder)
-            folder_idx = self.createIndex(folder_row, 0, folder)
-
-            start = len(folder.children)
-            end   = start + len(file_paths) - 1
-            self.beginInsertRows(folder_idx, start, end)
-            for p in file_paths:
-                node = FileNode(path=p, meta_loading=True)
-                folder.children.append(node)
-                self._path_to_node[p] = node
+            folder = self._ensure_folder_chain(file_path.parent, scan_root)
+            folder_idx = self._index_for_node(folder)
+            row = len(folder.children)
+            self.beginInsertRows(folder_idx, row, row)
+            node = FileNode(path=file_path, parent=folder, meta_loading=True)
+            folder.children.append(node)
+            self._path_to_node[file_path] = node
             self.endInsertRows()
-            added += len(file_paths)
+            added += 1
 
-        self._emit_selection_count()
+        if added:
+            self._emit_selection_count()
         return added
 
     def updateMeta(self, path: Path, meta) -> None:
@@ -310,138 +303,269 @@ class FileTreeModel(QAbstractItemModel):
         node.error      = str(result.error) if result.error else None
         idx = self._index_for_node(node)
         if idx.isValid():
-            # Status column carries both the icon (DecorationRole) and sort key (UserRole)
+            self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.ToolTipRole])
             status_idx = self.createIndex(idx.row(), COL_STATUS, node)
-            self.dataChanged.emit(
-                idx, idx, [Qt.ItemDataRole.ToolTipRole]
-            )
             self.dataChanged.emit(
                 status_idx, status_idx,
                 [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.UserRole],
             )
 
     def removeNodes(self, indices: list[QModelIndex]) -> None:
-        folders_to_delete: set[FolderNode] = set()
-        files_by_folder:   dict[FolderNode, set[FileNode]] = {}
+        """Remove selected nodes (folders recursively, files individually)."""
+        # Collect unique node objects
+        nodes: set = {idx.internalPointer() for idx in indices if idx.isValid()}
 
-        for idx in indices:
-            if not idx.isValid():
-                continue
-            node = idx.internalPointer()
-            if isinstance(node, FolderNode):
-                folders_to_delete.add(node)
-            elif isinstance(node, FileNode):
-                parent_idx = self.parent(idx)
-                folder     = parent_idx.internalPointer() if parent_idx.isValid() else None
-                if isinstance(folder, FolderNode) and folder not in folders_to_delete:
-                    files_by_folder.setdefault(folder, set()).add(node)
+        # Keep only "root" nodes of the selection (skip if an ancestor is also selected)
+        def _has_ancestor_in(node, node_set: set) -> bool:
+            p = node.parent
+            while p is not None:
+                if p in node_set:
+                    return True
+                p = p.parent
+            return False
 
-        for folder, files in files_by_folder.items():
-            folder_row   = self._folders.index(folder)
-            folder_index = self.createIndex(folder_row, 0, folder)
-            rows = sorted(
-                [i for i, c in enumerate(folder.children) if c in files],
-                reverse=True,
-            )
-            for row in rows:
-                self.beginRemoveRows(folder_index, row, row)
-                removed = folder.children.pop(row)
-                self._path_to_node.pop(removed.path, None)
-                self.endRemoveRows()
-            if not folder.children:
-                folders_to_delete.add(folder)
+        roots = [n for n in nodes if not _has_ancestor_in(n, nodes)]
 
-        folder_rows = sorted(
-            [i for i, f in enumerate(self._folders) if f in folders_to_delete],
-            reverse=True,
-        )
-        for row in folder_rows:
-            self.beginRemoveRows(QModelIndex(), row, row)
-            removed_folder = self._folders.pop(row)
-            for child in removed_folder.children:
-                self._path_to_node.pop(child.path, None)
-            self.endRemoveRows()
+        # Group removal roots by their parent
+        by_parent: dict = {}
+        for node in roots:
+            by_parent.setdefault(node.parent, []).append(node)
+
+        for parent, node_list in by_parent.items():
+            if parent is None:
+                # Root-level folders
+                rows = sorted(
+                    [self._root_folders.index(n) for n in node_list], reverse=True
+                )
+                for row in rows:
+                    self.beginRemoveRows(QModelIndex(), row, row)
+                    removed = self._root_folders.pop(row)
+                    self._deregister_subtree(removed)
+                    self.endRemoveRows()
+            else:
+                parent_idx = self._index_for_node(parent)
+                rows = sorted(
+                    [parent.children.index(n) for n in node_list], reverse=True
+                )
+                for row in rows:
+                    self.beginRemoveRows(parent_idx, row, row)
+                    removed = parent.children.pop(row)
+                    if isinstance(removed, FileNode):
+                        self._path_to_node.pop(removed.path, None)
+                    else:
+                        self._deregister_subtree(removed)
+                    self.endRemoveRows()
+                self._prune_empty_ancestors(parent)
 
         self._emit_selection_count()
 
     def removeAll(self) -> None:
-        if not self._folders:
+        if not self._root_folders:
             return
         self.beginResetModel()
-        self._folders.clear()
+        self._root_folders.clear()
         self._path_to_node.clear()
+        self._folder_map.clear()
         self.endResetModel()
         self._emit_selection_count()
 
     def removeCompleted(self) -> None:
-        for folder in list(self._folders):
-            if folder not in self._folders:
-                continue
-            folder_row   = self._folders.index(folder)
-            folder_index = self.createIndex(folder_row, 0, folder)
+        """Remove all SUCCESS files; prune folders that become empty."""
+        # Group success files by immediate parent
+        by_parent: dict[FolderNode, list[FileNode]] = {}
+        for node in self._path_to_node.values():
+            if node.status == ConversionStatus.SUCCESS:
+                by_parent.setdefault(node.parent, []).append(node)
+
+        if not by_parent:
+            return
+
+        for parent, nodes in by_parent.items():
+            parent_idx = self._index_for_node(parent)
             rows = sorted(
-                [i for i, c in enumerate(folder.children)
-                 if c.status == ConversionStatus.SUCCESS],
-                reverse=True,
+                [parent.children.index(n) for n in nodes], reverse=True
             )
             for row in rows:
-                self.beginRemoveRows(folder_index, row, row)
-                removed = folder.children.pop(row)
+                self.beginRemoveRows(parent_idx, row, row)
+                removed = parent.children.pop(row)
                 self._path_to_node.pop(removed.path, None)
                 self.endRemoveRows()
 
-        empty_rows = sorted(
-            [i for i, f in enumerate(self._folders) if not f.children],
+        # Prune empty folders (deepest first to avoid double-pruning)
+        candidates = sorted(
+            [p for p in by_parent if not p.children],
+            key=lambda f: len(f.path.parts),
             reverse=True,
         )
-        for row in empty_rows:
-            self.beginRemoveRows(QModelIndex(), row, row)
-            self._folders.pop(row)
-            self.endRemoveRows()
+        seen: set[int] = set()
+        for folder in candidates:
+            if id(folder) not in seen:
+                self._prune_empty_ancestors(folder)
+                seen.add(id(folder))
 
         self._emit_selection_count()
 
     def setAllChecked(self, is_checked: bool) -> None:
-        state: Qt.CheckState = Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked
-        for folder in self._folders:
+        state = Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked
+        for i, folder in enumerate(self._root_folders):
             folder.check_state = state
-            for child in folder.children:
-                child.check_state = state
-
-        if self._folders:
-            top_left  = self.index(0, 0)
-            top_right = self.index(len(self._folders) - 1, 0)
-            self.dataChanged.emit(top_left, top_right, [Qt.ItemDataRole.CheckStateRole])
-            for i, folder in enumerate(self._folders):
-                if folder.children:
-                    parent_idx = self.index(i, 0)
-                    first = self.index(0, 0, parent_idx)
-                    last  = self.index(len(folder.children) - 1, 0, parent_idx)
-                    self.dataChanged.emit(first, last, [Qt.ItemDataRole.CheckStateRole])
-
+            root_idx = self.index(i, 0)
+            self.dataChanged.emit(root_idx, root_idx, [Qt.ItemDataRole.CheckStateRole])
+            self._cascade_check(folder, state, root_idx)
         self._emit_selection_count()
 
     def checkedFilePaths(self) -> list[Path]:
         return [
             node.path
-            for folder in self._folders
-            for node in folder.children
+            for node in self._path_to_node.values()
             if node.check_state == Qt.CheckState.Checked
         ]
 
-    def nodeForIndex(self, index: QModelIndex) -> "FileNode | FolderNode | None":
-        if not index.isValid():
-            return None
-        return index.internalPointer()
+    def nodeForIndex(self, index: QModelIndex) -> FileNode | FolderNode | None:
+        return index.internalPointer() if index.isValid() else None
 
-    # ------------------------------------------------------------------
-    # Private helpers
-    # ------------------------------------------------------------------
+    def totalFileCount(self) -> int:
+        return len(self._path_to_node)
+
+    # ── Private: folder-chain creation ───────────────────────────────────────
+
+    def _ensure_folder_chain(self, folder_path: Path, scan_root: Path) -> FolderNode:
+        """
+        Return the FolderNode for folder_path, creating it and all intermediate
+        folders between scan_root and folder_path if they do not yet exist.
+        scan_root is always the topmost entry for this chain.
+        """
+        # Reuse an existing node (may already be nested inside another scan root)
+        if folder_path in self._folder_map:
+            return self._folder_map[folder_path]
+
+        # Anchor: scan_root (or filesystem root) becomes a root-level entry
+        if folder_path == scan_root or folder_path.parent == folder_path:
+            folder = FolderNode(path=folder_path, parent=None)
+            row = len(self._root_folders)
+            self.beginInsertRows(QModelIndex(), row, row)
+            self._root_folders.append(folder)
+            self._folder_map[folder_path] = folder
+            self.endInsertRows()
+            return folder
+
+        # Create parent first, then create this folder as a child
+        parent_folder = self._ensure_folder_chain(folder_path.parent, scan_root)
+        folder = FolderNode(path=folder_path, parent=parent_folder)
+        parent_idx = self._index_for_node(parent_folder)
+        row = len(parent_folder.children)
+        self.beginInsertRows(parent_idx, row, row)
+        parent_folder.children.append(folder)
+        self._folder_map[folder_path] = folder
+        self.endInsertRows()
+        return folder
+
+    # ── Private: check-state helpers ─────────────────────────────────────────
+
+    def _cascade_check(
+        self,
+        folder: FolderNode,
+        state: Qt.CheckState,
+        folder_idx: QModelIndex,
+    ) -> None:
+        """Set state on all immediate children, then recurse into sub-folders."""
+        if not folder.children:
+            return
+        for child in folder.children:
+            child.check_state = state
+        first = self.index(0, 0, folder_idx)
+        last  = self.index(len(folder.children) - 1, 0, folder_idx)
+        self.dataChanged.emit(first, last, [Qt.ItemDataRole.CheckStateRole])
+        for i, child in enumerate(folder.children):
+            if isinstance(child, FolderNode):
+                self._cascade_check(child, state, self.index(i, 0, folder_idx))
+
+    def _recalc_ancestors(self, folder: FolderNode, folder_idx: QModelIndex) -> None:
+        """Recalculate tri-state for folder and all ancestor folders."""
+        all_files = list(self._iter_files(folder))
+        if not all_files:
+            return
+        states = {f.check_state for f in all_files}
+        new_state = states.pop() if len(states) == 1 else Qt.CheckState.PartiallyChecked
+        if folder.check_state != new_state:
+            folder.check_state = new_state
+            self.dataChanged.emit(folder_idx, folder_idx, [Qt.ItemDataRole.CheckStateRole])
+        parent_idx = self.parent(folder_idx)
+        if parent_idx.isValid():
+            self._recalc_ancestors(parent_idx.internalPointer(), parent_idx)
+
+    # ── Private: removal helpers ──────────────────────────────────────────────
+
+    def _deregister_subtree(self, folder: FolderNode) -> None:
+        """Remove folder and all its contents from the lookup maps."""
+        self._folder_map.pop(folder.path, None)
+        for child in folder.children:
+            if isinstance(child, FileNode):
+                self._path_to_node.pop(child.path, None)
+            else:
+                self._deregister_subtree(child)
+
+    def _prune_empty_ancestors(self, folder: FolderNode) -> None:
+        """Remove folder if empty; then recurse up if its parent also becomes empty."""
+        # Guard: only operate on nodes still registered in the model
+        if self._folder_map.get(folder.path) is not folder:
+            return
+        if folder.children:
+            return
+
+        parent = folder.parent
+        if parent is None:
+            row = self._root_folders.index(folder)
+            self.beginRemoveRows(QModelIndex(), row, row)
+            self._root_folders.pop(row)
+            self._folder_map.pop(folder.path, None)
+            self.endRemoveRows()
+        else:
+            parent_idx = self._index_for_node(parent)
+            row = parent.children.index(folder)
+            self.beginRemoveRows(parent_idx, row, row)
+            parent.children.pop(row)
+            self._folder_map.pop(folder.path, None)
+            self.endRemoveRows()
+            self._prune_empty_ancestors(parent)
+
+    # ── Private: generic helpers ──────────────────────────────────────────────
+
+    def _iter_files(self, folder: FolderNode):
+        """Yield every FileNode in folder's subtree (recursive)."""
+        for child in folder.children:
+            if isinstance(child, FileNode):
+                yield child
+            else:
+                yield from self._iter_files(child)
+
+    def _index_for_node(self, node: FileNode | FolderNode) -> QModelIndex:
+        """Return the col-0 QModelIndex for any node in the tree."""
+        parent = node.parent
+        try:
+            if parent is None:
+                row = self._root_folders.index(node)
+            else:
+                row = parent.children.index(node)
+        except ValueError:
+            return QModelIndex()
+        return self.createIndex(row, 0, node)
+
+    def _emit_selection_count(self) -> None:
+        total   = len(self._path_to_node)
+        checked = sum(
+            1 for n in self._path_to_node.values()
+            if n.check_state == Qt.CheckState.Checked
+        )
+        self.selectionCountChanged.emit(checked, total)
+
+    # ── Private: data helpers ─────────────────────────────────────────────────
 
     def _folder_data(self, node: FolderNode, col: int, role: int):
         if col == COL_NAME:
             if role == Qt.ItemDataRole.DisplayRole:
-                return str(node.path)
+                # Root folders → full path; nested → name only
+                return str(node.path) if node.parent is None else node.path.name
             if role == Qt.ItemDataRole.CheckStateRole:
                 return node.check_state.value
             if role == Qt.ItemDataRole.FontRole:
@@ -451,7 +575,6 @@ class FileTreeModel(QAbstractItemModel):
         return None
 
     def _file_data(self, node: FileNode, col: int, role: int):
-        # --- Name column ---
         if col == COL_NAME:
             if role == Qt.ItemDataRole.DisplayRole:
                 return node.path.name
@@ -466,17 +589,14 @@ class FileTreeModel(QAbstractItemModel):
                 if node.check_state == Qt.CheckState.Unchecked:
                     return QBrush(QColor("#888888"))
 
-        # --- Status column ---
         elif col == COL_STATUS:
             if role == Qt.ItemDataRole.DecorationRole:
                 return self._status_icons.get(node.status)
             if role == Qt.ItemDataRole.UserRole:
-                # Integer sort key used by QSortFilterProxyModel
                 return _STATUS_SORT_KEY.get(node.status, 0)
             if role == Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
 
-        # --- Metadata columns ---
         elif role == Qt.ItemDataRole.DisplayRole:
             meta = node.metadata
             if meta is None:
@@ -487,29 +607,3 @@ class FileTreeModel(QAbstractItemModel):
             if col == COL_LANG:   return getattr(meta, "lang",   "") or ""
 
         return None
-
-    def _recalc_folder_state(self, folder: FolderNode, folder_index: QModelIndex) -> None:
-        if not folder.children:
-            return
-        states = {child.check_state for child in folder.children}
-        if len(states) == 1:
-            folder.check_state = states.pop()
-        else:
-            folder.check_state = Qt.CheckState.PartiallyChecked
-        self.dataChanged.emit(folder_index, folder_index, [Qt.ItemDataRole.CheckStateRole])
-
-    def _index_for_node(self, node: FileNode) -> QModelIndex:
-        for folder in self._folders:
-            for j, child in enumerate(folder.children):
-                if child is node:
-                    return self.createIndex(j, 0, node)
-        return QModelIndex()
-
-    def _emit_selection_count(self) -> None:
-        total   = sum(len(f.children) for f in self._folders)
-        checked = sum(
-            1 for f in self._folders
-            for c in f.children
-            if c.check_state == Qt.CheckState.Checked
-        )
-        self.selectionCountChanged.emit(checked, total)

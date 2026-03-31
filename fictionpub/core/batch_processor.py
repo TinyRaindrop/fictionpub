@@ -1,6 +1,10 @@
 """
 Handles the parallel processing of a batch of files.
-This class contains the ThreadPoolExecutor and is used by both the CLI and GUI.
+This class contains the ProcessPoolExecutor and is used by both the CLI and GUI.
+
+BatchAnchor is computed once at the start of run() from the full file list
+and forwarded to every worker so that resolve_epub_path() uses the same
+anchor across all files in the batch.
 """
 
 import concurrent.futures
@@ -10,7 +14,13 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from ..models.conversion import ConversionConfig, ConversionResult, ConversionStatus
+from ..models.conversion import (
+    BatchAnchor,
+    ConversionConfig,
+    ConversionResult,
+    ConversionStatus,
+    compute_batch_anchor,
+)
 from ..resources.localized_terms import LocalizedTerms
 from ..utils.logger import setup_worker_logger
 from .pipeline import ConversionPipeline
@@ -32,48 +42,34 @@ class WarningTracker(logging.Filter):
 
 
 def _init_worker(genres, headings) -> None:
-    """
-    This function runs once inside every new child process.
-    It receives the data and injects it into the local class.
-    """
+    """Runs once inside every new child process to inject localised terms."""
     LocalizedTerms.inject_terms((genres, headings))
 
 
-def _convert_single_file(path: Path, config: ConversionConfig) -> ConversionResult:
+def _convert_single_file(
+    path: Path,
+    config: ConversionConfig,
+    anchor: BatchAnchor | None,
+) -> ConversionResult:
     """
-    A standalone function to be the target for the executor.
-    It runs the full conversion pipeline on a single file and
-    captures all its log output.
-
-    Returns:
-        tuple[Path, str, Exception | None]:
-            - The path of the processed file.
-            - The captured log output as a string.
-            - An exception object if one occurred, else None.
+    Standalone function executed by each worker process.
+    Runs the full conversion pipeline for one file and captures its log output.
     """
-    # Set up in-memory logging for this worker process
     log_stream, log_handler = setup_worker_logger()
     worker_log = logging.getLogger("fb2_converter")
-
-    # Attach the warning tracker
     tracker = WarningTracker()
     log_handler.addFilter(tracker)
 
     try:
         worker_log.info(f"Converting: {path.name}")
-
-        # Main Conversion Logic
         pipeline = ConversionPipeline(config)
-        pipeline.convert(path)
+        pipeline.convert(path, anchor)
 
         status = (
             ConversionStatus.WARNING if tracker.has_warnings else ConversionStatus.SUCCESS
         )
-        warn_status_msg = " (with warnings!)" if tracker.has_warnings else ""
-        worker_log.info(
-            f"Successfully finished{warn_status_msg} conversion for: {path.name}"
-        )
-
+        suffix = " (with warnings!)" if tracker.has_warnings else ""
+        worker_log.info(f"Successfully finished{suffix} conversion for: {path.name}")
         return ConversionResult(path, status, log_stream.getvalue())
 
     except Exception as e:
@@ -95,7 +91,6 @@ def _convert_single_file(path: Path, config: ConversionConfig) -> ConversionResu
         )
 
     finally:
-        # Clean up handlers and close the stream
         log_handler.close()
         log_stream.close()
 
@@ -106,18 +101,22 @@ class BatchProcessor:
     def __init__(self, config: ConversionConfig):
         self.config = config
         import pickle
-
         pickle.dumps(self.config)
 
     def run(self, files: list[Path], progress_callback: Callable | None = None) -> None:
         """
-        Processes a list of files in parallel using Thread/ProcessPoolExecutor.
+        Process files in parallel.
+
+        The BatchAnchor is computed here — once — from the complete file list
+        and forwarded to every worker so that output-path resolution is
+        consistent across the whole batch.
 
         Args:
             files: A list of Path objects to convert.
             progress_callback: A function to be called as each file completes.
-                               It receives the (path, result, exception).
         """
+        anchor = compute_batch_anchor(files)
+
         # Determine the number of worker threads
         th = self.config.num_threads
         max_workers = th if th > 0 else (os.cpu_count() or 1)
@@ -127,43 +126,31 @@ class BatchProcessor:
         )
 
         # Map paths to their original index to maintain order
-        path_to_index = {path: i for i, path in enumerate(files)}
-
-        # This list will store results in the original file order
-        # Each item will be: (path, log_string, exception)
+        path_to_index    = {path: i for i, path in enumerate(files)}
         ordered_results: list[ConversionResult | None] = [None] * len(files)
 
         with concurrent.futures.ProcessPoolExecutor(
             max_workers,
-            initializer=_init_worker,  # Function to run on start
-            initargs=(LocalizedTerms.get_terms()),  # Arguments for that function
+            initializer=_init_worker,
+            initargs=(LocalizedTerms.get_terms()),
         ) as executor:
             # Submit all conversion tasks
             future_to_path = {
-                executor.submit(_convert_single_file, path, self.config): path
+                executor.submit(_convert_single_file, path, self.config, anchor): path
                 for path in files
             }
 
             # Process results as they are completed
             for future in concurrent.futures.as_completed(future_to_path):
                 path = future_to_path[future]
-                idx = path_to_index[path]
-
+                idx  = path_to_index[path]
                 try:
-                    # Get the worker's result: (path, log_string, exception)
-                    result_obj = future.result()
-                    ordered_results[idx] = result_obj
-
-                    # Call progress callback as items complete
+                    result = future.result()
+                    ordered_results[idx] = result
                     if progress_callback:
-                        progress_callback(result_obj)
-
+                        progress_callback(result)
                 except Exception as e:
-                    # This catches a critical failure in the worker itself
-                    # (e.g., the process died)
-                    log.error(
-                        f"Critical worker failure for {path.name}: {e}", exc_info=True
-                    )
+                    log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
                     ordered_results[idx] = ConversionResult(
                         path=path,
                         status=ConversionStatus.FAILURE,
@@ -174,15 +161,12 @@ class BatchProcessor:
             # Short delay for process shutdown
             time.sleep(0.05)
 
-        # --- All processing is done ---
         log.info("Batch processing complete. Writing logs...")
 
         # Find the main file handler to write the buffered logs
         file_handler = next(
             (h for h in log.handlers if isinstance(h, logging.FileHandler)), None
         )
-
-        # Now, iterate over the results in the original order
         for result in ordered_results:
             if result is None:
                 # This should not happen if logic is correct

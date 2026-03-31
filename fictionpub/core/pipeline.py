@@ -9,7 +9,7 @@ from pathlib import Path
 
 from lxml.etree import _Element
 
-from ..models.conversion import ConversionConfig
+from ..models.conversion import BatchAnchor, ConversionConfig
 from ..models.structures import ConvertedBody
 from ..post_processing.post_processor import PostProcessor
 from .epub_builder import EpubBuilder
@@ -29,17 +29,23 @@ class ConversionPipeline:
         """Initializes the pipeline with a specific configuration."""
         self.config = config
 
-    def convert(self, source_path: Path) -> None:
+    def convert(self, source_path: Path, anchor: BatchAnchor | None = None) -> None:
         """
-        Executes the full FB2 to EPUB conversion for a single file.
+        Execute the full FB2 → EPUB conversion for a single file.
+
+        Parameters
+        ----------
+        source_path : source .fb2 / .fb2.zip file
+        anchor      : precomputed batch anchor for output-path resolution;
+                      forwarded to EpubBuilder unchanged.
         """
-        # 1. Parse the FB2 file to extract its contents into a structured object
+        # 1. Parse
         fb2_book = FB2Book(source_path)
         fb2_book.parse()
 
-        # 2. Initialize the converter and builder
+        # 2. Initialize converter and builder
         converter = FB2ToHTMLConverter(binary_map=fb2_book.binaries, config=self.config)
-        builder = EpubBuilder(source_path, self.config)
+        builder   = EpubBuilder(source_path, self.config, anchor=anchor)
         builder.set_binaries(fb2_book.binaries)
         builder.set_metadata(fb2_book.metadata)
 
@@ -65,6 +71,5 @@ class ConversionPipeline:
         builder.set_annotation(annotation)
         builder.add_docs(doc_fragments)
 
-        # 6. Build the final EPUB file.
-        # Adds CSS, creates toc list, NAV, NCX, OPF, writes all docs to disk, zips the package.
+        # 6. Build — writes all files, zips the EPUB
         builder.build()

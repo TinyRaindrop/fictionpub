@@ -142,6 +142,7 @@ class BottomBarWidget(QWidget):
         self._convert.setText(t("bar.convert"))
 
     def _update_counters_label(self, success, warnings, failures) -> None:
+        # TODO: use same icons as FileTreeModel
         self._counters.setText(
             f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}"
         )

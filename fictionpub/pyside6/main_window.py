@@ -25,7 +25,14 @@ from PySide6.QtWidgets import (
 )
 
 from .. import app_info
-from ..models.conversion import ConversionConfig, ConversionResult, ConversionStatus
+from ..models.conversion import (
+    BatchAnchor,
+    ConversionConfig,
+    ConversionResult,
+    ConversionStatus,
+    compute_batch_anchor,
+    resolve_epub_path,
+)
 from ..utils.logger import LOG_DIR
 from .bottom_bar import BottomBarWidget
 from .dialogs.about_dialog import AboutDialog
@@ -78,6 +85,8 @@ class MainWindow(QMainWindow):
 
         self._scan_worker:  ScanWorker  | None = None
         self._batch_worker: BatchWorker | None = None
+        # Precomputed for the most recent conversion batch; used by _epub_path_for
+        self._batch_anchor: BatchAnchor | None = None
 
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
@@ -140,7 +149,9 @@ class MainWindow(QMainWindow):
         bb.openLastLogRequested.connect(self._on_open_last_log)
 
     def _apply_shortcuts(self) -> None:
-        QShortcut(QKeySequence.StandardKey.Delete, self._file_view).activated.connect(self._on_remove_selected)
+        QShortcut(QKeySequence.StandardKey.Delete, self._file_view).activated.connect(
+            self._on_remove_selected
+        )
         QShortcut(QKeySequence.StandardKey.SelectAll, self).activated.connect(
             lambda: self._model.setAllChecked(True)
         )
@@ -188,7 +199,6 @@ class MainWindow(QMainWindow):
     def _on_remove_selected(self) -> None:
         if self._is_converting():
             return
-        # Use selectedSourceIndices() — already mapped through the proxy
         indices = self._file_view.selectedSourceIndices()
         if indices:
             self._model.removeNodes(indices)
@@ -196,7 +206,7 @@ class MainWindow(QMainWindow):
     def _on_remove_all(self) -> None:
         if self._is_converting():
             return
-        if not self._model.rowCount():
+        if not self._model.totalFileCount():
             return
         reply = QMessageBox.question(
             self,
@@ -251,7 +261,6 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _on_status_clicked(self, node: FileNode) -> None:
-        """Single click on status icon → always open log viewer."""
         if node.log_output:
             LogViewerDialog(
                 node.log_output,
@@ -284,34 +293,16 @@ class MainWindow(QMainWindow):
             _open_path(target)
 
     # ------------------------------------------------------------------
-    # EPUB path resolution
+    # EPUB path resolution — single source of truth via resolve_epub_path()
     # ------------------------------------------------------------------
 
     def _epub_path_for(self, source: Path) -> Path:
         """
-        Resolve the expected output EPUB path for a given source file.
-
-        Mirrors the logic in EpubBuilder._zip_epub() so the GUI opens
-        the correct file after conversion.
+        Resolve the expected EPUB path using the same logic as EpubBuilder.
+        Uses the anchor from the most recent conversion batch so paths are
+        consistent whether the batch just finished or not.
         """
-        # TODO: remove duplicate logic, ensure SINGLE source of truth for epub paths
-        name = source.name
-        if name.endswith(".fb2.zip"):
-            stem = name[:-8]
-        elif name.endswith(".fb2"):
-            stem = name[:-4]
-        else:
-            stem = source.stem
-
-        if self._config.output_path:
-            if self._config.retain_folder_structure:
-                out_dir = self._config.output_path / source.parent.name
-            else:
-                out_dir = self._config.output_path
-        else:
-            out_dir = source.parent
-
-        return out_dir / f"{stem}.epub"
+        return resolve_epub_path(source, self._config, self._batch_anchor)
 
     # ------------------------------------------------------------------
     # Scanning
@@ -328,21 +319,27 @@ class MainWindow(QMainWindow):
         self._scan_worker.finished.connect(self._on_scan_finished)
         self._scan_worker.start()
 
-    def _on_scan_complete(self, found: list[Path]) -> None:
+    def _on_scan_complete(self, found: list[tuple[Path, Path]]) -> None:
+        """
+        Receive (scan_root, file_path) pairs from the scan worker and add
+        them to the model.  Then start metadata workers for new files.
+        """
         self._model.addFiles(found)
-        self._file_view.expandAll()
+        # Expand to first level; users can expand further or collapse freely
+        # TODO: when adding, retain expand/collapse state of existing folders, and only expand new folders
+        self._file_view.expandToDepth(1)
 
-        for path in found:
-            node = self._model._path_to_node.get(path)
+        for _root, file_path in found:
+            node = self._model._path_to_node.get(file_path)
             if node and node.meta_loading:
                 signals = MetaSignals(self)
                 signals.metaParsed.connect(self._model.updateMeta)
                 signals.metaFailed.connect(self._model.updateMetaError)
-                self._meta_pool.start(MetaWorker(path, signals))
+                self._meta_pool.start(MetaWorker(file_path, signals))
 
     def _on_scan_finished(self) -> None:
         self._toolbar.set_busy(False)
-        total = sum(len(f.children) for f in self._model._folders)
+        total = self._model.totalFileCount()
         self._bottom_bar.set_idle(t("bar.ready_n_files", n=total))
 
     # ------------------------------------------------------------------
@@ -360,11 +357,14 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # Compute anchor once for this batch and store so _epub_path_for
+        # resolves correctly after the batch finishes.
+        self._batch_anchor = compute_batch_anchor(files)
+
         session = ConversionSession(total=len(files))
         self._toolbar.set_busy(True)
         self._bottom_bar.set_converting(len(files))
 
-        # Fresh worker instance — _cancel_requested is always False at start
         self._batch_worker = BatchWorker(self._config, files, session, parent=self)
         self._batch_worker.progressUpdate.connect(self._on_progress_update)
         self._batch_worker.batchFinished.connect(self._on_batch_finished)
