@@ -21,6 +21,7 @@ from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from .. import app_info
 from ..resources.loader import get_icon_path
 from ..utils.logger import setup_main_logger
 from .i18n import set_language
@@ -50,8 +51,8 @@ def run_gui() -> None:
     setup_main_logger(logging.INFO)
 
     app = QApplication(sys.argv)
-    app.setApplicationName("fb2converter")
-    app.setOrganizationName("fictionpub")
+    app.setApplicationName(app_info.APP_NAME)
+    app.setOrganizationName(app_info.APP_NAME_SHORT)
     # Fusion renders identically on all platforms and works with custom palettes.
     app.setStyle("Fusion")
 
