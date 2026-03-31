@@ -24,6 +24,12 @@ Click behaviour
 Single click on COL_STATUS  → open log viewer (any status)
 Double click on file row    → open EPUB if SUCCESS/WARNING; log viewer if FAILURE
 Double click on folder row  → open folder in file manager
+
+Selective expand (expandNewFolders)
+------------------------------------
+MainWindow calls expandNewFolders(new_nodes) after each scan so that
+only freshly added root-level FolderNodes are expanded.  Already-visible
+folders keep whatever expand/collapse state the user set.
 """
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, Signal
@@ -44,7 +50,7 @@ class FileTreeView(QTreeView):
     statusClicked            = Signal(object)   # FileNode
     fileDoubleClicked        = Signal(object)   # Path
     folderDoubleClicked      = Signal(object)   # Path
-    openEpubRequested        = Signal(object)   # Path (source fb2 path; caller resolves epub)
+    openEpubRequested        = Signal(object)   # Path
     openFb2Requested         = Signal(object)   # Path
     openFolderRequested      = Signal(object)   # Path
     selectionRemoveRequested = Signal()
@@ -102,7 +108,7 @@ class FileTreeView(QTreeView):
         self.sortByColumn(COL_STATUS, Qt.SortOrder.AscendingOrder)
 
     # ------------------------------------------------------------------
-    # Window resize: only col 0 auto-fills, never on user column drags
+    # Window resize: COL_NAME auto-fills remaining viewport width
     # ------------------------------------------------------------------
 
     def resizeEvent(self, event) -> None:
@@ -123,6 +129,30 @@ class FileTreeView(QTreeView):
         h.blockSignals(True)
         h.resizeSection(COL_NAME, new_w)
         h.blockSignals(False)
+
+    # ------------------------------------------------------------------
+    # Selective expand — called by MainWindow after each scan
+    # ------------------------------------------------------------------
+
+    def expandNewFolders(self, new_root_nodes: list[FolderNode]) -> None:
+        """
+        Expand only the freshly added root-level FolderNodes.
+
+        The expand state of every existing node is left untouched so that
+        a user-collapsed subtree stays collapsed when new files are added
+        alongside it.
+
+        The proxy model is already in a sort order when this is called;
+        mapFromSource() handles the translation correctly regardless of
+        the current sort column.
+        """
+        for folder in new_root_nodes:
+            src_idx = self._source_model._index_for_node(folder)
+            if not src_idx.isValid():
+                continue
+            proxy_idx = self._proxy.mapFromSource(src_idx)
+            if proxy_idx.isValid():
+                self.expand(proxy_idx)
 
     # ------------------------------------------------------------------
     # Index translation: proxy → source
@@ -216,7 +246,6 @@ class FileTreeView(QTreeView):
             super().keyPressEvent(event)
 
     def _on_language_changed(self) -> None:
-        # Force the header to re-query translated labels
         self._source_model.headerDataChanged.emit(
             Qt.Orientation.Horizontal, 0, COLUMNS - 1
         )

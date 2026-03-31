@@ -1,14 +1,19 @@
 """
 Top toolbar containing file management and settings actions.
 
+QSS note
+--------
+Button hover / press styles are intentionally absent here.  They are
+applied centrally in MainWindow._apply_stylesheet() via the descendant
+selector  ToolbarWidget QPushButton { … }  so all styling lives in one
+place and responds correctly to runtime theme changes.
+
 Selection toggle
 ----------------
-The two former "✓ All" / "✗ None" buttons are replaced by a single
-QPushButton whose label always shows the current selection count.
+A single QPushButton whose label shows the current selection count.
 Clicking it alternates between "select all" and "deselect all":
   - if every file is already checked  → deselect all
   - otherwise (none or partial)       → select all
-The current state is tracked via update_selection_count().
 """
 
 from PySide6.QtCore import Signal
@@ -16,7 +21,6 @@ from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QPushButton,
     QSizePolicy,
     QStyle,
@@ -24,33 +28,6 @@ from PySide6.QtWidgets import (
 )
 
 from .i18n import register_listener, t
-
-# Stylesheet applied to every toolbar button for a clearly visible hover/press.
-# Uses palette() roles so it works on both light and dark themes.
-# TODO: merge with MainWindow._apply_stylesheet()
-_TOOLBAR_BTN_QSS = """
-QPushButton {
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 3px 8px;
-    background: transparent;
-}
-QPushButton:hover {
-    background-color: rgba(128, 128, 128, 0.20);
-    border: 1px solid rgba(128, 128, 128, 0.35);
-}
-QPushButton:pressed {
-    background-color: rgba(128, 128, 128, 0.35);
-    border: 1px solid rgba(128, 128, 128, 0.50);
-}
-QPushButton:checked {
-    background-color: rgba(128, 128, 128, 0.35);
-    border: 1px solid rgba(128, 128, 128, 0.50);
-}
-QPushButton:disabled {
-    color: palette(mid);
-}
-"""
 
 
 def _vsep() -> QFrame:
@@ -61,9 +38,8 @@ def _vsep() -> QFrame:
 
 
 def _btn() -> QPushButton:
-    b = QPushButton()
-    b.setStyleSheet(_TOOLBAR_BTN_QSS)
-    return b
+    """Plain QPushButton — visual styling is applied by the parent window's QSS."""
+    return QPushButton()
 
 
 class ToolbarWidget(QWidget):
@@ -105,8 +81,6 @@ class ToolbarWidget(QWidget):
                   self._remove, self._remove_all, self._remove_done):
             layout.addWidget(w)
 
-        # layout.addWidget(_vsep())
-
         spacer1 = QWidget()
         spacer1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer1)
@@ -118,21 +92,18 @@ class ToolbarWidget(QWidget):
         self._select_toggle.setMinimumWidth(130)
         layout.addWidget(self._select_toggle)
 
-        # Spacer
         spacer2 = QWidget()
         spacer2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer2)
 
         # Right group — settings | about
         self._conv_settings = _btn()
-
-        self._app_settings = _btn()  # text label set in _retranslate_ui
+        self._app_settings  = _btn()
 
         self._about = _btn()
-        info_icon = QApplication.style().standardIcon(
-            QStyle.StandardPixmap.SP_MessageBoxInformation
+        self._about.setIcon(
+            QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
         )
-        self._about.setIcon(info_icon)
         self._about.setFixedWidth(32)
 
         for w in (self._conv_settings, _vsep(), self._app_settings, _vsep(), self._about):
@@ -195,7 +166,7 @@ class ToolbarWidget(QWidget):
             w.setEnabled(not busy)
 
     def update_selection_count(self, checked: int, total: int) -> None:
-        self._last_checked  = checked
-        self._last_total    = total
-        self._all_selected  = (total > 0 and checked == total)
+        self._last_checked = checked
+        self._last_total   = total
+        self._all_selected = (total > 0 and checked == total)
         self._refresh_toggle_label()

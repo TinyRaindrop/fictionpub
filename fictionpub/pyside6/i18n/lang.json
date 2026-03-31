@@ -67,6 +67,14 @@
         "en": "Done — {total} file(s) processed.",
         "uk": "Готово — оброблено {total} файл(ів)."
     },
+    "bar.hint_same_folder": {
+        "en": "EPUBs will be saved alongside source files",
+        "uk": "Файли EPUB будуть збережені поряд із вихідними файлами"
+    },
+    "bar.hint_output_dir": {
+        "en": "Output: {path}",
+        "uk": "Виведення: {path}"
+    },
     "bar.last_log": {
         "en": "📋 Last log",
         "uk": "📋 Останній журнал"

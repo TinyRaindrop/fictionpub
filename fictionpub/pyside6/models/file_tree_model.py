@@ -48,6 +48,8 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPixmap
 
+from ..icons import get_status_icons
+...
 from ...models.conversion import ConversionStatus
 from ..i18n import t
 from .file_node import FileNode, FolderNode
@@ -80,40 +82,6 @@ _STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
     ConversionStatus.SUCCESS: 3,
 }
 
-_ICON_SIZE = 16
-
-
-def _load_png_icon(filename: str, size: int = _ICON_SIZE) -> QIcon | None:
-    # TODO: move to loader_gui
-    try:
-        from ...resources.loader_gui import get_icon_path
-        path = get_icon_path(filename)
-        if path and path.is_file():
-            px = QPixmap(str(path))
-            if not px.isNull():
-                return QIcon(px.scaled(
-                    size, size,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                ))
-    except Exception:
-        pass
-    return None
-
-
-def _make_fallback_icon(symbol: str, color: str, size: int = _ICON_SIZE) -> QIcon:
-    """Glyph icon used when the PNG resource is unavailable."""
-    px = QPixmap(size, size)
-    px.fill(Qt.GlobalColor.transparent)
-    p = QPainter(px)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setPen(QColor(color))
-    font = p.font()
-    font.setPixelSize(size - 1)
-    p.setFont(font)
-    p.drawText(QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, symbol)
-    p.end()
-    return QIcon(px)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -134,17 +102,7 @@ class FileTreeModel(QAbstractItemModel):
         self._path_to_node: dict[Path, FileNode]   = {}
         self._folder_map:   dict[Path, FolderNode] = {}
 
-        self._status_icons: dict[ConversionStatus, QIcon] = {
-            ConversionStatus.SUCCESS: (
-                _load_png_icon("status_success.png") or _make_fallback_icon("✓", "#27ae60")
-            ),
-            ConversionStatus.WARNING: (
-                _load_png_icon("status_warning.png") or _make_fallback_icon("⚠", "#e67e22")
-            ),
-            ConversionStatus.FAILURE: (
-                _load_png_icon("status_failure.png")   or _make_fallback_icon("✗", "#e74c3c")
-            ),
-        }
+        self._status_icons = get_status_icons(24)
 
     # ── QAbstractItemModel interface ──────────────────────────────────────────
 

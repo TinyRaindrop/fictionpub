@@ -5,6 +5,34 @@ Responsibilities:
   - Start / stop scan and batch workers
   - Route model signals to UI components
   - Persist settings on close
+  
+QSS strategy
+────────────
+All button hover / press / checked / disabled styles live in
+_apply_stylesheet() using descendant selectors:
+
+    ToolbarWidget  QPushButton { … }
+    BottomBarWidget QPushButton { … }
+    QPushButton#convertButton   { … }   ← overrides the above for Convert
+
+This is the correct Qt pattern: the application owner (MainWindow) is
+responsible for the visual language; individual widget classes just create
+QPushButtons without any inline QSS.  Runtime theme changes (dark ↔ light)
+only need to touch this one method.
+
+Scan → expand behaviour
+────────────────────────
+_on_scan_complete() snapshots the set of already-known folder paths before
+calling model.addFiles().  After the add, it passes only the newly created
+root FolderNodes to FileTreeView.expandNewFolders(), which expands those
+nodes through the proxy model.  Existing nodes keep whatever
+expanded/collapsed state the user set — no full expand / reset occurs.
+
+Output-path hint
+────────────────
+_update_output_hint() is called whenever _config changes.  It sets the
+BottomBar's hint strip text to reflect whether EPUBs go alongside the
+source files or to a custom directory.
 """
 
 import logging
@@ -77,6 +105,48 @@ class ConversionSession:
 # MainWindow
 # ---------------------------------------------------------------------------
 
+_BTN_QSS = """
+QPushButton {{
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+    background: transparent;
+}}
+QPushButton:hover {{
+    background-color: rgba(128, 128, 128, 0.20);
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}}
+QPushButton:pressed {{
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}}
+QPushButton:checked {{
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}}
+QPushButton:disabled {{
+    color: palette(mid);
+}}
+"""
+
+_CONVERT_BTN_QSS = """
+QPushButton#convertButton {
+    background-color: #2980b9;
+    color: white;
+    font-weight: bold;
+    padding: 4px 16px;
+    border-radius: 3px;
+    border: none;
+}
+QPushButton#convertButton:hover {
+    background-color: #3498db;
+}
+QPushButton#convertButton:disabled {
+    background-color: #7f8c8d;
+}
+"""
+
+
 class MainWindow(QMainWindow):
     def __init__(self, settings: AppSettings, parent=None):
         super().__init__(parent)
@@ -85,7 +155,7 @@ class MainWindow(QMainWindow):
 
         self._scan_worker:  ScanWorker  | None = None
         self._batch_worker: BatchWorker | None = None
-        # Precomputed for the most recent conversion batch; used by _epub_path_for
+        # Stored after _on_convert so _epub_path_for resolves identically to EpubBuilder
         self._batch_anchor: BatchAnchor | None = None
 
         self._meta_pool = QThreadPool.globalInstance()
@@ -98,6 +168,7 @@ class MainWindow(QMainWindow):
 
         register_listener(self._retranslate_ui)
         self._retranslate_ui()
+        self._update_output_hint()
 
     # ------------------------------------------------------------------
     # UI construction
@@ -157,25 +228,42 @@ class MainWindow(QMainWindow):
         )
 
     def _apply_stylesheet(self) -> None:
-        self.setStyleSheet("""
-            QPushButton#convertButton {
-                background-color: #2980b9;
-                color: white;
-                font-weight: bold;
-                padding: 4px 16px;
-                border-radius: 3px;
-                border: none;
-            }
-            QPushButton#convertButton:hover {
-                background-color: #3498db;
-            }
-            QPushButton#convertButton:disabled {
-                background-color: #7f8c8d;
-            }
-        """)
+        """
+        Central QSS for the whole window.
+
+        Why here, not in the widgets?
+        ─────────────────────────────
+        Qt's stylesheet cascade lets a parent widget style all matching
+        descendant widgets through selector specificity.  Keeping all QSS
+        here means:
+          • One place to audit / change the visual language.
+          • No string duplication across ToolbarWidget / BottomBarWidget.
+          • A future theme-switch only touches this method.
+
+        Descendant selectors used:
+          ToolbarWidget  QPushButton   — hover/press for toolbar buttons
+          BottomBarWidget QPushButton  — hover/press for bar buttons
+          QPushButton#convertButton    — primary-action override (blue)
+        """
+        # Build the descendant rule for both parents from the shared template
+        # TODO: fix ConvertButton style
+        scope = "ToolbarWidget QPushButton, BottomBarWidget QPushButton"
+        scoped_btn_qss = _BTN_QSS.replace("QPushButton", scope, 1).replace(
+            "QPushButton", scope
+        )
+        self.setStyleSheet(scoped_btn_qss + _CONVERT_BTN_QSS)
 
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(f"{app_info.APP_NAME} {app_info.VERSION}")
+        # Re-translate the hint in case a language switch changed the string
+        self._update_output_hint()
+
+    # ------------------------------------------------------------------
+    # Output-path hint helper
+    # ------------------------------------------------------------------
+
+    def _update_output_hint(self) -> None:
+        self._bottom_bar.set_output_hint(self._config.output_path)
 
     # ------------------------------------------------------------------
     # Toolbar action handlers
@@ -233,6 +321,7 @@ class MainWindow(QMainWindow):
         if dlg.exec() and dlg.result:
             self._config = dlg.result
             self._settings.set_conversion_config(self._config)
+            self._update_output_hint()
 
     def _on_app_settings(self) -> None:
         AppSettingsDialog(self._settings, self).exec()
@@ -273,7 +362,7 @@ class MainWindow(QMainWindow):
             _open_path(path)
 
     def _on_open_epub(self, source_path: Path) -> None:
-        epub = self._epub_path_for(source_path)
+        epub = resolve_epub_path(source_path, self._config, self._batch_anchor)
         if epub.exists():
             _open_path(epub)
         else:
@@ -293,18 +382,6 @@ class MainWindow(QMainWindow):
             _open_path(target)
 
     # ------------------------------------------------------------------
-    # EPUB path resolution — single source of truth via resolve_epub_path()
-    # ------------------------------------------------------------------
-
-    def _epub_path_for(self, source: Path) -> Path:
-        """
-        Resolve the expected EPUB path using the same logic as EpubBuilder.
-        Uses the anchor from the most recent conversion batch so paths are
-        consistent whether the batch just finished or not.
-        """
-        return resolve_epub_path(source, self._config, self._batch_anchor)
-
-    # ------------------------------------------------------------------
     # Scanning
     # ------------------------------------------------------------------
 
@@ -313,7 +390,6 @@ class MainWindow(QMainWindow):
             return
         self._toolbar.set_busy(True)
         self._bottom_bar.set_scanning()
-
         self._scan_worker = ScanWorker(paths, parent=self)
         self._scan_worker.filesFound.connect(self._on_scan_complete)
         self._scan_worker.finished.connect(self._on_scan_finished)
@@ -321,14 +397,29 @@ class MainWindow(QMainWindow):
 
     def _on_scan_complete(self, found: list[tuple[Path, Path]]) -> None:
         """
-        Receive (scan_root, file_path) pairs from the scan worker and add
-        them to the model.  Then start metadata workers for new files.
-        """
-        self._model.addFiles(found)
-        # Expand to first level; users can expand further or collapse freely
-        # TODO: when adding, retain expand/collapse state of existing folders, and only expand new folders
-        self._file_view.expandToDepth(1)
+        Add scanned files to the model, then expand only the newly created
+        root folders.
 
+        Expand strategy
+        ───────────────
+        We snapshot the set of root-level folder paths that already exist
+        in the model before calling addFiles().  After the add, we collect
+        every root FolderNode whose path was NOT in that snapshot — those
+        are the newly created roots — and pass them to
+        FileTreeView.expandNewFolders().  All previously-visible nodes keep
+        their current expanded/collapsed state.
+        """
+        existing_root_paths = {f.path for f in self._model._root_folders}
+
+        self._model.addFiles(found)
+
+        new_roots = [
+            f for f in self._model._root_folders
+            if f.path not in existing_root_paths
+        ]
+        self._file_view.expandNewFolders(new_roots)
+
+        # Launch metadata workers for every new file
         for _root, file_path in found:
             node = self._model._path_to_node.get(file_path)
             if node and node.meta_loading:
@@ -357,8 +448,8 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Compute anchor once for this batch and store so _epub_path_for
-        # resolves correctly after the batch finishes.
+        # Compute and store the anchor; EpubBuilder uses the same anchor via
+        # BatchProcessor so resolve_epub_path() gives identical results on both sides.
         self._batch_anchor = compute_batch_anchor(files)
 
         session = ConversionSession(total=len(files))

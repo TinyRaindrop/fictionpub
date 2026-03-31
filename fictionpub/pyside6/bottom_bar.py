@@ -1,17 +1,30 @@
 """
 Bottom bar: status | progress | counters | logs | Convert/Cancel.
 
-Layout stability
-----------------
-The progress bar and Cancel button use setRetainSizeWhenHidden(True) so
-their layout slot is preserved even when they are hidden.  This means
-nothing shifts when conversion starts or finishes.
+Two-row layout
+--------------
+Row 1 (main bar):
+  [status text]  [progress]  [counters]  │  [📂 Logs]  [📋 Last]  │  [Cancel]  [Convert]
 
-Counter label is always visible (shows "✅ 0  ⚠ 0  ❌ 0" at idle) for the
-same reason — it has a fixed minimum width, so it never causes reflow.
+Row 2 (hint strip, always present):
+  [output path hint — small muted text]
 
-Visual order (left → right):
-  [status text]  [progress bar]  [counters]  │  [📂 Logs]  [📋 Last]  │  [Cancel]  [Convert]
+The hint strip is always in the layout so the bar never resizes when the
+output path is set or cleared.  It is simply empty when there is nothing
+to show.
+
+Counter icons
+-------------
+The three status counts share the same QIcon instances as FileTreeModel
+(loaded once via pyside6.icons.get_status_icons()).  Each status group is
+a tiny icon QLabel + a count QLabel side by side.
+
+QSS
+---
+Button hover / press styles are intentionally absent here.  They are
+applied centrally in MainWindow._apply_stylesheet() via the descendant
+selector  BottomBarWidget QPushButton { … }  so all styling lives in one
+place.
 """
 
 from PySide6.QtCore import Qt, Signal
@@ -22,27 +35,13 @@ from PySide6.QtWidgets import (
     QProgressBar,
     QPushButton,
     QSizePolicy,
+    QVBoxLayout,
     QWidget,
 )
 
 from .i18n import register_listener, t
-
-
-_LOG_BTN_QSS = """
-QPushButton {
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 2px 8px;
-    background: transparent;
-}
-QPushButton:hover {
-    background-color: rgba(128, 128, 128, 0.20);
-    border: 1px solid rgba(128, 128, 128, 0.35);
-}
-QPushButton:pressed {
-    background-color: rgba(128, 128, 128, 0.35);
-}
-"""
+from .icons import get_status_icons
+from ..models.conversion import ConversionStatus
 
 
 def _vsep() -> QFrame:
@@ -59,6 +58,9 @@ def _retain_size(widget: QWidget) -> None:
     widget.setSizePolicy(sp)
 
 
+_ICON_PX = 14   # status-icon size inside the bar (slightly smaller than tree)
+
+
 class BottomBarWidget(QWidget):
     convertRequested     = Signal()
     cancelRequested      = Signal()
@@ -67,26 +69,33 @@ class BottomBarWidget(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedHeight(44)
+        # self.setFixedHeight(44)
         self._build_ui()
         self.set_idle()
         register_listener(self._retranslate_ui)
 
+    # ------------------------------------------------------------------
+    # Construction
+    # ------------------------------------------------------------------
+
     def _build_ui(self) -> None:
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(8, 4, 8, 4)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # ── Row 1: main action bar ──────────────────────────────────────
+        main_bar = QWidget()
+        layout = QHBoxLayout(main_bar)
+        layout.setContentsMargins(8, 4, 8, 2)
         layout.setSpacing(8)
 
-        # TODO: add output path hint:
-        # "EPUBs will be saved alongside source files" or "Output path: {dir}"
-        
         # Status — left-aligned, takes available space
         self._status = QLabel()
         self._status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         self._status.setMinimumWidth(140)
         layout.addWidget(self._status)
 
-        # Progress — fixed width, always in layout (retains space when hidden)
+        # Progress — fixed width, retains layout space when hidden
         self._progress = QProgressBar()
         self._progress.setFixedWidth(200)
         self._progress.setTextVisible(True)
@@ -94,29 +103,26 @@ class BottomBarWidget(QWidget):
         self._progress.hide()
         layout.addWidget(self._progress)
 
-        # Counters — always visible, fixed minimum width to prevent reflow
-        self._counters = QLabel()
-        self._counters.setMinimumWidth(130)
-        self._counters.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight)
-        self._counters.hide()
-        layout.addWidget(self._counters)
+        # Counters — three icon+count pairs, retains space when hidden
+        self._counters_widget = self._build_counters()
+        _retain_size(self._counters_widget)
+        self._counters_widget.hide()
+        layout.addWidget(self._counters_widget)
 
         layout.addWidget(_vsep())
 
-        # Log access
+        # Log access buttons
         self._logs_dir = QPushButton()
-        self._logs_dir.setStyleSheet(_LOG_BTN_QSS)
         self._logs_dir.clicked.connect(self.openLogsDirRequested)
         layout.addWidget(self._logs_dir)
 
         self._last_log = QPushButton()
-        self._last_log.setStyleSheet(_LOG_BTN_QSS)
         self._last_log.clicked.connect(self.openLastLogRequested)
         layout.addWidget(self._last_log)
 
         layout.addWidget(_vsep())
 
-        # Cancel — always in layout, retains space when hidden
+        # Cancel — retains layout space when hidden
         self._cancel = QPushButton()
         self._cancel.setMinimumWidth(150)
         # _retain_size(self._cancel)
@@ -131,7 +137,52 @@ class BottomBarWidget(QWidget):
         self._convert.clicked.connect(self.convertRequested)
         layout.addWidget(self._convert)
 
+        outer.addWidget(main_bar)
+
+        # ── Row 2: output path hint ─────────────────────────────────────
+        self._hint = QLabel()
+        self._hint.setContentsMargins(8, 0, 8, 3)
+        self._hint.setStyleSheet(
+            "font-size: 10px; color: palette(mid);"
+        )
+        outer.addWidget(self._hint)
+
         self._retranslate_ui()
+
+    def _build_counters(self) -> QWidget:
+        """Three icon+count pairs in a horizontal widget."""
+        icons = get_status_icons(_ICON_PX)
+
+        container = QWidget()
+        row = QHBoxLayout(container)
+        row.setContentsMargins(4, 0, 4, 0)
+        row.setSpacing(3)
+
+        def _pair(status: ConversionStatus):
+            icon_lbl = QLabel()
+            px = icons[status].pixmap(_ICON_PX, _ICON_PX)
+            icon_lbl.setPixmap(px)
+            icon_lbl.setFixedSize(_ICON_PX, _ICON_PX)
+
+            count_lbl = QLabel("—")
+            count_lbl.setMinimumWidth(20)
+            count_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            return icon_lbl, count_lbl
+
+        self._ok_icon,   self._ok_count   = _pair(ConversionStatus.SUCCESS)
+        self._warn_icon, self._warn_count  = _pair(ConversionStatus.WARNING)
+        self._fail_icon, self._fail_count  = _pair(ConversionStatus.FAILURE)
+
+        for w in (self._ok_icon,   self._ok_count,
+                  self._warn_icon, self._warn_count,
+                  self._fail_icon, self._fail_count):
+            row.addWidget(w)
+
+        return container
+
+    # ------------------------------------------------------------------
+    # i18n
+    # ------------------------------------------------------------------
 
     def _retranslate_ui(self) -> None:
         self._logs_dir.setText(t("bar.logs_folder"))
@@ -141,11 +192,37 @@ class BottomBarWidget(QWidget):
         self._cancel.setText(t("bar.cancel"))
         self._convert.setText(t("bar.convert"))
 
-    def _update_counters_label(self, success, warnings, failures) -> None:
-        # TODO: use same icons as FileTreeModel
-        self._counters.setText(
-            f"  ✅ {success}   ⚠ {warnings}   ❌ {failures}"
-        )
+    # ------------------------------------------------------------------
+    # Counter helpers
+    # ------------------------------------------------------------------
+
+    def _update_counters(self, success: int, warnings: int, failures: int) -> None:
+        self._ok_count.setText(str(success))
+        self._warn_count.setText(str(warnings))
+        self._fail_count.setText(str(failures))
+
+    def _reset_counters(self) -> None:
+        for lbl in (self._ok_count, self._warn_count, self._fail_count):
+            lbl.setText("—")
+
+    # ------------------------------------------------------------------
+    # Output-path hint (called by MainWindow on config change)
+    # ------------------------------------------------------------------
+
+    def set_output_hint(self, output_path) -> None:
+        """
+        Update the hint strip below the main bar.
+
+        Parameters
+        ----------
+        output_path : Path | None
+            None → "EPUBs will be saved alongside source files"
+            Path → "Output: <directory>"
+        """
+        if output_path is None:
+            self._hint.setText(t("bar.hint_same_folder"))
+        else:
+            self._hint.setText(t("bar.hint_output_dir", path=str(output_path)))
 
     # ------------------------------------------------------------------
     # State transitions
@@ -157,7 +234,8 @@ class BottomBarWidget(QWidget):
         self._cancel.hide()
         self._convert.show()
         self._convert.setEnabled(True)
-        self._counters.setText("  ✅ —   ⚠ —   ❌ —")
+        self._reset_counters()
+        self._counters_widget.hide()
 
     def set_scanning(self) -> None:
         self._status.setText(t("bar.scanning"))
@@ -168,8 +246,8 @@ class BottomBarWidget(QWidget):
         self._progress.setRange(0, total)
         self._progress.setValue(0)
         self._progress.show()
-        self._counters.show()
-        self._update_counters_label(0,0,0)
+        self._update_counters(0, 0, 0)
+        self._counters_widget.show()
         self._convert.hide()
         self._cancel.show()
         self._cancel.setEnabled(True)
@@ -184,7 +262,7 @@ class BottomBarWidget(QWidget):
         self._status.setText(
             t("bar.converting_progress", done=completed, total=total)
         )
-        self._update_counters_label(success, warnings, failures)
+        self._update_counters(success, warnings, failures)
 
     def set_done(self, success: int, warnings: int, failures: int,
                  cancelled: bool = False) -> None:
@@ -196,4 +274,5 @@ class BottomBarWidget(QWidget):
         self._cancel.hide()
         self._convert.show()
         self._convert.setEnabled(True)
-        self._update_counters_label(success, warnings, failures)
+        self._update_counters(success, warnings, failures)
+        self._counters_widget.show()

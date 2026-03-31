@@ -201,7 +201,7 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text: str) -> None:  # noqa: N802
         if not text:
             return
-
+        # TODO: fix highlighting. Everything is orange now
         if _RE_BOUNDARY.match(text):
             self.setFormat(0, len(text), self._fmt_boundary)
             return
