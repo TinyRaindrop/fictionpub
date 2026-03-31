@@ -33,7 +33,7 @@ class TitleInfo:
     def author(self) -> str:
         """First author name, or empty string."""
         return self.authors[0] if self.authors else ""
-    
+
     def todict(self):
         """For debugging purposes."""
         return {

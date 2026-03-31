@@ -82,8 +82,7 @@ class SettingsDialog(QDialog):
         outer.addWidget(self._build_performance_group())
 
         self._buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         self._buttons.accepted.connect(self._on_ok)
         self._buttons.rejected.connect(self.reject)
@@ -171,7 +170,7 @@ class SettingsDialog(QDialog):
 
         # ── Row 2: custom path + browse + view/edit ───────────────────
         row2 = QHBoxLayout()
-        row2.setContentsMargins(20, 0, 0, 0)   # visual indent under the radio
+        row2.setContentsMargins(20, 0, 0, 0)  # visual indent under the radio
         self._css = QLineEdit()
         self._css.setClearButtonEnabled(True)
         row2.addWidget(self._css)
@@ -355,15 +354,15 @@ class SettingsDialog(QDialog):
 
         self.result = dataclasses.replace(
             self._config,
-            toc_depth              = self._toc_depth.value(),
-            split_level            = self._split_level.value(),
-            split_size_kb          = self._split_size.value(),
-            remove_unused_images   = self._remove_images.isChecked(),
-            improve_typography     = False,   # in-development; always off
-            custom_stylesheet      = css_path,
-            output_path            = out_path,
-            retain_folder_structure = retain,
-            num_threads            = self._threads.value(),
+            toc_depth=self._toc_depth.value(),
+            split_level=self._split_level.value(),
+            split_size_kb=self._split_size.value(),
+            remove_unused_images=self._remove_images.isChecked(),
+            improve_typography=False,  # in-development; always off
+            custom_stylesheet=css_path,
+            output_path=out_path,
+            retain_folder_structure=retain,
+            num_threads=self._threads.value(),
         )
         self.accept()
 
@@ -374,7 +373,7 @@ class SettingsDialog(QDialog):
     def _on_css_radio_changed(self, btn_id: int, checked: bool) -> None:
         if not checked:
             return
-        custom_active = (btn_id == 1)
+        custom_active = btn_id == 1
         self._css.setEnabled(custom_active)
         self._css_browse.setEnabled(custom_active)
         self._sync_view_edit_btn()
@@ -382,15 +381,14 @@ class SettingsDialog(QDialog):
     def _on_out_radio_changed(self, btn_id: int, checked: bool) -> None:
         if not checked:
             return
-        folder_active = (btn_id == 1)
+        folder_active = btn_id == 1
         for w in self._out_custom_widgets:
             w.setEnabled(folder_active)
 
     def _sync_view_edit_btn(self) -> None:
         """Enable View/Edit only when the custom radio is selected and a path is present."""
         self._view_edit_btn.setEnabled(
-            self._css_custom_radio.isChecked()
-            and bool(self._css.text().strip())
+            self._css_custom_radio.isChecked() and bool(self._css.text().strip())
         )
 
     # ------------------------------------------------------------------

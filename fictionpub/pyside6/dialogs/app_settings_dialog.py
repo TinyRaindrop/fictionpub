@@ -32,7 +32,7 @@ class AppSettingsDialog(QDialog):
         form = QFormLayout(self._appearance_group)
 
         # Theme selector
-        self._theme_label_text = ""   # set in retranslate
+        self._theme_label_text = ""  # set in retranslate
         self._theme = QComboBox()
         # Use internal keys; display text set in retranslate_ui
         self._theme.addItem("", "system")
@@ -83,6 +83,7 @@ class AppSettingsDialog(QDialog):
 
         # Update form labels — find them by field widget
         from PySide6.QtWidgets import QFormLayout
+
         layout = self._appearance_group.layout()
         if isinstance(layout, QFormLayout):
             for row in range(layout.rowCount()):
@@ -108,6 +109,6 @@ class AppSettingsDialog(QDialog):
         # Apply language
         new_lang = self._lang.currentData()
         self._settings.set_language(new_lang)
-        set_language(new_lang)   # notifies all registered listeners
+        set_language(new_lang)  # notifies all registered listeners
 
         self.accept()

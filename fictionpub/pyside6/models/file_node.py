@@ -15,31 +15,31 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 
 from ...models.conversion import ConversionStatus
 
 if TYPE_CHECKING:
-    pass   # avoid circular import; typing only
+    pass  # avoid circular import; typing only
 
 
 @dataclass(eq=False)
 class FileNode:
-    path:         Path
-    parent:       "FolderNode"                     # always set; never None
-    check_state:  Qt.CheckState = Qt.CheckState.Checked
-    status:       ConversionStatus | None = None
-    log_output:   str = ""
-    error:        str | None = None
-    metadata:     object | None = None             # QuickMetadata (loosely typed)
+    path: Path
+    parent: FolderNode  # always set; never None
+    check_state: Qt.CheckState = Qt.CheckState.Checked
+    status: ConversionStatus | None = None
+    log_output: str = ""
+    error: str | None = None
+    metadata: object | None = None  # QuickMetadata (loosely typed)
     meta_loading: bool = False
 
 
 @dataclass(eq=False)
 class FolderNode:
-    path:        Path
-    parent:      "FolderNode | None"               # None for root entries
+    path: Path
+    parent: FolderNode | None  # None for root entries
     check_state: Qt.CheckState = Qt.CheckState.Checked
-    children:    list[Union["FolderNode", FileNode]] = field(default_factory=list)
+    children: list[FolderNode | FileNode] = field(default_factory=list)

@@ -58,7 +58,7 @@ class CSSViewerDialog(QDialog):
         self.resize(820, 720)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
 
-        self._path     = path
+        self._path = path
         self._editable = editable and path is not None
 
         self._build_ui()
@@ -77,9 +77,7 @@ class CSSViewerDialog(QDialog):
         # ── File path banner ────────────────────────────────────────────
         self._path_label = QLabel()
         self._path_label.setWordWrap(True)
-        self._path_label.setStyleSheet(
-            "font-size: 10px; color: palette(mid);"
-        )
+        self._path_label.setStyleSheet("font-size: 10px; color: palette(mid);")
         layout.addWidget(self._path_label)
 
         # ── Read-only notice (built-in stylesheet only) ──────────────────
@@ -94,7 +92,7 @@ class CSSViewerDialog(QDialog):
         self._editor = QPlainTextEdit()
         self._editor.setReadOnly(not self._editable)
         # TODO: unify common code with LogViewer
-        font_families= ["Hack", "Fira Code",  "Consolas", "Lucida Console"]
+        font_families = ["Hack", "Fira Code", "Consolas", "Lucida Console"]
         font = QFont(font_families, 11)
         font.setStyleHint(QFont.StyleHint.Monospace)
         self._editor.setFont(font)
@@ -131,9 +129,7 @@ class CSSViewerDialog(QDialog):
         self._retranslate_ui()
 
     def _retranslate_ui(self) -> None:
-        self._path_label.setText(
-            str(self._path) if self._path else t("cssviewer.no_file")
-        )
+        self._path_label.setText(str(self._path) if self._path else t("cssviewer.no_file"))
         if not self._editable and hasattr(self, "_ro_label"):
             self._ro_label.setText(t("cssviewer.readonly_note"))
 
@@ -171,6 +167,7 @@ class CSSViewerDialog(QDialog):
 
     def _copy_all(self) -> None:
         from PySide6.QtWidgets import QApplication
+
         QApplication.clipboard().setText(self._editor.toPlainText())
 
     def _save(self) -> None:

@@ -185,13 +185,15 @@ class PostProcessor:
         """Removes empty elements, handling whitespace and nested structures."""
         tags = ["p", "div", "span", "em", "strong"]
         tag_conditions = " or ".join([f"self::{tag}" for tag in tags])
-        xpath_query = f".//*[{tag_conditions}][not(*) and normalize-space()='' and not(@id)]"
-        
+        xpath_query = (
+            f".//*[{tag_conditions}][not(*) and normalize-space()='' and not(@id)]"
+        )
+
         # While loop for multiple passes to remove nested empty elements
         elements_removed = True
         while elements_removed:
             elements_removed = False
-            
+
             for el in self.body.xpath(xpath_query):  # type: ignore
                 parent = el.getparent()
                 if parent is not None:
@@ -202,7 +204,7 @@ class PostProcessor:
                             previous.tail = (previous.tail or "") + el.tail
                         else:
                             parent.text = (parent.text or "") + el.tail
-                    
+
                     parent.remove(el)
                     elements_removed = True
                     log.debug(f"Removed empty <{el.tag}> from <{parent.tag}>.")

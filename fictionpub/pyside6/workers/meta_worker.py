@@ -14,14 +14,15 @@ from ...core.fb2_book import FB2Book
 
 class MetaSignals(QObject):
     """Signals companion for MetaWorker."""
+
     metaParsed = Signal(object, object)  # (Path, QuickMetadata)
-    metaFailed = Signal(object, str)     # (Path, error_msg)
+    metaFailed = Signal(object, str)  # (Path, error_msg)
 
 
 class MetaWorker(QRunnable):
     def __init__(self, path: Path, signals: MetaSignals):
         super().__init__()
-        self.path    = path
+        self.path = path
         self.signals = signals
         self.setAutoDelete(True)
 

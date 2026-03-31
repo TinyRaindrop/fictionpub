@@ -44,20 +44,20 @@ def _btn() -> QPushButton:
 
 class ToolbarWidget(QWidget):
     # File management
-    addFilesRequested        = Signal()
-    addFolderRequested       = Signal()
-    removeSelectedRequested  = Signal()
-    removeAllRequested       = Signal()
+    addFilesRequested = Signal()
+    addFolderRequested = Signal()
+    removeSelectedRequested = Signal()
+    removeAllRequested = Signal()
     removeCompletedRequested = Signal()
 
     # Selection
-    selectAllRequested   = Signal()
+    selectAllRequested = Signal()
     deselectAllRequested = Signal()
 
     # App
     conversionSettingsRequested = Signal()
-    appSettingsRequested        = Signal()
-    aboutRequested              = Signal()
+    appSettingsRequested = Signal()
+    aboutRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -71,20 +71,26 @@ class ToolbarWidget(QWidget):
         layout.setSpacing(4)
 
         # Left group — file management
-        self._add_files   = _btn()
-        self._add_folder  = _btn()
-        self._remove      = _btn()
-        self._remove_all  = _btn()
+        self._add_files = _btn()
+        self._add_folder = _btn()
+        self._remove = _btn()
+        self._remove_all = _btn()
         self._remove_done = _btn()
 
-        for w in (self._add_files, self._add_folder, _vsep(),
-                  self._remove, self._remove_all, self._remove_done):
+        for w in (
+            self._add_files,
+            self._add_folder,
+            _vsep(),
+            self._remove,
+            self._remove_all,
+            self._remove_done,
+        ):
             layout.addWidget(w)
 
         spacer1 = QWidget()
         spacer1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer1)
-        
+
         # Single select-toggle button
         self._select_toggle = _btn()
         self._select_toggle.setCheckable(True)
@@ -98,11 +104,13 @@ class ToolbarWidget(QWidget):
 
         # Right group — settings | about
         self._conv_settings = _btn()
-        self._app_settings  = _btn()
+        self._app_settings = _btn()
 
         self._about = _btn()
         self._about.setIcon(
-            QApplication.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxInformation)
+            QApplication.style().standardIcon(
+                QStyle.StandardPixmap.SP_MessageBoxInformation
+            )
         )
         self._about.setFixedWidth(32)
 
@@ -149,7 +157,7 @@ class ToolbarWidget(QWidget):
 
     def _refresh_toggle_label(self) -> None:
         checked = getattr(self, "_last_checked", 0)
-        total   = getattr(self, "_last_total",   0)
+        total = getattr(self, "_last_total", 0)
         self._select_toggle.setText(
             t("toolbar.select_toggle", checked=checked, total=total)
         )
@@ -160,13 +168,18 @@ class ToolbarWidget(QWidget):
     # ------------------------------------------------------------------
 
     def set_busy(self, busy: bool) -> None:
-        for w in (self._add_files, self._add_folder,
-                  self._remove, self._remove_all, self._remove_done,
-                  self._select_toggle):
+        for w in (
+            self._add_files,
+            self._add_folder,
+            self._remove,
+            self._remove_all,
+            self._remove_done,
+            self._select_toggle,
+        ):
             w.setEnabled(not busy)
 
     def update_selection_count(self, checked: int, total: int) -> None:
         self._last_checked = checked
-        self._last_total   = total
-        self._all_selected = (total > 0 and checked == total)
+        self._last_total = total
+        self._all_selected = total > 0 and checked == total
         self._refresh_toggle_label()

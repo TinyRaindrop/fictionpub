@@ -24,22 +24,22 @@ from ...models.conversion import ConversionConfig, ConversionResult
 
 
 class BatchWorker(QThread):
-    progressUpdate = Signal(object)   # ConversionResult
-    batchFinished  = Signal(object)   # ConversionSession
-    errorOccurred  = Signal(str)
+    progressUpdate = Signal(object)  # ConversionResult
+    batchFinished = Signal(object)  # ConversionSession
+    errorOccurred = Signal(str)
 
     def __init__(
         self,
         config: ConversionConfig,
         files: list[Path],
-        session,            # ConversionSession — typed loosely to avoid circular import
+        session,  # ConversionSession — typed loosely to avoid circular import
         parent=None,
     ):
         super().__init__(parent)
-        self._config           = config
-        self._files            = files
-        self._session          = session
-        self._cancel_requested = False   # always False on a fresh instance
+        self._config = config
+        self._files = files
+        self._session = session
+        self._cancel_requested = False  # always False on a fresh instance
 
     def requestCancel(self) -> None:
         """

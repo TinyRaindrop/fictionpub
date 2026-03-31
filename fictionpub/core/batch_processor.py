@@ -101,6 +101,7 @@ class BatchProcessor:
     def __init__(self, config: ConversionConfig):
         self.config = config
         import pickle
+
         pickle.dumps(self.config)
 
     def run(self, files: list[Path], progress_callback: Callable | None = None) -> None:
@@ -126,7 +127,7 @@ class BatchProcessor:
         )
 
         # Map paths to their original index to maintain order
-        path_to_index    = {path: i for i, path in enumerate(files)}
+        path_to_index = {path: i for i, path in enumerate(files)}
         ordered_results: list[ConversionResult | None] = [None] * len(files)
 
         with concurrent.futures.ProcessPoolExecutor(
@@ -143,14 +144,16 @@ class BatchProcessor:
             # Process results as they are completed
             for future in concurrent.futures.as_completed(future_to_path):
                 path = future_to_path[future]
-                idx  = path_to_index[path]
+                idx = path_to_index[path]
                 try:
                     result = future.result()
                     ordered_results[idx] = result
                     if progress_callback:
                         progress_callback(result)
                 except Exception as e:
-                    log.error(f"Critical worker failure for {path.name}: {e}", exc_info=True)
+                    log.error(
+                        f"Critical worker failure for {path.name}: {e}", exc_info=True
+                    )
                     ordered_results[idx] = ConversionResult(
                         path=path,
                         status=ConversionStatus.FAILURE,

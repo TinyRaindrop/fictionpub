@@ -35,24 +35,26 @@ folders keep whatever expand/collapse state the user set.
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, Qt, Signal
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QMenu, QTreeView
 
+from ..models.conversion import ConversionStatus
 from .i18n import register_listener, t
 from .models.file_node import FileNode, FolderNode
 from .models.file_tree_model import (
-    COLUMNS, COL_NAME, COL_STATUS,
+    COL_NAME,
+    COL_STATUS,
+    COLUMNS,
     FileTreeModel,
 )
-from ..models.conversion import ConversionStatus
 
-_COL_NAME_MIN = 120   # px — filename col is never auto-shrunk below this
+_COL_NAME_MIN = 120  # px — filename col is never auto-shrunk below this
 
 
 class FileTreeView(QTreeView):
-    statusClicked            = Signal(object)   # FileNode
-    fileDoubleClicked        = Signal(object)   # Path
-    folderDoubleClicked      = Signal(object)   # Path
-    openEpubRequested        = Signal(object)   # Path
-    openFb2Requested         = Signal(object)   # Path
-    openFolderRequested      = Signal(object)   # Path
+    statusClicked = Signal(object)  # FileNode
+    fileDoubleClicked = Signal(object)  # Path
+    folderDoubleClicked = Signal(object)  # Path
+    openEpubRequested = Signal(object)  # Path
+    openFb2Requested = Signal(object)  # Path
+    openFolderRequested = Signal(object)  # Path
     selectionRemoveRequested = Signal()
 
     def __init__(self, model: FileTreeModel, parent=None):
@@ -63,7 +65,7 @@ class FileTreeView(QTreeView):
         self._proxy = QSortFilterProxyModel(self)
         self._proxy.setSourceModel(model)
         self._proxy.setSortRole(Qt.ItemDataRole.UserRole)
-        self._proxy.setDynamicSortFilter(False)   # sort only when header clicked
+        self._proxy.setDynamicSortFilter(False)  # sort only when header clicked
 
         self.setModel(self._proxy)
         self.setSortingEnabled(True)
@@ -96,12 +98,12 @@ class FileTreeView(QTreeView):
             h.setSectionResizeMode(col, QHeaderView.ResizeMode.Interactive)
 
         # Initial widths
-        h.resizeSection(COL_NAME,   320)
-        h.resizeSection(COL_STATUS,  36)
-        h.resizeSection(2,          160)   # Author
-        h.resizeSection(3,          200)   # Title
-        h.resizeSection(4,           70)   # Date
-        h.resizeSection(5,           50)   # Lang
+        h.resizeSection(COL_NAME, 320)
+        h.resizeSection(COL_STATUS, 36)
+        h.resizeSection(2, 160)  # Author
+        h.resizeSection(3, 200)  # Title
+        h.resizeSection(4, 70)  # Date
+        h.resizeSection(5, 50)  # Lang
 
         # Sort by status ascending by default (failures on top)
         # TODO: why sort now? files/folders should be in alphabetical order
@@ -119,9 +121,7 @@ class FileTreeView(QTreeView):
         h = self.header()
         vp_width = self.viewport().width()
         # Sum all columns except COL_NAME (which absorbs the remaining space)
-        other_sum = sum(
-            h.sectionSize(c) for c in range(COLUMNS) if c != COL_NAME
-        )
+        other_sum = sum(h.sectionSize(c) for c in range(COLUMNS) if c != COL_NAME)
         new_w = max(_COL_NAME_MIN, vp_width - other_sum)
 
         # blockSignals prevents the programmatic resize from being treated as
@@ -196,8 +196,8 @@ class FileTreeView(QTreeView):
 
     def _on_context_menu(self, pos) -> None:
         proxy_index = self.indexAt(pos)
-        node        = self._node_for_proxy(proxy_index)
-        menu        = QMenu(self)
+        node = self._node_for_proxy(proxy_index)
+        menu = QMenu(self)
 
         if isinstance(node, FileNode):
             if node.status is not None:
@@ -219,9 +219,7 @@ class FileTreeView(QTreeView):
             if node.status is not None:
                 menu.addSeparator()
                 act = menu.addAction(t("ctx.view_log"))
-                act.triggered.connect(
-                    lambda _=False, n=node: self.statusClicked.emit(n)
-                )
+                act.triggered.connect(lambda _=False, n=node: self.statusClicked.emit(n))
 
             menu.addSeparator()
 
@@ -246,9 +244,7 @@ class FileTreeView(QTreeView):
             super().keyPressEvent(event)
 
     def _on_language_changed(self) -> None:
-        self._source_model.headerDataChanged.emit(
-            Qt.Orientation.Horizontal, 0, COLUMNS - 1
-        )
+        self._source_model.headerDataChanged.emit(Qt.Orientation.Horizontal, 0, COLUMNS - 1)
 
     # ------------------------------------------------------------------
     # Public API
@@ -260,7 +256,5 @@ class FileTreeView(QTreeView):
         Used by MainWindow when removing nodes.
         """
         return [
-            self._source_index(idx)
-            for idx in self.selectedIndexes()
-            if idx.column() == 0
+            self._source_index(idx) for idx in self.selectedIndexes() if idx.column() == 0
         ]

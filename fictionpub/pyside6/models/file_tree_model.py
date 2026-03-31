@@ -36,34 +36,29 @@ every FolderNode.  The model does not force any expansion state.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Union
 
 from PySide6.QtCore import (
     QAbstractItemModel,
     QModelIndex,
     QPersistentModelIndex,
-    QRect,
     Qt,
     Signal,
 )
-from PySide6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont
 
-from ..icons import get_status_icons
-...
 from ...models.conversion import ConversionStatus
 from ..i18n import t
+from ..icons import get_status_icons
 from .file_node import FileNode, FolderNode
 
-IndexType = Union[QModelIndex, QPersistentModelIndex]
-
 # ── Column constants ──────────────────────────────────────────────────────────
-COL_NAME   = 0
+COL_NAME = 0
 COL_STATUS = 1
 COL_AUTHOR = 2
-COL_TITLE  = 3
-COL_DATE   = 4
-COL_LANG   = 5
-COLUMNS    = 6
+COL_TITLE = 3
+COL_DATE = 4
+COL_LANG = 5
+COLUMNS = 6
 
 _HEADER_KEYS = [
     "tree.col_name",
@@ -76,15 +71,15 @@ _HEADER_KEYS = [
 
 # Sort priority: lower = shown first in ascending sort.
 _STATUS_SORT_KEY: dict[ConversionStatus | None, int] = {
-    None:                     0,
+    None: 0,
     ConversionStatus.FAILURE: 1,
     ConversionStatus.WARNING: 2,
     ConversionStatus.SUCCESS: 3,
 }
 
 
-
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class FileTreeModel(QAbstractItemModel):
     """
@@ -99,14 +94,19 @@ class FileTreeModel(QAbstractItemModel):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self._root_folders: list[FolderNode] = []
-        self._path_to_node: dict[Path, FileNode]   = {}
-        self._folder_map:   dict[Path, FolderNode] = {}
+        self._path_to_node: dict[Path, FileNode] = {}
+        self._folder_map: dict[Path, FolderNode] = {}
 
         self._status_icons = get_status_icons(24)
 
     # ── QAbstractItemModel interface ──────────────────────────────────────────
 
-    def index(self, row: int, column: int, parent: IndexType = QModelIndex()) -> QModelIndex:
+    def index(
+        self,
+        row: int,
+        column: int,
+        parent: QModelIndex | QPersistentModelIndex = QModelIndex(),
+    ) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
         if not parent.isValid():
@@ -118,7 +118,7 @@ class FileTreeModel(QAbstractItemModel):
                 return self.createIndex(row, column, ptr.children[row])
         return QModelIndex()
 
-    def parent(self, index: IndexType) -> QModelIndex:  # type: ignore[override]
+    def parent(self, index: QModelIndex | QPersistentModelIndex) -> QModelIndex:  # type: ignore[override]
         if not index.isValid():
             return QModelIndex()
         node = index.internalPointer()
@@ -133,16 +133,18 @@ class FileTreeModel(QAbstractItemModel):
             row = grandparent.children.index(parent_node)
         return self.createIndex(row, 0, parent_node)
 
-    def rowCount(self, parent: IndexType = QModelIndex()) -> int:
+    def rowCount(self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()) -> int:
         if not parent.isValid():
             return len(self._root_folders)
         ptr = parent.internalPointer()
         return len(ptr.children) if isinstance(ptr, FolderNode) else 0
 
-    def columnCount(self, parent: IndexType = QModelIndex()) -> int:
+    def columnCount(
+        self, parent: QModelIndex | QPersistentModelIndex = QModelIndex()
+    ) -> int:
         return COLUMNS
 
-    def flags(self, index: IndexType) -> Qt.ItemFlag:
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
         if not index.isValid():
             return Qt.ItemFlag.NoItemFlags
         base = Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable
@@ -150,28 +152,41 @@ class FileTreeModel(QAbstractItemModel):
             base |= Qt.ItemFlag.ItemIsUserCheckable
         return base
 
-    def headerData(self, section: int, orientation: Qt.Orientation,
-                   role: int = Qt.ItemDataRole.DisplayRole):
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
         if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
             if 0 <= section < len(_HEADER_KEYS):
                 return t(_HEADER_KEYS[section])
         return None
 
-    def data(self, index: IndexType, role: int = Qt.ItemDataRole.DisplayRole):
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole,
+    ):
         if not index.isValid():
             return None
         node = index.internalPointer()
-        col  = index.column()
+        col = index.column()
         if isinstance(node, FolderNode):
             return self._folder_data(node, col, role)
         if isinstance(node, FileNode):
             return self._file_data(node, col, role)
         return None
 
-    def setData(self, index: IndexType, value, role: int = Qt.ItemDataRole.EditRole) -> bool:
+    def setData(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        value,
+        role: int = Qt.ItemDataRole.EditRole,
+    ) -> bool:
         if not index.isValid() or role != Qt.ItemDataRole.CheckStateRole:
             return False
-        node  = index.internalPointer()
+        node = index.internalPointer()
         state = Qt.CheckState(value)
 
         if isinstance(node, FolderNode):
@@ -232,12 +247,12 @@ class FileTreeModel(QAbstractItemModel):
         node = self._path_to_node.get(path)
         if not node:
             return
-        node.metadata     = meta
+        node.metadata = meta
         node.meta_loading = False
         idx = self._index_for_node(node)
         if idx.isValid():
-            left  = self.createIndex(idx.row(), COL_AUTHOR, node)
-            right = self.createIndex(idx.row(), COL_LANG,   node)
+            left = self.createIndex(idx.row(), COL_AUTHOR, node)
+            right = self.createIndex(idx.row(), COL_LANG, node)
             self.dataChanged.emit(left, right, [Qt.ItemDataRole.DisplayRole])
 
     def updateMetaError(self, path: Path, _error: str) -> None:
@@ -245,26 +260,27 @@ class FileTreeModel(QAbstractItemModel):
         if not node:
             return
         node.meta_loading = False
-        node.metadata     = None
+        node.metadata = None
         idx = self._index_for_node(node)
         if idx.isValid():
-            left  = self.createIndex(idx.row(), COL_AUTHOR, node)
-            right = self.createIndex(idx.row(), COL_LANG,   node)
+            left = self.createIndex(idx.row(), COL_AUTHOR, node)
+            right = self.createIndex(idx.row(), COL_LANG, node)
             self.dataChanged.emit(left, right, [Qt.ItemDataRole.DisplayRole])
 
     def setFileResult(self, path: Path, result) -> None:
         node = self._path_to_node.get(path)
         if not node:
             return
-        node.status     = result.status
+        node.status = result.status
         node.log_output = result.log_output
-        node.error      = str(result.error) if result.error else None
+        node.error = str(result.error) if result.error else None
         idx = self._index_for_node(node)
         if idx.isValid():
             self.dataChanged.emit(idx, idx, [Qt.ItemDataRole.ToolTipRole])
             status_idx = self.createIndex(idx.row(), COL_STATUS, node)
             self.dataChanged.emit(
-                status_idx, status_idx,
+                status_idx,
+                status_idx,
                 [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.UserRole],
             )
 
@@ -302,9 +318,7 @@ class FileTreeModel(QAbstractItemModel):
                     self.endRemoveRows()
             else:
                 parent_idx = self._index_for_node(parent)
-                rows = sorted(
-                    [parent.children.index(n) for n in node_list], reverse=True
-                )
+                rows = sorted([parent.children.index(n) for n in node_list], reverse=True)
                 for row in rows:
                     self.beginRemoveRows(parent_idx, row, row)
                     removed = parent.children.pop(row)
@@ -340,9 +354,7 @@ class FileTreeModel(QAbstractItemModel):
 
         for parent, nodes in by_parent.items():
             parent_idx = self._index_for_node(parent)
-            rows = sorted(
-                [parent.children.index(n) for n in nodes], reverse=True
-            )
+            rows = sorted([parent.children.index(n) for n in nodes], reverse=True)
             for row in rows:
                 self.beginRemoveRows(parent_idx, row, row)
                 removed = parent.children.pop(row)
@@ -432,7 +444,7 @@ class FileTreeModel(QAbstractItemModel):
         for child in folder.children:
             child.check_state = state
         first = self.index(0, 0, folder_idx)
-        last  = self.index(len(folder.children) - 1, 0, folder_idx)
+        last = self.index(len(folder.children) - 1, 0, folder_idx)
         self.dataChanged.emit(first, last, [Qt.ItemDataRole.CheckStateRole])
         for i, child in enumerate(folder.children):
             if isinstance(child, FolderNode):
@@ -510,10 +522,9 @@ class FileTreeModel(QAbstractItemModel):
         return self.createIndex(row, 0, node)
 
     def _emit_selection_count(self) -> None:
-        total   = len(self._path_to_node)
+        total = len(self._path_to_node)
         checked = sum(
-            1 for n in self._path_to_node.values()
-            if n.check_state == Qt.CheckState.Checked
+            1 for n in self._path_to_node.values() if n.check_state == Qt.CheckState.Checked
         )
         self.selectionCountChanged.emit(checked, total)
 
@@ -559,9 +570,13 @@ class FileTreeModel(QAbstractItemModel):
             meta = node.metadata
             if meta is None:
                 return "…" if node.meta_loading else ""
-            if col == COL_AUTHOR: return getattr(meta, "author", "") or ""
-            if col == COL_TITLE:  return getattr(meta, "title",  "") or ""
-            if col == COL_DATE:   return getattr(meta, "date",   "") or ""
-            if col == COL_LANG:   return getattr(meta, "lang",   "") or ""
+            if col == COL_AUTHOR:
+                return getattr(meta, "author", "") or ""
+            if col == COL_TITLE:
+                return getattr(meta, "title", "") or ""
+            if col == COL_DATE:
+                return getattr(meta, "date", "") or ""
+            if col == COL_LANG:
+                return getattr(meta, "lang", "") or ""
 
         return None

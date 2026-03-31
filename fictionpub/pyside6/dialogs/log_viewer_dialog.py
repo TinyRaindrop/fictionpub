@@ -41,7 +41,11 @@ from .highlighters import LogSyntaxHighlighter
 
 # TODO: unify with highlighting?
 _WARNING_KEYWORDS = ("] WARNING",)
-_ERROR_KEYWORDS   = ("] ERROR", "Traceback",)
+_ERROR_KEYWORDS = (
+    "] ERROR",
+    "Traceback",
+)
+
 
 # TODO: actually parse the log, split into files, and show full Error text from [pid] ERROR to the end of file
 def _line_matches_level(line: str, level: str) -> bool:
@@ -97,9 +101,9 @@ class LogViewerDialog(QDialog):
         top_row.addWidget(self._lbl_filter)
 
         self._radio_group = QButtonGroup(self)
-        self._radio_all   = QRadioButton()
-        self._radio_warn  = QRadioButton()
-        self._radio_err   = QRadioButton()
+        self._radio_all = QRadioButton()
+        self._radio_warn = QRadioButton()
+        self._radio_err = QRadioButton()
         self._radio_all.setChecked(True)
 
         for rb in (self._radio_all, self._radio_warn, self._radio_err):
@@ -124,7 +128,7 @@ class LogViewerDialog(QDialog):
         # ── Log text ────────────────────────────────────────────────────
         self._text = QPlainTextEdit()
         self._text.setReadOnly(True)
-        font_families= ["Hack", "Fira Code",  "Consolas", "Lucida Console"]
+        font_families = ["Hack", "Fira Code", "Consolas", "Lucida Console"]
         font = QFont(font_families, 11)
         font.setStyleHint(QFont.StyleHint.Monospace)
         self._text.setFont(font)
@@ -171,10 +175,11 @@ class LogViewerDialog(QDialog):
         return "all"
 
     def _apply_filters(self, *_) -> None:
-        level      = self._active_level()
+        level = self._active_level()
         search_txt = self._search.text().lower()
-        filtered   = [
-            line for line in self._full_content.splitlines()
+        filtered = [
+            line
+            for line in self._full_content.splitlines()
             if _line_matches_level(line, level)
             and (not search_txt or search_txt in line.lower())
         ]
@@ -199,6 +204,7 @@ class LogViewerDialog(QDialog):
 
     def _copy_all(self) -> None:
         from PySide6.QtWidgets import QApplication
+
         QApplication.clipboard().setText(self._text.toPlainText())
 
     # ------------------------------------------------------------------

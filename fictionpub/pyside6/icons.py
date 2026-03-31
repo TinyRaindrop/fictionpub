@@ -20,7 +20,7 @@ the requested size.  A glyph fallback is used when the PNG is unavailable.
 from __future__ import annotations
 
 from PySide6.QtCore import QRect, Qt
-from PySide6.QtGui import QColor, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 
 from ..models.conversion import ConversionStatus
 
@@ -29,16 +29,20 @@ _CACHE: dict[ConversionStatus, QIcon] | None = None
 
 def _load_png_icon(filename: str, size: int) -> QIcon | None:
     try:
-        from ..resources.loader_gui import get_icon_path
+        from ..resources.loader import get_icon_path
+
         path = get_icon_path(filename)
         if path and path.is_file():
             px = QPixmap(str(path))
             if not px.isNull():
-                return QIcon(px.scaled(
-                    size, size,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                ))
+                return QIcon(
+                    px.scaled(
+                        size,
+                        size,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
     except Exception:
         pass
     return None

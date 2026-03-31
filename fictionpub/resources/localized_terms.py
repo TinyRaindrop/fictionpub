@@ -22,8 +22,8 @@ from __future__ import annotations
 import logging
 from typing import ClassVar
 
-from .loader import load_terms_json
 from ..utils.term_lookup import TermLookup
+from .loader import load_terms_json
 
 log = logging.getLogger("fb2_converter")
 
@@ -59,7 +59,7 @@ class LocalizedTerms:
     """
 
     # Class-level lookup tables, shared across all instances
-    _GENRES:   ClassVar[TermLookup | None] = None
+    _GENRES: ClassVar[TermLookup | None] = None
     _HEADINGS: ClassVar[TermLookup | None] = None
 
     # Supported book languages (derived from heading data after first load)
@@ -81,7 +81,7 @@ class LocalizedTerms:
         Load genre and heading translations from JSON resource files.
         Must be called once before creating instances (or is called lazily).
         """
-        cls._GENRES   = cls._build_lookup("genres.json")
+        cls._GENRES = cls._build_lookup("genres.json")
         cls._HEADINGS = cls._build_lookup("headings.json")
         cls._SUPPORTED_BOOK_LANGS = cls._HEADINGS.languages()
 
@@ -103,7 +103,7 @@ class LocalizedTerms:
         """
         if cls._GENRES is None or cls._HEADINGS is None:
             cls.load_terms()
-        return cls._GENRES, cls._HEADINGS   # type: ignore[return-value]
+        return cls._GENRES, cls._HEADINGS  # type: ignore[return-value]
 
     # ------------------------------------------------------------------
     # Instance lifecycle
@@ -126,13 +126,14 @@ class LocalizedTerms:
         supported = self.__class__._SUPPORTED_BOOK_LANGS
         if lang not in supported:
             log.info(
-                "Unsupported book language: '%s'. Must be one of %s. "
-                "Falling back to [%s].",
-                lang, sorted(supported), default_lang,
+                "Unsupported book language: '%s'. Must be one of %s. Falling back to [%s].",
+                lang,
+                sorted(supported),
+                default_lang,
             )
             lang = default_lang
 
-        self.lang         = lang or default_lang
+        self.lang = lang or default_lang
         self.default_lang = default_lang
 
     # ------------------------------------------------------------------
@@ -145,7 +146,7 @@ class LocalizedTerms:
 
     def get_genre(self, key: str, default: str = "") -> str:
         """Return a genre name in the book's language."""
-        return self._get(self.__class__._GENRES, key, default)   # type: ignore[arg-type]
+        return self._get(self.__class__._GENRES, key, default)  # type: ignore[arg-type]
 
     def get_heading(self, key: str, default: str = "") -> str:
         """Return a section heading in the book's language."""
@@ -157,5 +158,5 @@ class LocalizedTerms:
         Falls back to [default] when the key is absent.
         Used when searching for known heading text variants in source FB2.
         """
-        result = self.__class__._HEADINGS.get_all(key)   # type: ignore[union-attr]
+        result = self.__class__._HEADINGS.get_all(key)  # type: ignore[union-attr]
         return result if result else [default]

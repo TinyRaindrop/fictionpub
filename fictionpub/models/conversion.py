@@ -37,14 +37,14 @@ and the remainder is replicated under output_path:
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ConversionConfig:
@@ -62,27 +62,28 @@ class ConversionConfig:
     retain_folder_structure: bool = False
 
     # ── Document structure ───────────────────────────────────────────────
-    toc_depth:    int = 4
-    split_level:  int = 2
-    split_size_kb: int = 0   # 0 = disabled  # TODO: implement
+    toc_depth: int = 4
+    split_level: int = 2
+    split_size_kb: int = 0  # 0 = disabled  # TODO: implement
 
     # ── Processing ───────────────────────────────────────────────────────
     remove_unused_images: bool = True
-    improve_typography:   bool = False
+    improve_typography: bool = False
     # Conservative defaults for typography processing word-length ranges
-    word_len_nbsp_range:    tuple[int, int] = (1, 1)
+    word_len_nbsp_range: tuple[int, int] = (1, 1)
     word_len_nobreak_range: tuple[int, int] = (4, 6)
 
     # ── Stylesheet ───────────────────────────────────────────────────────
     custom_stylesheet: Path | None = None
 
     # ── Parallelism ──────────────────────────────────────────────────────
-    num_threads: int = 0   # 0 = auto-detect
+    num_threads: int = 0  # 0 = auto-detect
 
 
 # ---------------------------------------------------------------------------
 # Result types
 # ---------------------------------------------------------------------------
+
 
 class ConversionStatus(Enum):
     SUCCESS = auto()
@@ -102,6 +103,7 @@ class ConversionResult:
 # Batch anchor — precomputed once for a whole batch
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BatchAnchor:
     """
@@ -111,6 +113,7 @@ class BatchAnchor:
                   or cannot share a common absolute ancestor.
     common      : The common ancestor Path, valid only when cross_drive=False.
     """
+
     cross_drive: bool = False
     common: Path | None = None
 
@@ -147,6 +150,7 @@ def compute_batch_anchor(paths: list[Path]) -> BatchAnchor:
 # ---------------------------------------------------------------------------
 # EPUB output-path resolution — single source of truth
 # ---------------------------------------------------------------------------
+
 
 def _epub_stem(source: Path) -> str:
     """Strip .fb2 or .fb2.zip extension and return the bare stem."""
@@ -209,7 +213,7 @@ def resolve_epub_path(
             rel_parts = src_parent.parts[1:]
             rel = Path(*rel_parts) if rel_parts else Path()
             if str(rel) == ".":
-                return (out / drive_folder / f"{stem}.epub")
+                return out / drive_folder / f"{stem}.epub"
             return out / drive_folder / rel / f"{stem}.epub"
         else:
             # POSIX without drives — use path relative to '/'

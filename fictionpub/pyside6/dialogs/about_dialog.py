@@ -85,8 +85,6 @@ class AboutDialog(QDialog):
         self.setWindowTitle(t("about.title"))
         self._name_label.setText(app_info.APP_NAME)
         self._version_label.setText(f"v{app_info.VERSION}")
-        self._url_label.setText(
-            f'<a href="{app_info.APP_URL}">{app_info.APP_URL}</a>'
-        )
+        self._url_label.setText(f'<a href="{app_info.APP_URL}">{app_info.APP_URL}</a>')
         self._desc_label.setText(t("about.description"))
         self._tech_label.setText(t("about.built_with"))

@@ -5,7 +5,7 @@ Responsibilities:
   - Start / stop scan and batch workers
   - Route model signals to UI components
   - Persist settings on close
-  
+
 QSS strategy
 ────────────
 All button hover / press / checked / disabled styles live in
@@ -42,7 +42,7 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QThreadPool, Qt
+from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -69,7 +69,7 @@ from .dialogs.log_viewer_dialog import LogViewerDialog
 from .dialogs.settings_dialog import SettingsDialog
 from .file_panel import FileTreeView
 from .i18n import register_listener, t
-from .models.file_node import FileNode, FolderNode
+from .models.file_node import FileNode
 from .models.file_tree_model import FileTreeModel
 from .state.settings import AppSettings
 from .toolbar import ToolbarWidget
@@ -84,21 +84,25 @@ log = logging.getLogger("fb2_converter")
 # Conversion session
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ConversionSession:
-    total:     int
-    completed: int  = 0
-    success:   int  = 0
-    warnings:  int  = 0
-    failures:  int  = 0
+    total: int
+    completed: int = 0
+    success: int = 0
+    warnings: int = 0
+    failures: int = 0
     cancelled: bool = False
 
     def update(self, result: ConversionResult) -> None:
         self.completed += 1
         match result.status:
-            case ConversionStatus.SUCCESS: self.success  += 1
-            case ConversionStatus.WARNING: self.warnings += 1
-            case ConversionStatus.FAILURE: self.failures += 1
+            case ConversionStatus.SUCCESS:
+                self.success += 1
+            case ConversionStatus.WARNING:
+                self.warnings += 1
+            case ConversionStatus.FAILURE:
+                self.failures += 1
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +157,7 @@ class MainWindow(QMainWindow):
         self._settings = settings
         self._config: ConversionConfig = settings.conversion_config()
 
-        self._scan_worker:  ScanWorker  | None = None
+        self._scan_worker: ScanWorker | None = None
         self._batch_worker: BatchWorker | None = None
         # Stored after _on_convert so _epub_path_for resolves identically to EpubBuilder
         self._batch_anchor: BatchAnchor | None = None
@@ -181,9 +185,9 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(4)
 
-        self._toolbar    = ToolbarWidget()
-        self._model      = FileTreeModel()
-        self._file_view  = FileTreeView(self._model)
+        self._toolbar = ToolbarWidget()
+        self._model = FileTreeModel()
+        self._file_view = FileTreeView(self._model)
         self._bottom_bar = BottomBarWidget()
 
         layout.addWidget(self._toolbar)
@@ -414,8 +418,7 @@ class MainWindow(QMainWindow):
         self._model.addFiles(found)
 
         new_roots = [
-            f for f in self._model._root_folders
-            if f.path not in existing_root_paths
+            f for f in self._model._root_folders if f.path not in existing_root_paths
         ]
         self._file_view.expandNewFolders(new_roots)
 
@@ -443,9 +446,7 @@ class MainWindow(QMainWindow):
 
         files = self._model.checkedFilePaths()
         if not files:
-            QMessageBox.information(
-                self, t("msg.no_files_title"), t("msg.no_files_text")
-            )
+            QMessageBox.information(self, t("msg.no_files_title"), t("msg.no_files_text"))
             return
 
         # Compute and store the anchor; EpubBuilder uses the same anchor via
@@ -478,12 +479,17 @@ class MainWindow(QMainWindow):
     def _on_batch_finished(self, session: ConversionSession) -> None:
         self._toolbar.set_busy(False)
         self._bottom_bar.set_done(
-            session.success, session.warnings, session.failures,
+            session.success,
+            session.warnings,
+            session.failures,
             cancelled=session.cancelled,
         )
         log.info(
             "Batch done — success=%d warnings=%d failures=%d cancelled=%s",
-            session.success, session.warnings, session.failures, session.cancelled,
+            session.success,
+            session.warnings,
+            session.failures,
+            session.cancelled,
         )
 
     def _on_batch_error(self, message: str) -> None:
@@ -531,10 +537,11 @@ class MainWindow(QMainWindow):
 # Platform helper
 # ---------------------------------------------------------------------------
 
+
 def _open_path(path: Path) -> None:
     try:
         if platform.system() == "Windows":
-            os.startfile(path)          # type: ignore[attr-defined]
+            os.startfile(path)  # type: ignore[attr-defined]
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:

@@ -18,7 +18,8 @@ Dead references are pruned on each set_language() call.
 from __future__ import annotations
 
 import weakref
-from typing import Callable
+from collections.abc import Callable
+from contextlib import suppress
 
 from ...resources.loader import load_json
 from ...utils.term_lookup import TermLookup
@@ -43,6 +44,7 @@ _listeners: list[weakref.ref] = []
 # Public API  (unchanged from previous version)
 # ---------------------------------------------------------------------------
 
+
 def t(key: str, **kwargs) -> str:
     """
     Return the UI string for *key* in the current language.
@@ -51,10 +53,9 @@ def t(key: str, **kwargs) -> str:
     """
     text = _lookup.get(key, _LANG, default=key)
     if kwargs:
-        try:
+        with suppress(KeyError, IndexError):
             text = text.format(**kwargs)
-        except (KeyError, IndexError):
-            pass
+
     return text
 
 
@@ -88,7 +89,7 @@ def register_listener(fn: Callable[[], None]) -> None:
     _listeners[:] = [ref for ref in _listeners if ref() is not None]
 
     try:
-        new_ref: weakref.ref = weakref.WeakMethod(fn)   # type: ignore[assignment]
+        new_ref: weakref.ref = weakref.WeakMethod(fn)  # type: ignore[assignment]
     except TypeError:
         new_ref = weakref.ref(fn)
 

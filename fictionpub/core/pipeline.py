@@ -45,7 +45,7 @@ class ConversionPipeline:
 
         # 2. Initialize converter and builder
         converter = FB2ToHTMLConverter(binary_map=fb2_book.binaries, config=self.config)
-        builder   = EpubBuilder(source_path, self.config, anchor=anchor)
+        builder = EpubBuilder(source_path, self.config, anchor=anchor)
         builder.set_binaries(fb2_book.binaries)
         builder.set_metadata(fb2_book.metadata)
 

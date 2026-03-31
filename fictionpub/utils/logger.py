@@ -7,6 +7,7 @@ import io
 import logging
 import os
 import sys
+from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
@@ -60,10 +61,9 @@ def setup_main_logger(console_level=logging.ERROR) -> None:
         files_to_remove = len(logs) - (MAX_LOG_FILES - 1)
         if files_to_remove > 0:
             for log_file in logs[:files_to_remove]:
-                try:
+                # Ignore errors if file is locked
+                with suppress(OSError):
                     log_file.unlink()
-                except OSError:
-                    pass  # Ignore errors if file is locked
 
         # 2. Create new log file for this run
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

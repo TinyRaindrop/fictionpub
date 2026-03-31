@@ -21,7 +21,7 @@ from ..epub.link_resolver import LinkResolver
 from ..epub.opf_builder import OpfBuilder
 from ..epub.toc_utils import TOCItem, iter_toc_items
 from ..models import namespaces as NS
-from ..models.conversion import ConversionConfig, BatchAnchor, resolve_epub_path
+from ..models.conversion import BatchAnchor, ConversionConfig, resolve_epub_path
 from ..models.metadata import BookMetadata, EpubMetadata
 from ..models.structures import BinaryInfo, BodyType, ConvertedBody, FileInfo
 from ..resources.loader import get_css_path
@@ -68,17 +68,17 @@ class EpubBuilder:
         self.source_path = source_path
         tmp: Path = source_path.parent / f"{source_path.stem}_epub_temp"
         self.paths: Paths = Paths.from_root(tmp)
- 
+
         self.config: ConversionConfig = config
         self._anchor: BatchAnchor | None = anchor
- 
+
         self.metadata: BookMetadata = BookMetadata()
         self.binaries: dict[str, BinaryInfo] = {}
         self.annotation_el = None
-        self.main_docs:  list[FileInfo] = []
-        self.note_docs:  list[FileInfo] = []
-        self.doc_list:   list[FileInfo] = []
-        self.toc_items:  list[TOCItem]  = []
+        self.main_docs: list[FileInfo] = []
+        self.note_docs: list[FileInfo] = []
+        self.doc_list: list[FileInfo] = []
+        self.toc_items: list[TOCItem] = []
         self.local_terms: LocalizedTerms
 
     def set_metadata(self, metadata: BookMetadata) -> None:
@@ -127,7 +127,7 @@ class EpubBuilder:
             else:
                 # BodyType.NOTE and BodyType.COMMENT
                 file_info = self._process_note_doc(doc)
-            
+
             if file_info:
                 self.doc_list.append(file_info)
 
@@ -136,12 +136,12 @@ class EpubBuilder:
         html, body = self._create_html(doc.file_id, doc.title)
         # Copy all children from converted body to new html
         body.extend(list(doc.body))
-        
+
         # Remove div.halftitle if it contains nothing more than Author/Title
         combinations = (
-                self.metadata.title,
-                self.metadata.author,
-            )
+            self.metadata.title,
+            self.metadata.author,
+        )
         halftitle: etree._Element | None = xu.get_halftitle(body)
         if halftitle is not None and xu.match_halftitle(halftitle, combinations):
             body.remove(halftitle)
@@ -149,7 +149,7 @@ class EpubBuilder:
             if len(body) == 0:
                 log.debug(f"Doc id={doc.file_id} is now empty. Skipping.")
                 return None
-        
+
         return FileInfo(doc.file_id, doc.title, html, body_type=doc.body_type)
 
     def _process_note_doc(self, doc: ConvertedBody) -> FileInfo | None:
@@ -188,7 +188,9 @@ class EpubBuilder:
             if body.index(h1) != 0:
                 body.remove(h1)
                 body.insert(0, h1)
-                log.warning(f"Note body '{doc.file_id}': h1 was not the 1st child of body. Fixed.")
+                log.warning(
+                    f"Note body '{doc.file_id}': h1 was not the 1st child of body. Fixed."
+                )
 
         else:
             # No original title existed, so inject a new H1 at the very top
@@ -674,16 +676,15 @@ class EpubBuilder:
     def _zip_epub(self) -> None:
         """
         Create the final .epub archive.
- 
+
         The output path is computed by resolve_epub_path() — the single
         source of truth shared with MainWindow._epub_path_for().
         The output directory is created (mkdir -p) if it does not yet exist.
         """
-        from ..models.conversion import resolve_epub_path  # local import avoids circular dep
- 
+
         epub_path = resolve_epub_path(self.source_path, self.config, self._anchor)
         epub_path.parent.mkdir(parents=True, exist_ok=True)
- 
+
         with zipfile.ZipFile(epub_path, "w", zipfile.ZIP_DEFLATED) as zf:
             # mimetype must be first and uncompressed (EPUB spec §3.3)
             zf.writestr(
@@ -696,9 +697,9 @@ class EpubBuilder:
                     if file == "mimetype":
                         continue
                     filepath = Path(root) / file
-                    arcname  = filepath.relative_to(self.paths.root)
+                    arcname = filepath.relative_to(self.paths.root)
                     zf.write(filepath, str(arcname))
- 
+
         log.info(f"✅ Success! EPUB file created at: {epub_path}")
 
     def _create_html(

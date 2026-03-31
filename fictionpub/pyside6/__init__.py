@@ -21,15 +21,15 @@ from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from ..resources.loader import get_icon_path
 from ..utils.logger import setup_main_logger
-from ..resources.loader_gui import get_icon_path
 from .i18n import set_language
 from .main_window import MainWindow
 from .state.settings import AppSettings
 from .themes import apply_theme
 
 _SUPPORTED_LANGS = {"en", "uk"}
-_SETTINGS_LANG_KEY_SENTINEL = "__unset__"   # value stored when no preference exists yet
+_SETTINGS_LANG_KEY_SENTINEL = "__unset__"  # value stored when no preference exists yet
 
 
 def _detect_os_language() -> str:
@@ -41,7 +41,7 @@ def _detect_os_language() -> str:
     QLocale.system().name() returns e.g. "uk_UA", "en_GB", "de_DE".
     We take the first two characters as the ISO 639-1 code.
     """
-    locale_name = QLocale.system().name()          # e.g. "uk_UA"
+    locale_name = QLocale.system().name()
     code = locale_name[:2].lower() if locale_name else "en"
     return code if code in _SUPPORTED_LANGS else "en"
 
@@ -58,7 +58,7 @@ def run_gui() -> None:
     # App icon — set on the QApplication so every window (including dialogs)
     # inherits it automatically.  QIcon handles .ico on all platforms.
     icon_path = get_icon_path("app.ico")
-    if icon_path:
+    if icon_path and icon_path.is_file():
         app.setWindowIcon(QIcon(str(icon_path)))
 
     settings = AppSettings()

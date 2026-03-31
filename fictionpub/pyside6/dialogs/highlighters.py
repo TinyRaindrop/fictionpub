@@ -37,10 +37,10 @@ import re
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
 
-
 # ---------------------------------------------------------------------------
 # Shared helper
 # ---------------------------------------------------------------------------
+
 
 def _fmt(
     color: str,
@@ -60,14 +60,15 @@ def _fmt(
 # CSS highlighter
 # ---------------------------------------------------------------------------
 
+
 class CssSyntaxHighlighter(QSyntaxHighlighter):
     """
     Highlight CSS source in a QPlainTextEdit / QTextEdit document.
 
     Block state contract
     --------------------
-    0  – normal (default)
-    1  – inside a /* block comment */
+    0 - normal (default)
+    1 - inside a /* block comment */
     """
 
     _IN_COMMENT = 1
@@ -75,34 +76,34 @@ class CssSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document) -> None:
         super().__init__(document)
 
-        self._fmt_comment   = _fmt("#6a8a5a", italic=True)
-        self._fmt_atrule    = _fmt("#7755bb", bold=True)
-        self._fmt_prop      = _fmt("#2255aa")
-        self._fmt_string    = _fmt("#bb6600")
-        self._fmt_hex       = _fmt("#228844")
-        self._fmt_number    = _fmt("#007788")
+        self._fmt_comment = _fmt("#6a8a5a", italic=True)
+        self._fmt_atrule = _fmt("#7755bb", bold=True)
+        self._fmt_prop = _fmt("#2255aa")
+        self._fmt_string = _fmt("#bb6600")
+        self._fmt_hex = _fmt("#228844")
+        self._fmt_number = _fmt("#007788")
         self._fmt_important = _fmt("#cc2222", bold=True)
 
         _unit = (
-            r'(?:px|em|rem|vw|vh|vmin|vmax|pt|pc|cm|mm|in|ms|s|fr'
-            r'|deg|rad|turn|ch|ex|dpi|dpcm|dppx|%)'
+            r"(?:px|em|rem|vw|vh|vmin|vmax|pt|pc|cm|mm|in|ms|s|fr"
+            r"|deg|rad|turn|ch|ex|dpi|dpcm|dppx|%)"
         )
         # Patterns applied to non-comment segments.
         # Strings are last so they override any false property match inside quotes.
         self._patterns: list[tuple[QRegularExpression, QTextCharFormat]] = [
-            (QRegularExpression(r'@[\w-]+'),                             self._fmt_atrule),
-            (QRegularExpression(r'#[0-9a-fA-F]{3,8}(?!\w)'),            self._fmt_hex),
-            (QRegularExpression(r'\d+(?:\.\d+)?' + _unit + r'?(?!\w)'), self._fmt_number),
-            (QRegularExpression(r'!important\b'),                        self._fmt_important),
+            (QRegularExpression(r"@[\w-]+"), self._fmt_atrule),
+            (QRegularExpression(r"#[0-9a-fA-F]{3,8}(?!\w)"), self._fmt_hex),
+            (QRegularExpression(r"\d+(?:\.\d+)?" + _unit + r"?(?!\w)"), self._fmt_number),
+            (QRegularExpression(r"!important\b"), self._fmt_important),
             # Property names: word chars before a colon (e.g. font-size:)
-            (QRegularExpression(r'[\w-]+(?=\s*:)'),                     self._fmt_prop),
-            # Strings – applied last to win over property mis-matches inside quotes
-            (QRegularExpression(r'"[^"\\]*(?:\\.[^"\\]*)*"'),           self._fmt_string),
-            (QRegularExpression(r"'[^'\\]*(?:\\.[^'\\]*)*'"),           self._fmt_string),
+            (QRegularExpression(r"[\w-]+(?=\s*:)"), self._fmt_prop),
+            # Strings - applied last to win over property mis-matches inside quotes
+            (QRegularExpression(r'"[^"\\]*(?:\\.[^"\\]*)*"'), self._fmt_string),
+            (QRegularExpression(r"'[^'\\]*(?:\\.[^'\\]*)*'"), self._fmt_string),
         ]
 
-        self._re_cs = QRegularExpression(r'/\*')   # comment start
-        self._re_ce = QRegularExpression(r'\*/')   # comment end
+        self._re_cs = QRegularExpression(r"/\*")  # comment start
+        self._re_ce = QRegularExpression(r"\*/")  # comment end
 
     # ------------------------------------------------------------------
 
@@ -137,10 +138,10 @@ class CssSyntaxHighlighter(QSyntaxHighlighter):
                 self._apply_patterns(text, pos, cs)
 
             if cs == len(text):
-                break   # no comment start found; done
+                break  # no comment start found; done
 
             # ── Found '/*' — look for matching '*/' ──────────────────────
-            search_from = cs_match.capturedEnd()   # just past '/*'
+            search_from = cs_match.capturedEnd()  # just past '/*'
             it_ce = self._re_ce.globalMatch(text, search_from)
             if it_ce.hasNext():
                 ce_match = it_ce.next()
@@ -171,12 +172,10 @@ class CssSyntaxHighlighter(QSyntaxHighlighter):
 # Log highlighter
 # ---------------------------------------------------------------------------
 
-_RE_BOUNDARY = re.compile(
-    r'^---\s*(?:End\s+)?[Ll]og\s+for\b', re.IGNORECASE
-)
-_ERROR_KEYS = frozenset(('ERROR', 'CRITICAL', 'FAIL'))
-_WARN_KEYS  = frozenset(('WARNING',))
-_DEBUG_KEYS  = frozenset(('DEBUG',))
+_RE_BOUNDARY = re.compile(r"^---\s*(?:End\s+)?[Ll]og\s+for\b", re.IGNORECASE)
+_ERROR_KEYS = frozenset(("ERROR", "CRITICAL", "FAIL"))
+_WARN_KEYS = frozenset(("WARNING",))
+_DEBUG_KEYS = frozenset(("DEBUG",))
 
 
 class LogSyntaxHighlighter(QSyntaxHighlighter):
@@ -194,9 +193,9 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document) -> None:
         super().__init__(document)
         self._fmt_boundary = _fmt("#2266cc", bold=True)
-        self._fmt_error    = _fmt("#cc2222")
-        self._fmt_warning  = _fmt("#cc7700")
-        self._fmt_debug    = _fmt("#888888")
+        self._fmt_error = _fmt("#cc2222")
+        self._fmt_warning = _fmt("#cc7700")
+        self._fmt_debug = _fmt("#888888")
 
     def highlightBlock(self, text: str) -> None:  # noqa: N802
         if not text:
@@ -214,4 +213,3 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
             self.setFormat(0, len(text), self._fmt_warning)
         elif any(k in text for k in _DEBUG_KEYS):
             self.setFormat(0, len(text), self._fmt_debug)
-            

@@ -35,7 +35,7 @@ class TermLookup:
         data: dict[str, dict[str, str]],
         default_lang: str = "en",
     ) -> None:
-        self._data         = data
+        self._data = data
         self._default_lang = default_lang
 
     # ------------------------------------------------------------------
@@ -111,4 +111,3 @@ class TermLookup:
             f"langs={sorted(self.languages())}, "
             f"default_lang={self._default_lang!r})"
         )
-    

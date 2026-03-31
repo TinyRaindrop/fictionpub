@@ -39,9 +39,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..models.conversion import ConversionStatus
 from .i18n import register_listener, t
 from .icons import get_status_icons
-from ..models.conversion import ConversionStatus
 
 
 def _vsep() -> QFrame:
@@ -58,12 +58,12 @@ def _retain_size(widget: QWidget) -> None:
     widget.setSizePolicy(sp)
 
 
-_ICON_PX = 14   # status-icon size inside the bar (slightly smaller than tree)
+_ICON_PX = 14  # status-icon size inside the bar (slightly smaller than tree)
 
 
 class BottomBarWidget(QWidget):
-    convertRequested     = Signal()
-    cancelRequested      = Signal()
+    convertRequested = Signal()
+    cancelRequested = Signal()
     openLogsDirRequested = Signal()
     openLastLogRequested = Signal()
 
@@ -91,7 +91,9 @@ class BottomBarWidget(QWidget):
 
         # Status — left-aligned, takes available space
         self._status = QLabel()
-        self._status.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._status.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self._status.setMinimumWidth(140)
         layout.addWidget(self._status)
 
@@ -142,9 +144,7 @@ class BottomBarWidget(QWidget):
         # ── Row 2: output path hint ─────────────────────────────────────
         self._hint = QLabel()
         self._hint.setContentsMargins(8, 0, 8, 3)
-        self._hint.setStyleSheet(
-            "font-size: 10px; color: palette(mid);"
-        )
+        self._hint.setStyleSheet("font-size: 10px; color: palette(mid);")
         outer.addWidget(self._hint)
 
         self._retranslate_ui()
@@ -166,16 +166,23 @@ class BottomBarWidget(QWidget):
 
             count_lbl = QLabel("—")
             count_lbl.setMinimumWidth(20)
-            count_lbl.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            count_lbl.setAlignment(
+                Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+            )
             return icon_lbl, count_lbl
 
-        self._ok_icon,   self._ok_count   = _pair(ConversionStatus.SUCCESS)
-        self._warn_icon, self._warn_count  = _pair(ConversionStatus.WARNING)
-        self._fail_icon, self._fail_count  = _pair(ConversionStatus.FAILURE)
+        self._ok_icon, self._ok_count = _pair(ConversionStatus.SUCCESS)
+        self._warn_icon, self._warn_count = _pair(ConversionStatus.WARNING)
+        self._fail_icon, self._fail_count = _pair(ConversionStatus.FAILURE)
 
-        for w in (self._ok_icon,   self._ok_count,
-                  self._warn_icon, self._warn_count,
-                  self._fail_icon, self._fail_count):
+        for w in (
+            self._ok_icon,
+            self._ok_count,
+            self._warn_icon,
+            self._warn_count,
+            self._fail_icon,
+            self._fail_count,
+        ):
             row.addWidget(w)
 
         return container
@@ -256,16 +263,16 @@ class BottomBarWidget(QWidget):
         self._status.setText(t("bar.cancelling"))
         self._cancel.setEnabled(False)
 
-    def update_progress(self, completed: int, total: int,
-                        success: int, warnings: int, failures: int) -> None:
+    def update_progress(
+        self, completed: int, total: int, success: int, warnings: int, failures: int
+    ) -> None:
         self._progress.setValue(completed)
-        self._status.setText(
-            t("bar.converting_progress", done=completed, total=total)
-        )
+        self._status.setText(t("bar.converting_progress", done=completed, total=total))
         self._update_counters(success, warnings, failures)
 
-    def set_done(self, success: int, warnings: int, failures: int,
-                 cancelled: bool = False) -> None:
+    def set_done(
+        self, success: int, warnings: int, failures: int, cancelled: bool = False
+    ) -> None:
         if cancelled:
             self._status.setText(t("bar.cancelled"))
         else:
