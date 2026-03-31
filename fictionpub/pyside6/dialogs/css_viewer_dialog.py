@@ -93,7 +93,9 @@ class CSSViewerDialog(QDialog):
         # ── Editor ──────────────────────────────────────────────────────
         self._editor = QPlainTextEdit()
         self._editor.setReadOnly(not self._editable)
-        font = QFont("Courier New", 11)
+        # TODO: unify common code with LogViewer
+        font_families= ["Hack", "Fira Code",  "Consolas", "Lucida Console"]
+        font = QFont(font_families, 11)
         font.setStyleHint(QFont.StyleHint.Monospace)
         self._editor.setFont(font)
         self._editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)

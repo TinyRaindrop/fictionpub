@@ -39,10 +39,11 @@ from PySide6.QtWidgets import (
 from ..i18n import register_listener, t
 from .highlighters import LogSyntaxHighlighter
 
-_WARNING_KEYWORDS = ("WARNING", "WARN")
-_ERROR_KEYWORDS   = ("ERROR", "CRITICAL", "FAIL")
+# TODO: unify with highlighting?
+_WARNING_KEYWORDS = ("] WARNING",)
+_ERROR_KEYWORDS   = ("] ERROR", "Traceback",)
 
-
+# TODO: actually parse the log, split into files, and show full Error text from [pid] ERROR to the end of file
 def _line_matches_level(line: str, level: str) -> bool:
     upper = line.upper()
     if level == "warnings":
@@ -58,6 +59,7 @@ class LogViewerDialog(QDialog):
     def __init__(self, content: str, title: str = "Log Viewer", parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
+        # TODO: add maximize button. Resize to 85vh 60vw
         self.setMinimumSize(740, 560)
         self.resize(960, 720)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
@@ -122,10 +124,12 @@ class LogViewerDialog(QDialog):
         # ── Log text ────────────────────────────────────────────────────
         self._text = QPlainTextEdit()
         self._text.setReadOnly(True)
-        font = QFont("Courier New", 11)
+        font_families= ["Hack", "Fira Code",  "Consolas", "Lucida Console"]
+        font = QFont(font_families, 11)
         font.setStyleHint(QFont.StyleHint.Monospace)
         self._text.setFont(font)
         self._text.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+        # TODO: add line numbers
         layout.addWidget(self._text)
 
         # Attach syntax highlighter

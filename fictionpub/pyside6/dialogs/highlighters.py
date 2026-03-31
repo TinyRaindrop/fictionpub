@@ -175,8 +175,8 @@ _RE_BOUNDARY = re.compile(
     r'^---\s*(?:End\s+)?[Ll]og\s+for\b', re.IGNORECASE
 )
 _ERROR_KEYS = frozenset(('ERROR', 'CRITICAL', 'FAIL'))
-_WARN_KEYS  = frozenset(('WARNING'))
-_DEBUG_KEYS  = frozenset(('DEBUG'))
+_WARN_KEYS  = frozenset(('WARNING',))
+_DEBUG_KEYS  = frozenset(('DEBUG',))
 
 
 class LogSyntaxHighlighter(QSyntaxHighlighter):
@@ -201,7 +201,7 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text: str) -> None:  # noqa: N802
         if not text:
             return
-        # TODO: fix highlighting. Everything is orange now
+
         if _RE_BOUNDARY.match(text):
             self.setFormat(0, len(text), self._fmt_boundary)
             return
