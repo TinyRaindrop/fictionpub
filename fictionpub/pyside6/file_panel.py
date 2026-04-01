@@ -61,7 +61,7 @@ _COL_STATUS_W = 36  # px — fixed status column width
 
 class NaturalSortProxyModel(QSortFilterProxyModel):
     """
-    Proxy model with natural + Ukrainian collation sort order.
+    Proxy model with natural + Cyrillic collation sort order.
 
     lessThan() is fully manual so setSortRole() is irrelevant here; we
     leave the role at the default DisplayRole but never call the base
@@ -87,7 +87,7 @@ class NaturalSortProxyModel(QSortFilterProxyModel):
             rv = model.data(right, Qt.ItemDataRole.UserRole) or 0
             return int(lv) < int(rv)
 
-        # ── All other columns: natural + Ukrainian collation ──────────────
+        # ── All other columns: natural + Cyrillic collation ──────────────
         ld = model.data(left, Qt.ItemDataRole.DisplayRole) or ""
         rd = model.data(right, Qt.ItemDataRole.DisplayRole) or ""
         if isinstance(ld, str) and isinstance(rd, str):
@@ -113,8 +113,8 @@ class FileTreeView(QTreeView):
 
         self._proxy = NaturalSortProxyModel(self)
         self._proxy.setSourceModel(model)
-        self._proxy.setDynamicSortFilter(False)  # re-sort only on header click
-
+        self._proxy.setDynamicSortFilter(True)  # False = re-sort only on header click
+        # TODO: add drag&drop support
         self.setModel(self._proxy)
         self.setSortingEnabled(True)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -157,8 +157,6 @@ class FileTreeView(QTreeView):
         h.resizeSection(5, 50)  # Lang
 
         # Sort by Name ascending on startup.
-        # COL_STATUS is NOT used as the default sort to avoid the sort arrow
-        # obscuring the narrow status column header.
         self.sortByColumn(COL_NAME, Qt.SortOrder.AscendingOrder)
 
     # ------------------------------------------------------------------
