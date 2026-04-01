@@ -93,10 +93,20 @@ class PostProcessor:
             etree.strip_tags(heading, "em", "strong", "b", "i")
 
             h_length = len(heading)
+            # No children
+            if h_length < 1:
+                continue
+            
             # 2. Single <p>: unwrap directly
             if h_length == 1:
                 if xu.get_tag_name(heading[0]) == "p":
-                    etree.strip_tags(heading, "p")
+                    if heading.get("id") == None:
+                        # Retain <p> id if <h> has no own id
+                        xu.copy_id(heading[0], heading)
+                        etree.strip_tags(heading, "p")
+                    else:
+                        # Retain <p> id by replacing it with a <span>
+                        span = xu.replace_tag(heading[0], "span")
                     heading.text = heading.text.strip()
                 else:
                     log.debug(

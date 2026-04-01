@@ -127,7 +127,7 @@ class LinkResolver:
         Link classification criteria:
         1. NOTE: Note reference (anchor)
             * has link-type="note" (sufficient)
-            * target BodyType is NOTE
+            * ELIF: target BodyType is NOTE
 
         2. COMMENT: Comment reference (anchor)
             * target BodyType is COMMENT
@@ -152,12 +152,17 @@ class LinkResolver:
 
         data_link_type = a.attrib.pop("data-link-type", "").lower()
         if data_link_type == "note":
+            # note criteria 1
             return LinkType.NOTE
         elif data_link_type:
             log.debug(
-                f"Noteref id='{a.get('id')}': unexpected link-type '{data_link_type}'"
+                f"Noteref href='{a.get('href')}': unexpected link-type '{data_link_type}'"
             )
 
+        if target_doc.body_type == BodyType.NOTE:
+            # note criteria 2
+            return LinkType.NOTE
+        
         if (
             target_doc.body_type == BodyType.COMMENT
             and target_doc.id != self._current_doc_id

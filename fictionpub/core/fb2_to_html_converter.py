@@ -80,6 +80,9 @@ class FB2ToHTMLConverter:
             "empty-line": Tag("empty-line"),  # resolved up in post-processing
             "br": Tag("br"),    # not standard for FB2, but may occur
             # annotation, epigraph, poem, stanza -> div class=tag
+
+            # Custom conversions
+            "halftitle": Tag("div", {"class": "halftitle"}),
         }
 
         # Handlers for tags that need more than a simple tag/attrib substitution.
@@ -308,11 +311,7 @@ class FB2ToHTMLConverter:
 
         # Body-level title → div.halftitle (builder extracts it later)
         if parent_tag == "body":
-            attrib = {"class": "halftitle"}
-            element_id = element.get("id")
-            if element_id:
-                attrib["id"] = element_id
-            return etree.Element("div", attrib)
+            return self._handle_default(element, convert_as="halftitle")
 
         # Poem title → p.subtitle
         if parent_tag == "poem":
