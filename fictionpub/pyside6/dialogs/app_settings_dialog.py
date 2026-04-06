@@ -1,14 +1,30 @@
 """
-Modal dialog for application preferences.
-Language and theme changes are applied immediately on OK.
+fictionpub/pyside6/dialogs/app_settings_dialog.py
+
+Modal dialog for application-level preferences.
+
+Changes applied immediately on OK:
+  • Theme (via apply_theme)
+  • Language (via set_language / i18n listeners)
+
+"Reset to defaults" button:
+  • Asks for confirmation
+  • Calls AppSettings.reset_to_defaults() (clears ALL persisted keys
+    including language, theme, window geometries, conversion config)
+  • Re-applies the default theme (System) and detects the OS language
+  • Closes the dialog — the main window will re-read defaults at next
+    launch (or immediately for theme/language)
 """
 
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
+    QMessageBox,
+    QPushButton,
     QVBoxLayout,
 )
 
@@ -28,13 +44,12 @@ class AppSettingsDialog(QDialog):
     def _build_ui(self) -> None:
         outer = QVBoxLayout(self)
 
+        # ── Appearance group ───────────────────────────────────────────────
         self._appearance_group = QGroupBox()
         form = QFormLayout(self._appearance_group)
 
         # Theme selector
-        self._theme_label_text = ""  # set in retranslate
         self._theme = QComboBox()
-        # Use internal keys; display text set in retranslate_ui
         self._theme.addItem("", "system")
         self._theme.addItem("", "light")
         self._theme.addItem("", "dark")
@@ -43,7 +58,7 @@ class AppSettingsDialog(QDialog):
             if self._theme.itemData(i) == current_theme:
                 self._theme.setCurrentIndex(i)
                 break
-        self._theme_row = form.addRow("", self._theme)
+        form.addRow("", self._theme)
 
         # Language selector
         self._lang = QComboBox()
@@ -55,10 +70,10 @@ class AppSettingsDialog(QDialog):
                 self._lang.setCurrentIndex(i)
                 break
         form.addRow("", self._lang)
-        self._lang_row_label = form.labelForField(self._lang)
 
         outer.addWidget(self._appearance_group)
 
+        # ── Main buttons ───────────────────────────────────────────────────
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -66,13 +81,19 @@ class AppSettingsDialog(QDialog):
         self._buttons.rejected.connect(self.reject)
         outer.addWidget(self._buttons)
 
+        # ── Reset button (below the standard buttons) ──────────────────────
+        # TODO: move to the left of Ok|Cancel box
+        self._reset_btn = QPushButton()
+        self._reset_btn.setStyleSheet("color: palette(mid);")
+        self._reset_btn.clicked.connect(self._on_reset)
+        outer.addWidget(self._reset_btn)
+
         self._retranslate_ui()
 
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(t("appsettings.title"))
         self._appearance_group.setTitle(t("appsettings.appearance"))
 
-        # Update theme combo display text
         labels = [
             t("appsettings.theme_system"),
             t("appsettings.theme_light"),
@@ -81,7 +102,7 @@ class AppSettingsDialog(QDialog):
         for i, label in enumerate(labels):
             self._theme.setItemText(i, label)
 
-        # Update form labels — find them by field widget
+        # Update form row labels by iterating the QFormLayout
         from PySide6.QtWidgets import QFormLayout
 
         layout = self._appearance_group.layout()
@@ -98,17 +119,38 @@ class AppSettingsDialog(QDialog):
                         elif widget is self._lang:
                             lw.setText(t("appsettings.language"))
 
-    def _on_ok(self) -> None:
-        from PySide6.QtWidgets import QApplication
+        self._reset_btn.setText(t("appsettings.reset_defaults"))
+        self._reset_btn.setToolTip(t("tooltip.reset_defaults"))
 
-        # Apply theme
+    # ── Handlers ──────────────────────────────────────────────────────────────
+
+    def _on_ok(self) -> None:
         new_theme = self._theme.currentData()
         self._settings.set_theme(new_theme)
         apply_theme(QApplication.instance(), new_theme)
 
-        # Apply language
         new_lang = self._lang.currentData()
         self._settings.set_language(new_lang)
-        set_language(new_lang)  # notifies all registered listeners
+        set_language(new_lang)
 
         self.accept()
+
+    def _on_reset(self) -> None:
+        reply = QMessageBox.question(
+            self,
+            t("appsettings.reset_title"),
+            t("appsettings.reset_text"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self._settings.reset_to_defaults()
+
+        # Re-apply default theme immediately
+        apply_theme(QApplication.instance(), "system")
+
+        # Re-apply default language (English) immediately
+        set_language("en")
+
+        self.reject()  # close dialog; caller sees no config change to persist

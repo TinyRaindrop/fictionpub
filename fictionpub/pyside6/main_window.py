@@ -512,7 +512,7 @@ class MainWindow(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
-            self._batch_worker.requestCancel()
+            self._batch_worker.requestCancel()  # type: ignore
 
         if self._scan_worker:
             self._scan_worker.quit()

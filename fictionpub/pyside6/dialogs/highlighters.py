@@ -193,8 +193,8 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document) -> None:
         super().__init__(document)
         self._fmt_boundary = _fmt("#2266cc", bold=True)
-        self._fmt_error = _fmt("#cc2222")
-        self._fmt_warning = _fmt("#cc7700")
+        self._fmt_error = _fmt("#d00d0d", bold=True)
+        self._fmt_warning = _fmt("#e07000")
         self._fmt_debug = _fmt("#888888")
 
     def highlightBlock(self, text: str) -> None:  # noqa: N802

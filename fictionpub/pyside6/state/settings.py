@@ -2,15 +2,22 @@
 fictionpub/pyside6/state/settings.py
 
 Typed wrapper around QSettings.
-Provides persistence for app preferences and ConversionConfig.
 
-Persisted ConversionConfig fields
-──────────────────────────────────
-output_path        — NOT persisted (session-specific file path)
-custom_stylesheet  — persisted as a string path; restored only when the
-                     file still exists at launch time, so stale paths from
-                     a previous session don't silently produce broken output.
-retain_folder_structure — persisted (structural user preference)
+Geometry keys
+─────────────
+  app/geometry              — main window
+  geometry/log_viewer       — LogViewerDialog
+  geometry/css_viewer       — CSSViewerDialog
+
+reset_to_defaults() clears ALL keys so every size, preference, and
+conversion setting reverts to its hard-coded default on next launch.
+
+Custom stylesheet path
+──────────────────────
+Persisted as a string.  On load, the path is validated; if the file no
+longer exists the value is silently discarded (falls back to the built-in
+stylesheet) so a stale path from a previous session never silently breaks
+EPUB output.
 """
 
 from pathlib import Path
@@ -45,12 +52,22 @@ class AppSettings:
     def set_language(self, value: str) -> None:
         self._s.setValue("app/language", value)
 
+    # ------------------------------------------------------------------
+    # Window / dialog geometry
+    # ------------------------------------------------------------------
+
     def geometry(self) -> QByteArray | None:
+        """Main window geometry (key: app/geometry)."""
         raw = self._s.value("app/geometry")
         return raw if isinstance(raw, QByteArray) else None
 
     def set_geometry(self, value: QByteArray) -> None:
         self._s.setValue("app/geometry", value)
+
+    # TextViewerDialog subclasses call QSettings directly via their own
+    # instance using the same org/app strings, so their geometry keys
+    # (geometry/log_viewer, geometry/css_viewer) land in the same file
+    # and are cleared by reset_to_defaults().
 
     # ------------------------------------------------------------------
     # ConversionConfig persistence
@@ -111,7 +128,23 @@ class AppSettings:
         self._s.sync()
 
     # ------------------------------------------------------------------
-    # Helpers
+    # Reset
+    # ------------------------------------------------------------------
+
+    def reset_to_defaults(self) -> None:
+        """
+        Clear all persisted settings.
+
+        After this call, every preference (language, theme, window sizes,
+        conversion settings) reverts to its hard-coded default on the next
+        read.  The caller is responsible for applying any immediate UI
+        changes (theme, language) before closing the settings dialog.
+        """
+        self._s.clear()
+        self._s.sync()
+
+    # ------------------------------------------------------------------
+    # Private helpers
     # ------------------------------------------------------------------
 
     def _bool(self, key: str, default: bool) -> bool:

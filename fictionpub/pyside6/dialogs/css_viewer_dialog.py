@@ -1,14 +1,13 @@
 """
 fictionpub/pyside6/dialogs/css_viewer_dialog.py
 
-Non-modal CSS viewer / editor dialog.
+Non-modal CSS viewer / editor built on TextViewerDialog.
 
 Two modes
----------
+─────────
 editable=False  Read-only view of the built-in default stylesheet.
-                A grey italic notice confirms that edits are not saved.
-editable=True   Fully editable view of a user-supplied file, with a
-                Save button that writes changes back to disk.
+                A grey italic notice confirms edits are not saved.
+editable=True   Editable; Save button writes changes back to disk.
 
 Both modes share:
   • CssSyntaxHighlighter for /* comments */, @rules, properties, strings,
@@ -20,29 +19,29 @@ Both modes share:
 The dialog is non-modal (show(), not exec()) so the user can keep it
 open alongside the settings dialog.  WA_DeleteOnClose + WeakMethod in
 the i18n registry mean no manual cleanup is required.
+
+Geometry key : "css_viewer"  (width_fraction=0.50)
 """
+
+from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QCheckBox,
-    QDialog,
-    QHBoxLayout,
     QLabel,
     QMessageBox,
-    QPlainTextEdit,
     QPushButton,
     QVBoxLayout,
+    QWidget,
 )
 
 from ..i18n import register_listener, t
 from .highlighters import CssSyntaxHighlighter
+from .text_viewer import TextViewerDialog
 
 
-class CSSViewerDialog(QDialog):
-    """Modeless dialog to view (and optionally edit) a CSS file."""
+class CSSViewerDialog(TextViewerDialog):
+    """Modeless CSS viewer / editor with syntax highlighting."""
 
     def __init__(
         self,
@@ -52,96 +51,64 @@ class CSSViewerDialog(QDialog):
         title: str = "CSS Viewer",
         parent=None,
     ) -> None:
-        super().__init__(parent)
-        self.setWindowTitle(title)
-        self.setMinimumSize(740, 560)
-        self.resize(820, 720)
-        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-
         self._path = path
         self._editable = editable and path is not None
 
-        self._build_ui()
+        super().__init__(
+            title=title,
+            geom_key="css_viewer",
+            width_fraction=0.50,
+            height_fraction=0.85,
+            parent=parent,
+        )
+
+        self._editor.setReadOnly(not self._editable)
         self._load_content()
-        register_listener(self._retranslate_ui)
+        register_listener(self._retranslate_controls)
 
-    # ------------------------------------------------------------------
-    # Construction
-    # ------------------------------------------------------------------
+    # ── Extension points ──────────────────────────────────────────────────────
 
-    def _build_ui(self) -> None:
-        layout = QVBoxLayout(self)
-        layout.setSpacing(6)
-        layout.setContentsMargins(8, 8, 8, 8)
+    def _build_top_controls(self) -> QWidget:
+        container = QWidget()
+        vbox = QVBoxLayout(container)
+        vbox.setContentsMargins(0, 0, 0, 2)
+        vbox.setSpacing(2)
 
-        # ── File path banner ────────────────────────────────────────────
         self._path_label = QLabel()
         self._path_label.setWordWrap(True)
         self._path_label.setStyleSheet("font-size: 10px; color: palette(mid);")
-        layout.addWidget(self._path_label)
+        vbox.addWidget(self._path_label)
 
-        # ── Read-only notice (built-in stylesheet only) ──────────────────
         if not self._editable:
             self._ro_label = QLabel()
             self._ro_label.setStyleSheet(
                 "color: palette(mid); font-style: italic; font-size: 10px;"
             )
-            layout.addWidget(self._ro_label)
+            vbox.addWidget(self._ro_label)
 
-        # ── Editor ──────────────────────────────────────────────────────
-        self._editor = QPlainTextEdit()
-        self._editor.setReadOnly(not self._editable)
-        # TODO: unify common code with LogViewer
-        font_families = ["Hack", "Fira Code", "Consolas", "Lucida Console"]
-        font = QFont(font_families, 11)
-        font.setStyleHint(QFont.StyleHint.Monospace)
-        self._editor.setFont(font)
-        self._editor.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        layout.addWidget(self._editor)
+        self._retranslate_controls()
+        return container
 
-        # Attach syntax highlighter to the editor's document
+    def _extra_bottom_buttons(self) -> list[QPushButton]:
+        if not self._editable:
+            return []
+        self._save_btn = QPushButton()
+        self._save_btn.clicked.connect(self._save)
+        return [self._save_btn]
+
+    def _attach_highlighter(self) -> None:
         self._highlighter = CssSyntaxHighlighter(self._editor.document())
 
-        # ── Bottom row ──────────────────────────────────────────────────
-        bottom = QHBoxLayout()
+    # ── i18n ─────────────────────────────────────────────────────────────────
 
-        self._wrap_cb = QCheckBox()
-        self._wrap_cb.toggled.connect(self._on_wrap_toggled)
-        bottom.addWidget(self._wrap_cb)
-
-        bottom.addStretch()
-
-        self._copy_btn = QPushButton()
-        self._copy_btn.clicked.connect(self._copy_all)
-        bottom.addWidget(self._copy_btn)
-
-        if self._editable:
-            self._save_btn = QPushButton()
-            self._save_btn.clicked.connect(self._save)
-            bottom.addWidget(self._save_btn)
-
-        self._close_btn = QPushButton()
-        self._close_btn.clicked.connect(self.close)
-        bottom.addWidget(self._close_btn)
-
-        layout.addLayout(bottom)
-
-        self._retranslate_ui()
-
-    def _retranslate_ui(self) -> None:
+    def _retranslate_controls(self) -> None:
         self._path_label.setText(str(self._path) if self._path else t("cssviewer.no_file"))
         if not self._editable and hasattr(self, "_ro_label"):
             self._ro_label.setText(t("cssviewer.readonly_note"))
-
-        self._wrap_cb.setText(t("settings.wrap_lines"))
-        self._copy_btn.setText(t("dlg.copy"))
         if self._editable and hasattr(self, "_save_btn"):
             self._save_btn.setText(t("dlg.save"))
-        self._close_btn.setText(t("dlg.close"))
 
-    # ------------------------------------------------------------------
-    # Content
-    # ------------------------------------------------------------------
+    # ── Content ───────────────────────────────────────────────────────────────
 
     def _load_content(self) -> None:
         if self._path and self._path.is_file():
@@ -151,24 +118,9 @@ class CSSViewerDialog(QDialog):
                 text = f"/* Could not read file:\n   {exc} */"
         else:
             text = "/* File not found */"
-        self._editor.setPlainText(text)
+        self.set_content(text)
 
-    # ------------------------------------------------------------------
-    # Actions
-    # ------------------------------------------------------------------
-
-    def _on_wrap_toggled(self, checked: bool) -> None:
-        mode = (
-            QPlainTextEdit.LineWrapMode.WidgetWidth
-            if checked
-            else QPlainTextEdit.LineWrapMode.NoWrap
-        )
-        self._editor.setLineWrapMode(mode)
-
-    def _copy_all(self) -> None:
-        from PySide6.QtWidgets import QApplication
-
-        QApplication.clipboard().setText(self._editor.toPlainText())
+    # ── Actions ───────────────────────────────────────────────────────────────
 
     def _save(self) -> None:
         if not self._path:

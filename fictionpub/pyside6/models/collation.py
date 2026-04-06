@@ -29,6 +29,7 @@ for _i, _ch in enumerate(_CYR_LOWER):
     _CYR_WEIGHTS[_ch] = _i
     _CYR_WEIGHTS[_ch.upper()] = _i
 
+
 # TODO: sort latin before cyrillic. Don't use manual alphabet
 def _char_key(c: str) -> tuple[int, int]:
     """

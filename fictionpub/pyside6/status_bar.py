@@ -53,9 +53,7 @@ class AppStatusBar(QWidget):
         self._label = QLabel()
         self._label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         # Muted, small — this strip should recede visually
-        self._label.setStyleSheet(
-            "font-size: 10px; color: palette(mid);"
-        )
+        self._label.setStyleSheet("font-size: 10px; color: palette(mid);")
         layout.addWidget(self._label)
 
     # ------------------------------------------------------------------

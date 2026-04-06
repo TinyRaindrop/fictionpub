@@ -542,5 +542,29 @@
     "tree.col_title": {
         "en": "Title",
         "uk": "Назва"
+    },
+    "appsettings.reset_defaults": {
+        "en": "Reset to defaults…",
+        "uk": "Скинути до стандартних…"
+    },
+    "appsettings.reset_title": {
+        "en": "Reset Settings",
+        "uk": "Скидання налаштувань"
+    },
+    "appsettings.reset_text": {
+        "en": "This will clear all preferences — language, theme, window sizes, and conversion settings. Continue?",
+        "uk": "Це очистить усі налаштування — мову, тему, розміри вікон та налаштування конвертації. Продовжити?"
+    },
+    "dlg.maximize": {
+        "en": "Maximize / restore window",
+        "uk": "Розгорнути / відновити вікно"
+    },
+    "logviewer.filter_info": {
+        "en": "Info",
+        "uk": "Інфо"
+    },
+    "tooltip.reset_defaults": {
+        "en": "Clear all saved preferences and restore factory defaults",
+        "uk": "Очистити всі збережені налаштування та відновити стандартні"
     }
 }
