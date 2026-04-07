@@ -3,56 +3,42 @@ fictionpub/pyside6/dialogs/log_viewer_dialog.py
 
 Non-modal log viewer built on TextViewerDialog.
 
-Filtering strategy  (single linear pass, no intermediate objects)
-──────────────────────────────────────────────────────────────────
-For every line in the source content:
+Log structure
+─────────────
+The log contains two kinds of content:
 
-  m_start  (--- Log for FILE ---)
-      Always emit.  Begin accumulating a block.
+  1. Outer lines — emitted by the main process, directly to the file:
+         2026-04-07 13:32:08 [10216] LEVEL - [module:line] - message
 
-  m_end    (--- End log for FILE ---)
-      If the accumulated block has content lines → emit header, content,
-      footer.  If empty (all lines were filtered) → suppress header,
-      footer, and the one blank line that follows (per-user spec).
+  2. File blocks — buffered worker output, wrapped in boundary markers:
+         --- Log for filename.fb2 ---
+         13:32:26 [2516] LEVEL - [module:line] - message
+         ...
+         --- End log for filename.fb2 ---
 
-  m_log    (structured log line: "DATE? TIME [PID] LEVEL - ...")
-      If level ≥ selected minimum → emit.  Set skip_continuation=False.
-      Otherwise → drop.  Set skip_continuation=True.
+     Worker lines omit the date token; the shared _RE_LOG_LINE regex
+     handles both timestamp formats.
 
-  anything else  (blank lines, Traceback, bare exception text)
-      If skip_continuation is True → drop (continuation of a filtered
-      line).  Otherwise → emit as-is.  This preserves Tracebacks with
-      their ERROR line and preserves blank lines between sections.
+Filtering — _render()
+──────────────────────
+Level filter (applied first):
+  Lines matching _RE_LOG_LINE with level < min_level_idx are dropped.
+  All other lines — block wrappers, tracebacks, blank lines — pass
+  through unchanged. This matches the expected behaviour where a
+  traceback stays with its ERROR line because neither the traceback
+  lines nor the wrappers match _RE_LOG_LINE.
 
-suppress_next_blank
-      Set to True when an empty block or a search-miss block is skipped.
-      The one blank line immediately following is consumed without output.
-      This avoids leaving double-blank gaps where a filtered block was.
+Search filter (applied on top of level-filtered content):
+  Blocks   — block-level: if no line in the filtered block (including
+             the header) contains the search term the whole block is
+             suppressed.
+  Non-block lines — line-level: blank lines always pass; other lines
+             must contain the search term.
 
-Blank lines before m_start and after m_end
-      These live outside any block and are handled by the "anything else"
-      branch (skip_continuation starts as False, so they pass through).
-      No second pass is needed, so no trailing-blank stripping occurs.
-
-Regex (_RE_LOG_LINE)
-      Handles both logger formats produced by the app:
-        Old worker:  "HH:MM:SS [PID] LEVEL - ..."     (no date)
-        Outer batch: "YYYY-MM-DD HH:MM:SS [PID] LEVEL - ..."
-
-      Pattern: r'^\S+ (?:\S+ )?\[\d+\] (LEVEL) - '
-        ^\S+          = first token  (time OR date)
-        (?:\S+ )?     = optional second token (time, when date was first)
-        \[\d+\]       = [PID]
-        (LEVEL) - '   = level word
-
-      Regex engine backtracks correctly: if the optional group consumes
-      [PID], the following \[\d+\] fails, so the engine retries without
-      the optional group and finds [PID] at the original position.
-
-Text search
-      Applied at block level: the search string must appear somewhere in
-      the block's filtered lines (or its header) for the block to be
-      emitted.  Non-block lines are never suppressed by search.
+Empty-block suppression:
+  When a block has no remaining lines after level/search filtering,
+  its header, footer, and the blank lines that immediately follow the
+  footer are all dropped.
 
 Level radios: All | Info | Warning | Error
 """
@@ -87,86 +73,103 @@ from .text_viewer import TextViewerDialog
 _RE_BLOCK_START = re.compile(r"^---\s+Log for\s+(.+?)\s+---\s*$")
 _RE_BLOCK_END = re.compile(r"^---\s+End log for\s+.+?\s+---\s*$")
 
-# Matches log lines produced by both logger configurations:
-#   HH:MM:SS [PID] LEVEL - ...
-#   YYYY-MM-DD HH:MM:SS [PID] LEVEL - ...
-# The optional (?:\S+ )? handles the extra date token.
+# Handles both logger timestamp formats produced by the app:
+#   HH:MM:SS [PID] LEVEL - ...              (worker, no date prefix)
+#   YYYY-MM-DD HH:MM:SS [PID] LEVEL - ...  (main process, date + time)
+#
+# Pattern breakdown:
+#   ^\S+          first token  (time OR date)
+#   (?:\S+ )?     optional second token (time, when date came first)
+#   \[\d+\]       [PID]
+#   (LEVEL) -     captured level word
 _RE_LOG_LINE = re.compile(r"^\S+ (?:\S+ )?\[\d+\] (DEBUG|INFO|WARNING|ERROR|CRITICAL) - ")
 
 _LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
-_LEVEL_IDX = {lv: i for i, lv in enumerate(_LEVELS)}
+_LEVEL_IDX: dict[str, int] = {lv: i for i, lv in enumerate(_LEVELS)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Single-pass renderer
+# Renderer
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def _render(content: str, min_level_idx: int, search: str) -> str:
+    """
+    Return a filtered view of *content*.
+
+    Parameters
+    ----------
+    content       : raw log text
+    min_level_idx : index into _LEVELS; log lines below this level are dropped
+    search        : case-insensitive substring; empty string disables search
+    """
+    search_lower = search.strip().lower()
     result: list[str] = []
+    lines = content.splitlines()
+    n = len(lines)
+    i = 0
 
-    in_block = False
-    pending_header = ""
-    block_lines: list[str] = []
-    skip_continuation = False
-    suppress_next_blank = False  # consume one blank after a skipped block
+    def _passes_level(line: str) -> bool:
+        """True when *line* is not a log line, or its level meets the threshold."""
+        m = _RE_LOG_LINE.match(line)
+        return not m or _LEVEL_IDX.get(m.group(1), 0) >= min_level_idx
 
-    for line in content.splitlines():
-        m_start = _RE_BLOCK_START.match(line)
-        m_end = _RE_BLOCK_END.match(line)
-        m_log = _RE_LOG_LINE.match(line)
+    def _skip_trailing_blanks() -> None:
+        """Advance *i* past any blank lines that follow a suppressed block."""
+        nonlocal i
+        while i < n and not lines[i].strip():
+            i += 1
 
-        # ── Block start ───────────────────────────────────────────────────────
-        if m_start:
-            suppress_next_blank = False
-            in_block = True
-            pending_header = line
-            block_lines = []
-            skip_continuation = False
+    while i < n:
+        line = lines[i]
 
-        # ── Block end ─────────────────────────────────────────────────────────
-        elif m_end and in_block:
-            in_block = False
-            if block_lines:
-                keep: bool = (
-                    not search
-                    or search.lower()
-                    in (pending_header + "\n" + "\n".join(block_lines)).lower()
-                )
-                if keep:
-                    result.append(pending_header)
-                    result.extend(block_lines)
-                    result.append(line)
-                    suppress_next_blank = False
-                else:
-                    # Search miss: drop block + the one following blank
-                    suppress_next_blank = True
-            else:
-                # All lines were level-filtered: drop header, footer, + one blank
-                suppress_next_blank = True
-            pending_header = ""
-            block_lines = []
-            skip_continuation = False
+        # ── File block ────────────────────────────────────────────────────
+        if _RE_BLOCK_START.match(line):
+            header = line
+            body: list[str] = []
+            footer = ""
+            i += 1
 
-        # ── Structured log line ───────────────────────────────────────────────
-        elif m_log:
-            level = m_log.group(1)
-            if _LEVEL_IDX.get(level, 0) >= min_level_idx:
-                skip_continuation = False
-                suppress_next_blank = False
-                (block_lines if in_block else result).append(line)
-            elif in_block:
-                skip_continuation = True  # drop this line + its continuations
+            # Collect body lines until the closing boundary (or EOF)
+            while i < n and not _RE_BLOCK_END.match(lines[i]):
+                body.append(lines[i])
+                i += 1
 
-        # ── Blank line / Traceback / other continuation ───────────────────────
-        else:
-            if suppress_next_blank and not line.strip():
-                pass
-                # suppress_next_blank = False  # consume exactly one blank
-            elif not skip_continuation:
-                suppress_next_blank = False
-                (block_lines if in_block else result).append(line)
-            # if skip_continuation: drop (continuation of a filtered log line)
+            if i < n:           # found the closing boundary
+                footer = lines[i]
+                i += 1
+
+            # ── Level filter: only structured log lines are candidates ────
+            filtered = [bl for bl in body if _passes_level(bl)]
+
+            # ── Search: block-level ------------------------------─────────
+            # If in header, include entire block, else filter lines
+            if search_lower and search_lower not in header:
+                filtered = [fl for fl in filtered if search_lower in fl]
+
+            # ── Empty block after filters -> skip + skip blanks ───
+            if not filtered:
+                _skip_trailing_blanks()
+                continue
+
+            # ── Emit the block ────────────────────────────────────────────
+            result.append(header)
+            result.extend(filtered)
+            if footer:
+                result.append(footer)
+            continue
+
+        # ── Non-block line ────────────────────────────────────────────────
+        i += 1
+
+        if not _passes_level(line):
+            continue
+
+        # Search: line-level; blank lines always pass through
+        if search_lower and line.strip() and search_lower not in line.lower():
+            continue
+
+        result.append(line)
 
     return "\n".join(result)
 
@@ -181,7 +184,8 @@ class LogViewerDialog(TextViewerDialog):
     Modeless log viewer with level filtering and text search.
 
     Level radios:  All | Info | Warning | Error
-    Text search:   substring match at block level (keeps traceback context)
+    Text search:   substring match; blocks matched at block level,
+                   non-block lines matched per-line.
     """
 
     def __init__(
@@ -205,7 +209,7 @@ class LogViewerDialog(TextViewerDialog):
         register_listener(self._retranslate_controls)
 
     @classmethod
-    def from_file(cls, path: Path, parent=None) -> LogViewerDialog:
+    def from_file(cls, path: Path, parent=None) -> "LogViewerDialog":
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
@@ -275,9 +279,12 @@ class LogViewerDialog(TextViewerDialog):
     # ── Filtering ─────────────────────────────────────────────────────────────
 
     def _min_level_idx(self) -> int:
-        """Return the minimum _LEVELS index for the selected radio."""
-        # button ids: 0=All(DEBUG=0), 1=Info, 2=Warning, 3=Error
-        return {0: 0, 1: 1, 2: 2, 3: 3}.get(self._level_group.checkedId(), 0)
+        """Map radio button id (0–3) → minimum _LEVELS index (DEBUG–ERROR)."""
+        # id 0 = All  → DEBUG  (0)
+        # id 1 = Info → INFO   (1)
+        # id 2 = Warn → WARNING(2)
+        # id 3 = Err  → ERROR  (3)
+        return self._level_group.checkedId()
 
     def _apply_filters(self) -> None:
         text = _render(
@@ -288,3 +295,4 @@ class LogViewerDialog(TextViewerDialog):
         self._editor.setPlainText(text)
         n = text.count("\n") + 1 if text.strip() else 0
         self._lbl_count.setText(f"{n} line{'s' if n != 1 else ''}")
+        
