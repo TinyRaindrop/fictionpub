@@ -566,5 +566,81 @@
     "tooltip.reset_defaults": {
         "en": "Clear all saved preferences and restore factory defaults",
         "uk": "Очистити всі збережені налаштування та відновити стандартні"
+    },
+    "logfolder.title": {
+        "en": "Log Files",
+        "uk": "Файли журналів"
+    },
+    "logfolder.open_log": {
+        "en": "Open Log",
+        "uk": "Відкрити журнал"
+    },
+    "logfolder.delete": {
+        "en": "Delete",
+        "uk": "Видалити"
+    },
+    "logfolder.delete_all": {
+        "en": "Delete All",
+        "uk": "Видалити всі"
+    },
+    "logfolder.open_folder": {
+        "en": "Open Folder",
+        "uk": "Відкрити папку"
+    },
+    "logfolder.col_date": {
+        "en": "Date",
+        "uk": "Дата"
+    },
+    "logfolder.col_time": {
+        "en": "Time",
+        "uk": "Час"
+    },
+    "logfolder.col_mode": {
+        "en": "Mode",
+        "uk": "Режим"
+    },
+    "logfolder.col_total": {
+        "en": "Total",
+        "uk": "Всього"
+    },
+    "logfolder.confirm_title": {
+        "en": "Delete Logs",
+        "uk": "Видалення журналів"
+    },
+    "logfolder.confirm_delete": {
+        "en": "Delete this log file?\n{name}",
+        "uk": "Видалити цей файл журналу?\n{name}"
+    },
+    "logfolder.confirm_delete_all": {
+        "en": "Delete all {n} log file(s)?",
+        "uk": "Видалити всі {n} файл(ів) журналів?"
+    },
+    "logfolder.delete_error_title": {
+        "en": "Delete Failed",
+        "uk": "Помилка видалення"
+    },
+    "logfolder.delete_error": {
+        "en": "Could not delete:\n{name}\n\n{error}",
+        "uk": "Не вдалося видалити:\n{name}\n\n{error}"
+    },
+    "logfolder.delete_error_multi": {
+        "en": "Could not delete some files:\n{errors}",
+        "uk": "Не вдалося видалити деякі файли:\n{errors}"
+    },
+    "tooltip.logfolder_open": {
+        "en": "Open the selected log in the viewer",
+        "uk": "Відкрити вибраний журнал у переглядачі"
+    },
+    "tooltip.logfolder_delete": {
+        "en": "Delete the selected log file",
+        "uk": "Видалити вибраний файл журналу"
+    },
+    "tooltip.logfolder_delete_all": {
+        "en": "Delete all log files",
+        "uk": "Видалити всі файли журналів"
+    },
+    "tooltip.logfolder_open_folder": {
+        "en": "Open log directory in file manager",
+        "uk": "Відкрити папку журналів у файловому менеджері"
     }
 }

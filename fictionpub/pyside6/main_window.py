@@ -35,6 +35,13 @@ Output-path hint
 ────────────────
 _update_output_hint() pushes a translated hint into AppStatusBar whenever
 the configuration changes (settings dialog OK, language switch).
+
+Cumulative session stats
+────────────────────────
+_cumulative_success / _warnings / _failures accumulate across all
+conversion runs in a single GUI session.  A SESSION_REPORT line is written
+to the log after each run so the log folder viewer always shows up-to-date
+totals even if the application is closed unexpectedly.
 """
 
 import logging
@@ -67,6 +74,7 @@ from ..utils.logger import LOG_DIR
 from .bottom_bar import BottomBarWidget
 from .dialogs.about_dialog import AboutDialog
 from .dialogs.app_settings_dialog import AppSettingsDialog
+from .dialogs.log_folder_dialog import LogFolderDialog
 from .dialogs.log_viewer_dialog import LogViewerDialog
 from .dialogs.settings_dialog import SettingsDialog
 from .file_panel import FileTreeView
@@ -176,6 +184,11 @@ class MainWindow(QMainWindow):
 
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
+
+        # Cumulative conversion stats across all runs in this GUI session.
+        self._cumulative_success = 0
+        self._cumulative_warnings = 0
+        self._cumulative_failures = 0
 
         self._build_ui()
         self._connect_signals()
@@ -336,10 +349,8 @@ class MainWindow(QMainWindow):
         AppSettingsDialog(self._settings, self).exec()
 
     def _on_open_logs(self) -> None:
-        if LOG_DIR.exists():
-            _open_path(LOG_DIR)
-        else:
-            QMessageBox.information(self, t("msg.no_logs_title"), t("msg.no_logs_dir"))
+        """Open the log folder viewer dialog."""
+        LogFolderDialog(parent=self).show()
 
     def _on_open_last_log(self) -> None:
         if not LOG_DIR.exists():
@@ -478,11 +489,30 @@ class MainWindow(QMainWindow):
             cancelled=session.cancelled,
         )
         log.info(
-            "Batch done — success=%d warnings=%d failures=%d cancelled=%s",
+            "BATCH_REPORT mode=gui total=%d success=%d warnings=%d failures=%d cancelled=%s",
+            session.total,
             session.success,
             session.warnings,
             session.failures,
             session.cancelled,
+        )
+
+        # Written to the log as SESSION_REPORT after each run 
+        # so the log folder viewer always reflects the latest totals.
+        self._cumulative_success += session.success
+        self._cumulative_warnings += session.warnings
+        self._cumulative_failures += session.failures
+        cumulative_total = (
+            self._cumulative_success
+            + self._cumulative_warnings
+            + self._cumulative_failures
+        )
+        log.info(
+            "SESSION_REPORT mode=gui total=%d success=%d warnings=%d failures=%d",
+            cumulative_total,
+            self._cumulative_success,
+            self._cumulative_warnings,
+            self._cumulative_failures,
         )
 
     def _on_batch_error(self, message: str) -> None:

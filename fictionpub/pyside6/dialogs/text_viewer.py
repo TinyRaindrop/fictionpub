@@ -47,7 +47,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..i18n import register_listener, t
-from ...app_info import APP_NAME_SHORT, APP_ORG
+from ... import app_info
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -283,8 +283,8 @@ class TextViewerDialog(QDialog):
         s = QSettings(
             QSettings.Format.IniFormat,
             QSettings.Scope.UserScope,
-            APP_ORG,
-            APP_NAME_SHORT,
+            app_info.APP_ORG,
+            app_info.APP_NAME_SHORT,
         )
         raw = s.value(self._geom_key)
         if raw:
@@ -304,8 +304,8 @@ class TextViewerDialog(QDialog):
         s = QSettings(
             QSettings.Format.IniFormat,
             QSettings.Scope.UserScope,
-            APP_ORG,
-            APP_NAME_SHORT,
+            app_info.APP_ORG,
+            app_info.APP_NAME_SHORT,
         )
         s.setValue(self._geom_key, self.saveGeometry())
         super().closeEvent(event)

@@ -48,7 +48,12 @@ def _detect_os_language() -> str:
 
 
 def run_gui() -> None:
+    # TODO: ensure loggin setup is consistent between CLI and GUI
     setup_main_logger(logging.INFO)
+
+    # Write a session marker for log folder viewer.
+    log = logging.getLogger("fb2_converter")
+    log.info("APP_START mode=gui")
 
     app = QApplication(sys.argv)
     app.setApplicationName(app_info.APP_NAME)
