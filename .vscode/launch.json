@@ -9,7 +9,7 @@
             "args": [
                 "books/bierce.fb2",
                 "-o",
-                "books/bierce.epub"
+                "books"
             ]
         },
         {

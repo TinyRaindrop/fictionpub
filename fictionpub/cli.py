@@ -62,10 +62,10 @@ def run_cli() -> None:
     )
     parser.add_argument(
         "-o",
-        "--output",
+        "--outfolder",
         type=Path,
         default=None,
-        help="Output folder or filename (for single input). If omitted, each output is placed next to the input file.",
+        help="Output folder. If omitted, each output is placed next to the input file.",
     )
     parser.add_argument(
         "-t",
