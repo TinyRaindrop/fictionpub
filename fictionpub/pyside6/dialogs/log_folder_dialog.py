@@ -3,25 +3,23 @@ fictionpub/pyside6/dialogs/log_folder_dialog.py
 
 Non-modal dialog listing all converter log files with parsed statistics.
 
-Columns: Status | Date | Time | Mode | Total | ✓ | ⚠ | ✗
+Columns: # | Date | Time | Mode | Total | ✓ | ⚠ | ✗
 
-Status icon per row:
-  ✓  SUCCESS  — failures == 0, warnings == 0
-  ⚠  WARNING  — failures == 0, warnings > 0
-  ✗  FAILURE  — failures > 0
-  ?  UNKNOWN  — no SESSION_REPORT line found in the file
+The ✗ (failures) cell is coloured red when its value is greater than zero.
+The row corresponding to the current process's log file is highlighted.
 
-Two structured lines are parsed from each log file:
+Parsing
+───────
+Two structured lines are read from each log file:
 
   APP_START mode=gui|cli
-      Written at application startup.  Determines the Mode column.
+      Written at startup; identifies the launch mode.
 
   SESSION_REPORT mode=X total=N success=N warnings=N failures=N
-      Written after every conversion batch completes.  The parser
-      uses the LAST occurrence so that GUI sessions with multiple
-      runs show the final cumulative tally.
+      Written after every batch.  The LAST occurrence is used so
+      GUI sessions with multiple runs reflect the final cumulative tally.
 
-Toolbar: [Open Log] [Delete] [Delete All]  |  [Open Folder]
+Toolbar: [Open Log] [Delete] [Delete All]          [Open Folder]
 """
 from __future__ import annotations
 
@@ -32,15 +30,13 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QRect, QSettings, QSize, Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtCore import QSettings, QSize, Qt
+from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
-    QDialogButtonBox,
-    QFrame,
-    QHBoxLayout,
     QHeaderView,
+    QHBoxLayout,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -50,14 +46,14 @@ from PySide6.QtWidgets import (
 
 from ...app_info import APP_NAME_SHORT, APP_ORG
 from ...models.conversion import ConversionStatus
-from ...utils.logger import LOG_DIR
+from ...utils.logger import LOG_DIR, get_current_log_path
 from ..i18n import register_listener, t
 from ..icons import get_status_icons
 from .log_viewer_dialog import LogViewerDialog
 
 # ── Column indices ────────────────────────────────────────────────────────────
 
-COL_STATUS = 0
+COL_NUM = 0
 COL_DATE = 1
 COL_TIME = 2
 COL_MODE = 3
@@ -67,8 +63,7 @@ COL_WARN = 6
 COL_FAIL = 7
 NCOLS = 8
 
-_ICON_PX = 18
-_STATUS_COL_W = 36
+_ICON_PX = 16
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
@@ -80,6 +75,10 @@ _RE_SESSION_REPORT = re.compile(
     r"SESSION_REPORT mode=(\w+) total=(\d+) success=(\d+) warnings=(\d+) failures=(\d+)"
 )
 
+# Colours
+_RED_FAIL = QColor("#c0392b")
+_CURRENT_BG = QColor(38, 120, 200, 35)   # faint highlight tint for current session
+
 # ── Data model ────────────────────────────────────────────────────────────────
 
 
@@ -90,23 +89,11 @@ class LogSummary:
     path: Path
     date: str
     time_str: str
-    mode: str  # "GUI", "CLI", or "?"
+    mode: str            # "GUI", "CLI", or "?"
     total: int | None = None
     success: int | None = None
     warnings: int | None = None
     failures: int | None = None
-
-    # TODO: remove status column? 
-    @property
-    def status(self) -> ConversionStatus | None:
-        """Overall status for the row icon; None → show '?' icon."""
-        if self.total is None:
-            return None
-        if self.failures:
-            return ConversionStatus.FAILURE
-        if self.warnings:
-            return ConversionStatus.WARNING
-        return ConversionStatus.SUCCESS
 
 
 def _parse_log_summary(path: Path) -> LogSummary:
@@ -141,7 +128,7 @@ def _parse_log_summary(path: Path) -> LogSummary:
             path=path,
             date=date,
             time_str=time_str,
-            mode=last_report.group(1).upper(),  # authoritative when present
+            mode=last_report.group(1).upper(),
             total=int(last_report.group(2)),
             success=int(last_report.group(3)),
             warnings=int(last_report.group(4)),
@@ -162,30 +149,13 @@ def _load_summaries() -> list[LogSummary]:
     return [_parse_log_summary(p) for p in logs]
 
 
-# ── Icon helpers ──────────────────────────────────────────────────────────────
-
-
-def _make_unknown_icon(size: int) -> QIcon:
-    """Create a muted '?' icon for log files with no SESSION_REPORT."""
-    px = QPixmap(size, size)
-    px.fill(Qt.GlobalColor.transparent)
-    p = QPainter(px)
-    p.setRenderHint(QPainter.RenderHint.Antialiasing)
-    p.setPen(QColor("#888888"))
-    font = p.font()
-    font.setPixelSize(size - 2)
-    font.setBold(True)
-    p.setFont(font)
-    p.drawText(QRect(0, 0, size, size), Qt.AlignmentFlag.AlignCenter, "?")
-    p.end()
-    return QIcon(px)
-
+# ── Platform helper ───────────────────────────────────────────────────────────
 
 def _open_path(path: Path) -> None:
     """Open a file or directory using the OS default handler."""
     try:
         if platform.system() == "Windows":
-            os.startfile(path)  # type: ignore[attr-defined]
+            os.startfile(path)          # type: ignore[attr-defined]
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:
@@ -194,15 +164,7 @@ def _open_path(path: Path) -> None:
         pass
 
 
-def _vsep() -> QFrame:
-    sep = QFrame()
-    sep.setFrameShape(QFrame.Shape.VLine)
-    sep.setFrameShadow(QFrame.Shadow.Sunken)
-    return sep
-
-
-# ── Dialog ────────────────────────────────────────────────────────────────────
-
+# ── QSS ──────────────────────────────────────────────────────────────────────
 # TODO: unify with MainWindow styling
 _TOOLBAR_QSS = """
 QPushButton {
@@ -223,6 +185,9 @@ QPushButton:disabled {
 """
 
 
+# ── Dialog ────────────────────────────────────────────────────────────────────
+
+
 class LogFolderDialog(QDialog):
     """
     Non-modal dialog showing all log files with parsed statistics.
@@ -241,7 +206,7 @@ class LogFolderDialog(QDialog):
         )
 
         self._status_icons = get_status_icons(_ICON_PX)
-        self._unknown_icon = _make_unknown_icon(_ICON_PX)
+        self._current_log = get_current_log_path()
         self._file_count = 0
 
         self._build_ui()
@@ -259,6 +224,13 @@ class LogFolderDialog(QDialog):
         outer.addWidget(self._build_table(), stretch=1)
 
         self.setStyleSheet(_TOOLBAR_QSS)
+
+        # Calculate minimum width to prevent horizontal overflow:
+        # 6 fixed columns, 2 stretch columns
+        # Extra buffer for layout margins, frame borders, and vertical scrollbar
+        MIN_WINDOW_WIDTH = 6*64 + 2*120 + 36
+        self.setMinimumWidth(MIN_WINDOW_WIDTH)
+
         self._retranslate_ui()
 
     def _build_toolbar(self) -> QHBoxLayout:
@@ -271,11 +243,11 @@ class LogFolderDialog(QDialog):
         self._btn_delete_all = QPushButton()
         self._btn_open_folder = QPushButton()
 
-        for btn in (self._btn_open, self._btn_delete, self._btn_delete_all):
-            row.addWidget(btn)
-        row.addWidget(_vsep())
-        row.addWidget(self._btn_open_folder)
+        row.addWidget(self._btn_open)
+        row.addWidget(self._btn_delete)
+        row.addWidget(self._btn_delete_all)
         row.addStretch()
+        row.addWidget(self._btn_open_folder)
 
         self._btn_open.clicked.connect(self._on_open)
         self._btn_delete.clicked.connect(self._on_delete)
@@ -298,23 +270,40 @@ class LogFolderDialog(QDialog):
         self._table.verticalHeader().setDefaultSectionSize(26)
 
         h = self._table.horizontalHeader()
-        h.setStretchLastSection(False)
-        h.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-        h.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        h.setSectionResizeMode(COL_STATUS, QHeaderView.ResizeMode.Fixed)
-        self._table.setColumnWidth(COL_STATUS, _STATUS_COL_W)
-        self._table.setColumnWidth(COL_DATE, 92)
-        self._table.setColumnWidth(COL_TIME, 68)
-        self._table.setColumnWidth(COL_MODE, 48)
-        self._table.setColumnWidth(COL_TOTAL, 54)
-        self._table.setColumnWidth(COL_OK, 50)
-        self._table.setColumnWidth(COL_WARN, 50)
-        self._table.setColumnWidth(COL_FAIL, 50)
+        # Protects columns from getting too tiny if squeezed
+        h.setMinimumSectionSize(64) 
+        h.setStretchLastSection(True)
+        h.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Set specific resize modes per column
+        for col in range(NCOLS):
+            # Fix the rest at an identical width
+            h.setSectionResizeMode(col, QHeaderView.ResizeMode.Fixed)
 
         self._table.itemSelectionChanged.connect(self._update_buttons)
         self._table.itemDoubleClicked.connect(lambda _: self._on_open())
 
         return self._table
+
+    def resizeEvent(self, event) -> None:
+        super().resizeEvent(event)
+        
+        # Ensure table exists before trying to resize its columns
+        if not hasattr(self, '_table'):
+            return
+
+        # Get the actual drawable width inside the table
+        viewport_width = self._table.viewport().width()
+
+        # Date and Time: weight = 1.5, other 6 columns: weight = 1.0.
+        # Total weights = (2 * 1.5) + (6 * 1.0) = 9.0
+        unit_width = viewport_width / 9.0
+
+        for col in range(NCOLS):
+            if col in (COL_DATE, COL_TIME):
+                self._table.setColumnWidth(col, int(unit_width * 1.5))
+            else:
+                self._table.setColumnWidth(col, int(unit_width * 1.0))
 
     # ── i18n ─────────────────────────────────────────────────────────────────
 
@@ -330,34 +319,33 @@ class LogFolderDialog(QDialog):
         self._btn_open_folder.setText(t("logfolder.open_folder"))
         self._btn_open_folder.setToolTip(t("tooltip.logfolder_open_folder"))
 
-        icons = self._status_icons
+        def _hdr(text: str) -> QTableWidgetItem:
+            it = QTableWidgetItem(text)
+            it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            return it
 
-        # Status column header: blank (icon column)
-        self._table.setHorizontalHeaderItem(COL_STATUS, QTableWidgetItem(""))
-        self._table.setHorizontalHeaderItem(COL_DATE, QTableWidgetItem(t("logfolder.col_date")))
-        self._table.setHorizontalHeaderItem(COL_TIME, QTableWidgetItem(t("logfolder.col_time")))
-        self._table.setHorizontalHeaderItem(COL_MODE, QTableWidgetItem(t("logfolder.col_mode")))
-        self._table.setHorizontalHeaderItem(COL_TOTAL, QTableWidgetItem(t("logfolder.col_total")))
+        self._table.setHorizontalHeaderItem(COL_NUM,   _hdr("#"))
+        self._table.setHorizontalHeaderItem(COL_DATE,  _hdr(t("logfolder.col_date")))
+        self._table.setHorizontalHeaderItem(COL_TIME,  _hdr(t("logfolder.col_time")))
+        self._table.setHorizontalHeaderItem(COL_MODE,  _hdr(t("logfolder.col_mode")))
+        self._table.setHorizontalHeaderItem(COL_TOTAL, _hdr(t("logfolder.col_total")))
 
         # Count columns use status icons as headers
         for col, status in (
-            (COL_OK, ConversionStatus.SUCCESS),
+            (COL_OK,   ConversionStatus.SUCCESS),
             (COL_WARN, ConversionStatus.WARNING),
             (COL_FAIL, ConversionStatus.FAILURE),
         ):
-            hdr = QTableWidgetItem()
-            hdr.setIcon(icons[status])
-            hdr.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._table.setHorizontalHeaderItem(col, hdr)
+            it = QTableWidgetItem()
+            it.setIcon(self._status_icons[status])
+            it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            self._table.setHorizontalHeaderItem(col, it)
 
         self._update_buttons()
 
     def _update_title(self) -> None:
         base = t("logfolder.title")
-        if self._file_count > 0:
-            self.setWindowTitle(f"{base} ({self._file_count})")
-        else:
-            self.setWindowTitle(base)
+        self.setWindowTitle(f"{base} ({self._file_count})" if self._file_count else base)
 
     # ── Table population ──────────────────────────────────────────────────────
 
@@ -370,38 +358,47 @@ class LogFolderDialog(QDialog):
         self._table.setRowCount(0)
         self._table.setRowCount(len(summaries))
 
-        center = Qt.AlignmentFlag.AlignCenter
-        left = Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
+        bold_font = QFont()
+        bold_font.setBold(True)
+
+        current_log_resolved = (
+            self._current_log.resolve() if self._current_log else None
+        )
 
         for row, s in enumerate(summaries):
-            # Status icon cell — stores the file path for later retrieval
-            status_cell = QTableWidgetItem()
-            icon = (
-                self._status_icons.get(s.status)
-                if s.status is not None
-                else self._unknown_icon
+            is_current = (
+                current_log_resolved is not None
+                and s.path.resolve() == current_log_resolved
             )
-            if icon:
-                status_cell.setIcon(icon)
-            status_cell.setTextAlignment(center)
-            status_cell.setData(Qt.ItemDataRole.UserRole, str(s.path))
-            self._table.setItem(row, COL_STATUS, status_cell)
 
-            def _cell(text: str, align=left) -> QTableWidgetItem:
+            def _cell(text: str) -> QTableWidgetItem:
                 it = QTableWidgetItem(text)
-                it.setTextAlignment(align)
+                it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+                if is_current:
+                    it.setFont(bold_font)
+                    it.setBackground(QBrush(_CURRENT_BG))
                 return it
 
             def _num(val: int | None) -> str:
                 return "?" if val is None else str(val)
 
-            self._table.setItem(row, COL_DATE, _cell(s.date))
-            self._table.setItem(row, COL_TIME, _cell(s.time_str))
-            self._table.setItem(row, COL_MODE, _cell(s.mode, center))
-            self._table.setItem(row, COL_TOTAL, _cell(_num(s.total), center))
-            self._table.setItem(row, COL_OK, _cell(_num(s.success), center))
-            self._table.setItem(row, COL_WARN, _cell(_num(s.warnings), center))
-            self._table.setItem(row, COL_FAIL, _cell(_num(s.failures), center))
+            num_cell = _cell(str(row + 1))
+            # Stash path on the number cell for retrieval by actions
+            num_cell.setData(Qt.ItemDataRole.UserRole, str(s.path))
+            self._table.setItem(row, COL_NUM,   num_cell)
+            self._table.setItem(row, COL_DATE,  _cell(s.date))
+            self._table.setItem(row, COL_TIME,  _cell(s.time_str))
+            self._table.setItem(row, COL_MODE,  _cell(s.mode))
+            self._table.setItem(row, COL_TOTAL, _cell(_num(s.total)))
+            self._table.setItem(row, COL_OK,    _cell(_num(s.success)))
+            self._table.setItem(row, COL_WARN,  _cell(_num(s.warnings)))
+
+            fail_cell = _cell(_num(s.failures))
+            if s.failures:
+                fail_cell.setForeground(QBrush(_RED_FAIL))
+                if not is_current:             # bold already set for current row
+                    fail_cell.setFont(bold_font)
+            self._table.setItem(row, COL_FAIL, fail_cell)
 
         self._update_buttons()
 
@@ -410,10 +407,8 @@ class LogFolderDialog(QDialog):
         row = self._table.currentRow()
         if row < 0:
             return None
-        item = self._table.item(row, COL_STATUS)
-        if item is None:
-            return None
-        raw = item.data(Qt.ItemDataRole.UserRole)
+        item = self._table.item(row, COL_NUM)
+        raw = item.data(Qt.ItemDataRole.UserRole) if item else None
         return Path(raw) if raw else None
 
     def _update_buttons(self) -> None:
@@ -427,9 +422,8 @@ class LogFolderDialog(QDialog):
 
     def _on_open(self) -> None:
         path = self._current_path()
-        if path is None:
-            return
-        LogViewerDialog.from_file(path, parent=self).show()
+        if path:
+            LogViewerDialog.from_file(path, parent=self).show()
 
     def _on_delete(self) -> None:
         path = self._current_path()
@@ -445,8 +439,7 @@ class LogFolderDialog(QDialog):
             return
         try:
             path.unlink(missing_ok=True)
-            row = self._table.currentRow()
-            self._table.removeRow(row)
+            self._table.removeRow(self._table.currentRow())
             self._file_count = self._table.rowCount()
             self._update_title()
             self._update_buttons()
@@ -459,7 +452,7 @@ class LogFolderDialog(QDialog):
 
     def _on_delete_all(self) -> None:
         n = self._table.rowCount()
-        if n == 0:
+        if not n:
             return
         reply = QMessageBox.question(
             self,
@@ -472,12 +465,9 @@ class LogFolderDialog(QDialog):
 
         errors: list[str] = []
         rows_ok: list[int] = []
-
         for row in range(n):
-            item = self._table.item(row, COL_STATUS)
-            if item is None:
-                continue
-            raw = item.data(Qt.ItemDataRole.UserRole)
+            item = self._table.item(row, COL_NUM)
+            raw = item.data(Qt.ItemDataRole.UserRole) if item else None
             if not raw:
                 continue
             try:
@@ -488,7 +478,6 @@ class LogFolderDialog(QDialog):
 
         for row in reversed(rows_ok):
             self._table.removeRow(row)
-
         self._file_count = self._table.rowCount()
         self._update_title()
         self._update_buttons()
@@ -518,7 +507,7 @@ class LogFolderDialog(QDialog):
         if raw:
             self.restoreGeometry(raw)
         else:
-            self.resize(560, 400)
+            self.resize(560, 380)
 
     def closeEvent(self, event) -> None:  # noqa: N802
         s = QSettings(

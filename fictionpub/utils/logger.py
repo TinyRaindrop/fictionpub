@@ -18,6 +18,15 @@ FILE_LOG_FORMAT = (
     "%(asctime)s [%(process)d] %(levelname)s - [%(module)s:%(lineno)d] - %(message)s"
 )
 
+# Path of the log file opened for the current process. Set by setup_main_logger().
+# None when file logging is not active (e.g. early startup or setup failure).
+_current_log_path: Path | None = None
+
+
+def get_current_log_path() -> Path | None:
+    """Return the Path of the log file for the current process, or None."""
+    return _current_log_path
+
 
 def setup_main_logger(console_level=logging.ERROR) -> None:
     """
@@ -27,6 +36,8 @@ def setup_main_logger(console_level=logging.ERROR) -> None:
     and file output (at DEBUG level) for a new, unique log file.
     It also performs log rotation.
     """
+    global _current_log_path
+
     logger = logging.getLogger("fb2_converter")
     logger.setLevel(logging.DEBUG)  # Capture all levels
 
@@ -74,6 +85,8 @@ def setup_main_logger(console_level=logging.ERROR) -> None:
         file_formatter = logging.Formatter(FILE_LOG_FORMAT, datefmt="%Y-%m-%d %H:%M:%S")
         file_handler.setFormatter(file_formatter)
         logger.addHandler(file_handler)
+
+        _current_log_path = new_log_path
 
         logger.info(
             "Main logger initialized. Console level: %s, File level: DEBUG. Logging to: %s",
