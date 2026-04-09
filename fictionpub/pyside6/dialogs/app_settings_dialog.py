@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QVBoxLayout,
+    QHBoxLayout,
 )
 
 from ..i18n import get_language, register_listener, set_language, t
@@ -73,20 +74,24 @@ class AppSettingsDialog(QDialog):
 
         outer.addWidget(self._appearance_group)
 
-        # ── Main buttons ───────────────────────────────────────────────────
-        self._buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._buttons.accepted.connect(self._on_ok)
-        self._buttons.rejected.connect(self.reject)
-        outer.addWidget(self._buttons)
+        buttons = QHBoxLayout()
 
-        # ── Reset button (below the standard buttons) ──────────────────────
-        # TODO: move to the left of Ok|Cancel box
+        # ── Reset button ──────────────────────
         self._reset_btn = QPushButton()
         self._reset_btn.setStyleSheet("color: palette(mid);")
         self._reset_btn.clicked.connect(self._on_reset)
-        outer.addWidget(self._reset_btn)
+        buttons.addWidget(self._reset_btn)
+        buttons.addStretch()
+
+        # ── Main buttons ───────────────────────────────────────────────────
+        self.bbox = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self.bbox.accepted.connect(self._on_ok)
+        self.bbox.rejected.connect(self.reject)
+        buttons.addWidget(self.bbox)
+
+        outer.addLayout(buttons)
 
         self._retranslate_ui()
 
