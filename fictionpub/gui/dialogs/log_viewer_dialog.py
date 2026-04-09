@@ -1,6 +1,4 @@
 r"""
-fictionpub/pyside6/dialogs/log_viewer_dialog.py
-
 Non-modal log viewer built on TextViewerDialog.
 
 Log structure
@@ -60,11 +58,6 @@ from PySide6.QtWidgets import (
 from ..i18n import register_listener, t
 from .highlighters import LogSyntaxHighlighter
 from .text_viewer import TextViewerDialog
-
-# TODO: add log folder view with a file list. Parse last log line and display number of processed files
-# [Date | Time | Total files | Success | Warnings | Errors]
-# App should write a unified final report line (in gui and cli), which would then be read by Log folder parser
-# Display [ok|warn|err] status icons or [?] if report line is not found.
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Patterns and level table
@@ -135,7 +128,7 @@ def _render(content: str, min_level_idx: int, search: str) -> str:
                 body.append(lines[i])
                 i += 1
 
-            if i < n:           # found the closing boundary
+            if i < n:  # found the closing boundary
                 footer = lines[i]
                 i += 1
 
@@ -209,7 +202,7 @@ class LogViewerDialog(TextViewerDialog):
         register_listener(self._retranslate_controls)
 
     @classmethod
-    def from_file(cls, path: Path, parent=None) -> "LogViewerDialog":
+    def from_file(cls, path: Path, parent=None) -> LogViewerDialog:
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
@@ -279,7 +272,7 @@ class LogViewerDialog(TextViewerDialog):
     # ── Filtering ─────────────────────────────────────────────────────────────
 
     def _min_level_idx(self) -> int:
-        """Map radio button id (0–3) → minimum _LEVELS index (DEBUG–ERROR)."""
+        """Map radio button id (0-3) → minimum _LEVELS index (DEBUG-ERROR)."""
         # id 0 = All  → DEBUG  (0)
         # id 1 = Info → INFO   (1)
         # id 2 = Warn → WARNING(2)
@@ -295,4 +288,3 @@ class LogViewerDialog(TextViewerDialog):
         self._editor.setPlainText(text)
         n = text.count("\n") + 1 if text.strip() else 0
         self._lbl_count.setText(f"{n} line{'s' if n != 1 else ''}")
-        

@@ -1,18 +1,16 @@
 """
-fictionpub/pyside6/dialogs/app_settings_dialog.py
-
 Modal dialog for application-level preferences.
 
 Changes applied immediately on OK:
-  • Theme (via apply_theme)
-  • Language (via set_language / i18n listeners)
+  * Theme (via apply_theme)
+  * Language (via set_language / i18n listeners)
 
 "Reset to defaults" button:
-  • Asks for confirmation
-  • Calls AppSettings.reset_to_defaults() (clears ALL persisted keys
+  * Asks for confirmation
+  * Calls AppSettings.reset_to_defaults() (clears ALL persisted keys
     including language, theme, window geometries, conversion config)
-  • Re-applies the default theme (System) and detects the OS language
-  • Closes the dialog — the main window will re-read defaults at next
+  * Re-applies the default theme (System) and detects the OS language
+  * Closes the dialog — the main window will re-read defaults at next
     launch (or immediately for theme/language)
 """
 
@@ -23,10 +21,10 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
-    QHBoxLayout,
 )
 
 from ..i18n import get_language, register_listener, set_language, t

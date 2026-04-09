@@ -29,4 +29,4 @@ except ImportError:
     except PackageNotFoundError:
         VERSION = "0.0.0+unknown"
 
-__all__ = ["APP_NAME", "APP_NAME_SHORT", "APP_URL", "VERSION"]
+__all__ = ["APP_NAME", "APP_NAME_SHORT", "APP_ORG", "APP_URL", "VERSION"]

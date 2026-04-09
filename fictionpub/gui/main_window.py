@@ -15,16 +15,6 @@ string on the QMainWindow.  Descendant selectors style buttons inside
 each named container class; the #convertButton ID selector overrides for
 the primary-action button.  No inline QSS in widget files.
 
-Why this is correct
-───────────────────
-Qt's stylesheet cascade resolves specificity exactly like CSS:
-  • Type+ancestor selector  e.g. "ToolbarWidget QPushButton"
-    specificity = (0, 0, 2) — two type selectors
-  • ID selector  e.g. "QPushButton#convertButton"
-    specificity = (0, 1, 1) — one ID + one type  → wins over the above
-So the Convert button gets the blue primary-action style while every other
-button in ToolbarWidget / BottomBarWidget gets the transparent hover style.
-
 Scan → expand behaviour
 ────────────────────────
 _on_scan_complete() snapshots the set of already-known root folder paths
@@ -39,9 +29,10 @@ the configuration changes (settings dialog OK, language switch).
 Cumulative session stats
 ────────────────────────
 _cumulative_success / _warnings / _failures accumulate across all
-conversion runs in a single GUI session.  A SESSION_REPORT line is written
-to the log after each run so the log folder viewer always shows up-to-date
-totals even if the application is closed unexpectedly.
+conversion runs in a single GUI session.
+A SESSION_REPORT line is written to the log after each run
+so the log folder viewer always shows up-to-date totals
+even if the application is closed unexpectedly.
 """
 
 import logging
@@ -50,10 +41,12 @@ import platform
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import override
 
 from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QAbstractItemView,
     QFileDialog,
     QMainWindow,
     QMessageBox,
@@ -223,51 +216,44 @@ class MainWindow(QMainWindow):
 
     def _connect_signals(self) -> None:
         tb = self._toolbar
-        tb.addFilesRequested.connect(self._on_add_files)
-        tb.addFolderRequested.connect(self._on_add_folder)
-        tb.removeSelectedRequested.connect(self._on_remove_selected)
-        tb.removeAllRequested.connect(self._on_remove_all)
-        tb.removeCompletedRequested.connect(self._on_remove_completed)
-        tb.selectAllRequested.connect(self._on_select_all)
-        tb.deselectAllRequested.connect(self._on_deselect_all)
-        tb.conversionSettingsRequested.connect(self._on_conversion_settings)
-        tb.appSettingsRequested.connect(self._on_app_settings)
-        tb.aboutRequested.connect(self._on_about)
+        tb.add_files_requested.connect(self._on_add_files)
+        tb.add_folder_requested.connect(self._on_add_folder)
+        tb.remove_selected_requested.connect(self._on_remove_selected)
+        tb.remove_all_requested.connect(self._on_remove_all)
+        tb.remove_completed_requested.connect(self._on_remove_completed)
+        tb.select_all_requested.connect(self._on_select_all)
+        tb.deselect_all_requested.connect(self._on_deselect_all)
+        tb.conversion_settings_requested.connect(self._on_conversion_settings)
+        tb.app_settings_requested.connect(self._on_app_settings)
+        tb.about_requested.connect(self._on_about)
 
-        self._model.selectionCountChanged.connect(self._toolbar.update_selection_count)
+        self._model.selection_count_changed.connect(self._toolbar.update_selection_count)
 
         fv = self._file_view
-        fv.statusClicked.connect(self._on_status_clicked)
-        fv.folderDoubleClicked.connect(self._on_folder_double_clicked)
-        fv.openEpubRequested.connect(self._on_open_epub)
-        fv.openFb2Requested.connect(self._on_open_fb2)
-        fv.openFolderRequested.connect(self._on_open_folder)
-        fv.selectionRemoveRequested.connect(self._on_remove_selected)
+        fv.status_clicked.connect(self._on_status_clicked)
+        fv.folder_double_clicked.connect(self._on_folder_double_clicked)
+        fv.open_epub_requested.connect(self._on_open_epub)
+        fv.open_fb2_requested.connect(self._on_open_fb2)
+        fv.open_folder_requested.connect(self._on_open_folder)
+        fv.selection_remove_requested.connect(self._on_remove_selected)
+        fv.files_dropped.connect(self._start_scan)
 
         bb = self._bottom_bar
-        bb.convertRequested.connect(self._on_convert)
-        bb.cancelRequested.connect(self._on_cancel)
-        bb.openLogsDirRequested.connect(self._on_open_logs)
-        bb.openLastLogRequested.connect(self._on_open_last_log)
+        bb.convert_requested.connect(self._on_convert)
+        bb.cancel_requested.connect(self._on_cancel)
+        bb.open_logs_dir_requested.connect(self._on_open_logs)
+        bb.open_last_log_requested.connect(self._on_open_last_log)
 
     def _apply_shortcuts(self) -> None:
         QShortcut(QKeySequence.StandardKey.Delete, self._file_view).activated.connect(
             self._on_remove_selected
         )
         QShortcut(QKeySequence.StandardKey.SelectAll, self).activated.connect(
-            lambda: self._model.setAllChecked(True)
+            lambda: self._model.set_all_checked(True)
         )
 
     def _apply_stylesheet(self) -> None:
-        """
-        Single stylesheet for the whole window.
-
-        ToolbarWidget QPushButton / BottomBarWidget QPushButton
-            → transparent hover/press for all plain buttons in those panels.
-
-        QPushButton#convertButton
-            → blue primary-action override (higher specificity than the above).
-        """
+        """Single stylesheet for the whole window."""
         self.setStyleSheet(_WINDOW_QSS)
 
     def _retranslate_ui(self) -> None:
@@ -302,21 +288,41 @@ class MainWindow(QMainWindow):
             self._start_scan([Path(p) for p in paths])
 
     def _on_add_folder(self) -> None:
-        folder = QFileDialog.getExistingDirectory(self, t("toolbar.add_folder"))
-        if folder:
-            self._start_scan([Path(folder)])
+        """
+        Open a folder-picker that supports selecting multiple directories.
+
+        QFileDialog.getExistingDirectory() only ever returns one path, so we
+        open the dialog manually with DontUseNativeDialog and extend the
+        selection mode of its internal list- and tree-views at runtime.
+        """
+        # TODO: consider falling back to the default folder picker
+        dlg = QFileDialog(self, t("toolbar.add_folder"))
+        dlg.setFileMode(QFileDialog.FileMode.Directory)
+        # Must disable the native dialog to be able to patch the internal views.
+        dlg.setOption(QFileDialog.Option.DontUseNativeDialog, True)
+
+        # Patch every QAbstractItemView inside the dialog to allow multi-select.
+        # Qt uses a QListView ("listView") for icon/list mode and a QTreeView
+        # ("treeView") for detail mode; both need patching.
+        for view in dlg.findChildren(QAbstractItemView):
+            view.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+
+        if dlg.exec():
+            folders = [Path(f) for f in dlg.selectedFiles() if Path(f).is_dir()]
+            if folders:
+                self._start_scan(folders)
 
     def _on_remove_selected(self) -> None:
         if self._is_converting():
             return
-        indices = self._file_view.selectedSourceIndices()
+        indices = self._file_view.selected_source_indices()
         if indices:
-            self._model.removeNodes(indices)
+            self._model.remove_nodes(indices)
 
     def _on_remove_all(self) -> None:
         if self._is_converting():
             return
-        if not self._model.totalFileCount():
+        if not self._model.total_file_count():
             return
         reply = QMessageBox.question(
             self,
@@ -325,18 +331,18 @@ class MainWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )
         if reply == QMessageBox.StandardButton.Yes:
-            self._model.removeAll()
+            self._model.remove_all()
             self._bottom_bar.set_idle()
 
     def _on_remove_completed(self) -> None:
         if not self._is_converting():
-            self._model.removeCompleted()
+            self._model.remove_completed()
 
     def _on_select_all(self) -> None:
-        self._model.setAllChecked(True)
+        self._model.set_all_checked(True)
 
     def _on_deselect_all(self) -> None:
-        self._model.setAllChecked(False)
+        self._model.set_all_checked(False)
 
     def _on_conversion_settings(self) -> None:
         dlg = SettingsDialog(self._config, self)
@@ -350,7 +356,7 @@ class MainWindow(QMainWindow):
 
     def _on_open_logs(self) -> None:
         """Open the log folder viewer dialog."""
-        LogFolderDialog(parent=self).show()
+        LogFolderDialog(self._settings, parent=self).show()
 
     def _on_open_last_log(self) -> None:
         if not LOG_DIR.exists():
@@ -411,7 +417,7 @@ class MainWindow(QMainWindow):
         self._toolbar.set_busy(True)
         self._bottom_bar.set_scanning()
         self._scan_worker = ScanWorker(paths, parent=self)
-        self._scan_worker.filesFound.connect(self._on_scan_complete)
+        self._scan_worker.files_found.connect(self._on_scan_complete)
         self._scan_worker.finished.connect(self._on_scan_finished)
         self._scan_worker.start()
 
@@ -424,22 +430,22 @@ class MainWindow(QMainWindow):
         """
         existing_roots = {f.path for f in self._model._root_folders}
 
-        self._model.addFiles(found)
+        self._model.add_files(found)
 
         new_roots = [f for f in self._model._root_folders if f.path not in existing_roots]
-        self._file_view.expandNewFolders(new_roots)
+        self._file_view.expand_new_folders(new_roots)
 
         for _root, file_path in found:
             node = self._model._path_to_node.get(file_path)
             if node and node.meta_loading:
                 signals = MetaSignals(self)
-                signals.metaParsed.connect(self._model.updateMeta)
-                signals.metaFailed.connect(self._model.updateMetaError)
+                signals.meta_parsed.connect(self._model.update_meta)
+                signals.meta_failed.connect(self._model.update_meta_error)
                 self._meta_pool.start(MetaWorker(file_path, signals))
 
     def _on_scan_finished(self) -> None:
         self._toolbar.set_busy(False)
-        total = self._model.totalFileCount()
+        total = self._model.total_file_count()
         self._bottom_bar.set_idle(t("bar.ready_n_files", n=total))
 
     # ------------------------------------------------------------------
@@ -450,7 +456,7 @@ class MainWindow(QMainWindow):
         if self._is_converting():
             return
 
-        files = self._model.checkedFilePaths()
+        files = self._model.checked_file_paths()
         if not files:
             QMessageBox.information(self, t("msg.no_files_title"), t("msg.no_files_text"))
             return
@@ -462,18 +468,18 @@ class MainWindow(QMainWindow):
         self._bottom_bar.set_converting(len(files))
 
         self._batch_worker = BatchWorker(self._config, files, session, parent=self)
-        self._batch_worker.progressUpdate.connect(self._on_progress_update)
-        self._batch_worker.batchFinished.connect(self._on_batch_finished)
-        self._batch_worker.errorOccurred.connect(self._on_batch_error)
+        self._batch_worker.progress_update.connect(self._on_progress_update)
+        self._batch_worker.batch_finished.connect(self._on_batch_finished)
+        self._batch_worker.error_occurred.connect(self._on_batch_error)
         self._batch_worker.start()
 
     def _on_cancel(self) -> None:
         if self._batch_worker and self._batch_worker.isRunning():
-            self._batch_worker.requestCancel()
+            self._batch_worker.request_cancel()
             self._bottom_bar.set_cancelling()
 
     def _on_progress_update(self, result: ConversionResult) -> None:
-        self._model.setFileResult(result.path, result)
+        self._model.set_file_result(result.path, result)
         if self._batch_worker:
             s = self._batch_worker._session
             self._bottom_bar.update_progress(
@@ -497,15 +503,13 @@ class MainWindow(QMainWindow):
             session.cancelled,
         )
 
-        # Written to the log as SESSION_REPORT after each run 
+        # Written to the log as SESSION_REPORT after each run
         # so the log folder viewer always reflects the latest totals.
         self._cumulative_success += session.success
         self._cumulative_warnings += session.warnings
         self._cumulative_failures += session.failures
         cumulative_total = (
-            self._cumulative_success
-            + self._cumulative_warnings
-            + self._cumulative_failures
+            self._cumulative_success + self._cumulative_warnings + self._cumulative_failures
         )
         log.info(
             "SESSION_REPORT mode=gui total=%d success=%d warnings=%d failures=%d",
@@ -531,6 +535,7 @@ class MainWindow(QMainWindow):
     # Window lifecycle
     # ------------------------------------------------------------------
 
+    @override
     def closeEvent(self, event) -> None:
         if self._is_converting():
             reply = QMessageBox.question(
@@ -542,7 +547,7 @@ class MainWindow(QMainWindow):
             if reply != QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
-            self._batch_worker.requestCancel()  # type: ignore
+            self._batch_worker.request_cancel()  # type: ignore
 
         if self._scan_worker:
             self._scan_worker.quit()

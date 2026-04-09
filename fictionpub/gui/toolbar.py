@@ -1,13 +1,6 @@
 """
 Top toolbar containing file management and settings actions.
 
-QSS note
---------
-Button hover / press styles are intentionally absent here.  They are
-applied centrally in MainWindow._apply_stylesheet() via the descendant
-selector  ToolbarWidget QPushButton { … }  so all styling lives in one
-place and responds correctly to runtime theme changes.
-
 Selection toggle
 ----------------
 A single QPushButton whose label shows the current selection count.
@@ -30,6 +23,7 @@ from PySide6.QtWidgets import (
 from .i18n import register_listener, t
 
 
+# FIXME: extract vsep() from modules to a helper module
 def _vsep() -> QFrame:
     sep = QFrame()
     sep.setFrameShape(QFrame.Shape.VLine)
@@ -44,20 +38,20 @@ def _btn() -> QPushButton:
 
 class ToolbarWidget(QWidget):
     # File management
-    addFilesRequested = Signal()
-    addFolderRequested = Signal()
-    removeSelectedRequested = Signal()
-    removeAllRequested = Signal()
-    removeCompletedRequested = Signal()
+    add_files_requested = Signal()
+    add_folder_requested = Signal()
+    remove_selected_requested = Signal()
+    remove_all_requested = Signal()
+    remove_completed_requested = Signal()
 
     # Selection
-    selectAllRequested = Signal()
-    deselectAllRequested = Signal()
+    select_all_requested = Signal()
+    deselect_all_requested = Signal()
 
     # App
-    conversionSettingsRequested = Signal()
-    appSettingsRequested = Signal()
-    aboutRequested = Signal()
+    conversion_settings_requested = Signal()
+    app_settings_requested = Signal()
+    about_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -118,23 +112,23 @@ class ToolbarWidget(QWidget):
             layout.addWidget(w)
 
         # Signals
-        self._add_files.clicked.connect(self.addFilesRequested)
-        self._add_folder.clicked.connect(self.addFolderRequested)
-        self._remove.clicked.connect(self.removeSelectedRequested)
-        self._remove_all.clicked.connect(self.removeAllRequested)
-        self._remove_done.clicked.connect(self.removeCompletedRequested)
+        self._add_files.clicked.connect(self.add_files_requested)
+        self._add_folder.clicked.connect(self.add_folder_requested)
+        self._remove.clicked.connect(self.remove_selected_requested)
+        self._remove_all.clicked.connect(self.remove_all_requested)
+        self._remove_done.clicked.connect(self.remove_completed_requested)
         self._select_toggle.clicked.connect(self._on_select_toggle)
-        self._conv_settings.clicked.connect(self.conversionSettingsRequested)
-        self._app_settings.clicked.connect(self.appSettingsRequested)
-        self._about.clicked.connect(self.aboutRequested)
+        self._conv_settings.clicked.connect(self.conversion_settings_requested)
+        self._app_settings.clicked.connect(self.app_settings_requested)
+        self._about.clicked.connect(self.about_requested)
 
         self._retranslate_ui()
 
     def _on_select_toggle(self) -> None:
         if self._all_selected:
-            self.deselectAllRequested.emit()
+            self.deselect_all_requested.emit()
         else:
-            self.selectAllRequested.emit()
+            self.select_all_requested.emit()
 
     def _retranslate_ui(self) -> None:
         self._add_files.setText(t("toolbar.add_files"))

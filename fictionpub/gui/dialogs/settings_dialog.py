@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/dialogs/settings_dialog.py
-
 Modal dialog for editing ConversionConfig.
 Returns the new config via .result after exec().
 Supports runtime language switching.
@@ -61,7 +59,7 @@ class SettingsDialog(QDialog):
     def __init__(self, config: ConversionConfig, parent=None):
         super().__init__(parent)
         self.setFixedWidth(480)
-        self._config = config
+        self._config: ConversionConfig = config
         self.result: ConversionConfig | None = None
         self._build_ui()
         self._load(config)

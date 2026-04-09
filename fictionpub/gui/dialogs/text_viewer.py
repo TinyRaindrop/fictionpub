@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/dialogs/text_viewer.py
-
 Shared infrastructure for all monospace text viewer dialogs.
 
 CodeViewer
@@ -12,17 +10,19 @@ hardcoded values.
 TextViewerDialog
 ────────────────
 Base QDialog that:
-  • Shows the OS maximize button in the title bar via
+  * Shows the OS maximize button in the title bar via
     Qt.WindowMaximizeButtonHint — the correct, expected location on
     every platform.
-  • Hosts a CodeViewer with a Wrap-lines checkbox and Copy / Close buttons.
-  • Provides extension hooks _build_top_controls(), _extra_bottom_buttons(),
+  * Hosts a CodeViewer with a Wrap-lines checkbox and Copy / Close buttons.
+  * Provides extension hooks _build_top_controls(), _extra_bottom_buttons(),
     _attach_highlighter(), set_content().
-  • Persists and restores its geometry per dialog variant using QSettings.
-  • Computes a sensible default size from the primary screen dimensions.
+  * Persists and restores its geometry per dialog variant using QSettings.
+  * Computes a sensible default size from the primary screen dimensions.
 """
 
 from __future__ import annotations
+
+from typing import override
 
 from PySide6.QtCore import (
     QRect,
@@ -46,9 +46,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..i18n import register_listener, t
 from ... import app_info
-
+from ..i18n import register_listener, t
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Line-number gutter
@@ -60,10 +59,12 @@ class _LineNumberArea(QWidget):
         super().__init__(editor)
         self._editor = editor
 
+    @override
     def sizeHint(self) -> QSize:
         return QSize(self._editor._gutter_width(), 0)
 
-    def paintEvent(self, event) -> None:  # noqa: N802
+    @override
+    def paintEvent(self, event) -> None:
         self._editor._paint_line_numbers(event)
 
 
@@ -112,7 +113,8 @@ class CodeViewer(QPlainTextEdit):
 
     # ── Layout ────────────────────────────────────────────────────────────────
 
-    def resizeEvent(self, event) -> None:  # noqa: N802
+    @override
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         cr = self.contentsRect()
         self._gutter.setGeometry(
@@ -278,7 +280,8 @@ class TextViewerDialog(QDialog):
 
     # ── Geometry persistence ──────────────────────────────────────────────────
 
-    def showEvent(self, event) -> None:  # noqa: N802
+    @override
+    def showEvent(self, event) -> None:
         super().showEvent(event)
         s = QSettings(
             QSettings.Format.IniFormat,
@@ -300,7 +303,8 @@ class TextViewerDialog(QDialog):
                 screen.top() + (screen.height() - h) // 2,
             )
 
-    def closeEvent(self, event) -> None:  # noqa: N802
+    @override
+    def closeEvent(self, event) -> None:
         s = QSettings(
             QSettings.Format.IniFormat,
             QSettings.Scope.UserScope,

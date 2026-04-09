@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/dialogs/log_folder_dialog.py
-
 Non-modal dialog listing all converter log files with parsed statistics.
 
 Columns: # | Date | Time | Mode | Total | ✓ | ⚠ | ✗
@@ -21,6 +19,7 @@ Two structured lines are read from each log file:
 
 Toolbar: [Open Log] [Delete] [Delete All]          [Open Folder]
 """
+
 from __future__ import annotations
 
 import os
@@ -29,14 +28,15 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import override
 
-from PySide6.QtCore import QSettings, QSize, Qt
+from PySide6.QtCore import QSize, Qt
 from PySide6.QtGui import QBrush, QColor, QFont
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
-    QHeaderView,
     QHBoxLayout,
+    QHeaderView,
     QMessageBox,
     QPushButton,
     QTableWidget,
@@ -44,11 +44,14 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...app_info import APP_NAME_SHORT, APP_ORG
+from fictionpub.gui.state.settings import AppSettings
+
+# TODO: switch to absolute imports everywhere
 from ...models.conversion import ConversionStatus
 from ...utils.logger import LOG_DIR, get_current_log_path
 from ..i18n import register_listener, t
 from ..icons import get_status_icons
+from ..themes import PLAIN_BUTTON_QSS
 from .log_viewer_dialog import LogViewerDialog
 
 # ── Column indices ────────────────────────────────────────────────────────────
@@ -67,9 +70,7 @@ _ICON_PX = 16
 
 # ── Regex patterns ────────────────────────────────────────────────────────────
 
-_RE_FILENAME = re.compile(
-    r"^converter_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.log$"
-)
+_RE_FILENAME = re.compile(r"^converter_(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})\.log$")
 _RE_APP_START = re.compile(r"APP_START mode=(\w+)")
 _RE_SESSION_REPORT = re.compile(
     r"SESSION_REPORT mode=(\w+) total=(\d+) success=(\d+) warnings=(\d+) failures=(\d+)"
@@ -77,7 +78,7 @@ _RE_SESSION_REPORT = re.compile(
 
 # Colours
 _RED_FAIL = QColor("#c0392b")
-_CURRENT_BG = QColor(38, 120, 200, 35)   # faint highlight tint for current session
+_CURRENT_BG = QColor(38, 120, 200, 35)  # faint highlight tint for current session
 
 # ── Data model ────────────────────────────────────────────────────────────────
 
@@ -89,7 +90,7 @@ class LogSummary:
     path: Path
     date: str
     time_str: str
-    mode: str            # "GUI", "CLI", or "?"
+    mode: str  # "GUI", "CLI", or "?"
     total: int | None = None
     success: int | None = None
     warnings: int | None = None
@@ -151,38 +152,18 @@ def _load_summaries() -> list[LogSummary]:
 
 # ── Platform helper ───────────────────────────────────────────────────────────
 
+
 def _open_path(path: Path) -> None:
     """Open a file or directory using the OS default handler."""
     try:
         if platform.system() == "Windows":
-            os.startfile(path)          # type: ignore[attr-defined]
+            os.startfile(path)  # type: ignore[attr-defined]
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:
             subprocess.Popen(["xdg-open", str(path)])
     except Exception:
         pass
-
-
-# ── QSS ──────────────────────────────────────────────────────────────────────
-# TODO: unify with MainWindow styling
-_TOOLBAR_QSS = """
-QPushButton {
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 3px 10px;
-}
-QPushButton:hover {
-    background-color: rgba(128, 128, 128, 0.20);
-    border: 1px solid rgba(128, 128, 128, 0.35);
-}
-QPushButton:pressed {
-    background-color: rgba(128, 128, 128, 0.35);
-}
-QPushButton:disabled {
-    color: palette(mid);
-}
-"""
 
 
 # ── Dialog ────────────────────────────────────────────────────────────────────
@@ -196,8 +177,11 @@ class LogFolderDialog(QDialog):
 
     _GEOM_KEY = "geometry/log_folder"
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, settings: AppSettings, parent=None) -> None:
         super().__init__(parent)
+        self._settings = settings
+        self._geom_key = "log_folder"
+
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowFlags(
             self.windowFlags()
@@ -223,13 +207,15 @@ class LogFolderDialog(QDialog):
         outer.addLayout(self._build_toolbar())
         outer.addWidget(self._build_table(), stretch=1)
 
-        self.setStyleSheet(_TOOLBAR_QSS)
+        self.setStyleSheet(PLAIN_BUTTON_QSS)
+        # We can override the style
+        # self.setStyleSheet(PLAIN_BUTTON_QSS + "QPushButton { padding: 3px 10px; }")
 
         # Calculate minimum width to prevent horizontal overflow:
         # 6 fixed columns, 2 stretch columns
         # Extra buffer for layout margins, frame borders, and vertical scrollbar
-        MIN_WINDOW_WIDTH = 6*64 + 2*120 + 36
-        self.setMinimumWidth(MIN_WINDOW_WIDTH)
+        min_window_width = 6 * 64 + 2 * 120 + 36
+        self.setMinimumWidth(min_window_width)
 
         self._retranslate_ui()
 
@@ -271,7 +257,7 @@ class LogFolderDialog(QDialog):
 
         h = self._table.horizontalHeader()
         # Protects columns from getting too tiny if squeezed
-        h.setMinimumSectionSize(64) 
+        h.setMinimumSectionSize(64)
         h.setStretchLastSection(True)
         h.setDefaultAlignment(Qt.AlignmentFlag.AlignCenter)
 
@@ -285,11 +271,12 @@ class LogFolderDialog(QDialog):
 
         return self._table
 
+    @override
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        
+
         # Ensure table exists before trying to resize its columns
-        if not hasattr(self, '_table'):
+        if not hasattr(self, "_table"):
             return
 
         # Get the actual drawable width inside the table
@@ -324,15 +311,15 @@ class LogFolderDialog(QDialog):
             it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             return it
 
-        self._table.setHorizontalHeaderItem(COL_NUM,   _hdr("#"))
-        self._table.setHorizontalHeaderItem(COL_DATE,  _hdr(t("logfolder.col_date")))
-        self._table.setHorizontalHeaderItem(COL_TIME,  _hdr(t("logfolder.col_time")))
-        self._table.setHorizontalHeaderItem(COL_MODE,  _hdr(t("logfolder.col_mode")))
+        self._table.setHorizontalHeaderItem(COL_NUM, _hdr("#"))
+        self._table.setHorizontalHeaderItem(COL_DATE, _hdr(t("logfolder.col_date")))
+        self._table.setHorizontalHeaderItem(COL_TIME, _hdr(t("logfolder.col_time")))
+        self._table.setHorizontalHeaderItem(COL_MODE, _hdr(t("logfolder.col_mode")))
         self._table.setHorizontalHeaderItem(COL_TOTAL, _hdr(t("logfolder.col_total")))
 
         # Count columns use status icons as headers
         for col, status in (
-            (COL_OK,   ConversionStatus.SUCCESS),
+            (COL_OK, ConversionStatus.SUCCESS),
             (COL_WARN, ConversionStatus.WARNING),
             (COL_FAIL, ConversionStatus.FAILURE),
         ):
@@ -361,9 +348,7 @@ class LogFolderDialog(QDialog):
         bold_font = QFont()
         bold_font.setBold(True)
 
-        current_log_resolved = (
-            self._current_log.resolve() if self._current_log else None
-        )
+        current_log_resolved = self._current_log.resolve() if self._current_log else None
 
         for row, s in enumerate(summaries):
             is_current = (
@@ -371,7 +356,7 @@ class LogFolderDialog(QDialog):
                 and s.path.resolve() == current_log_resolved
             )
 
-            def _cell(text: str) -> QTableWidgetItem:
+            def _cell(text: str, is_current=is_current) -> QTableWidgetItem:
                 it = QTableWidgetItem(text)
                 it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 if is_current:
@@ -385,18 +370,18 @@ class LogFolderDialog(QDialog):
             num_cell = _cell(str(row + 1))
             # Stash path on the number cell for retrieval by actions
             num_cell.setData(Qt.ItemDataRole.UserRole, str(s.path))
-            self._table.setItem(row, COL_NUM,   num_cell)
-            self._table.setItem(row, COL_DATE,  _cell(s.date))
-            self._table.setItem(row, COL_TIME,  _cell(s.time_str))
-            self._table.setItem(row, COL_MODE,  _cell(s.mode))
+            self._table.setItem(row, COL_NUM, num_cell)
+            self._table.setItem(row, COL_DATE, _cell(s.date))
+            self._table.setItem(row, COL_TIME, _cell(s.time_str))
+            self._table.setItem(row, COL_MODE, _cell(s.mode))
             self._table.setItem(row, COL_TOTAL, _cell(_num(s.total)))
-            self._table.setItem(row, COL_OK,    _cell(_num(s.success)))
-            self._table.setItem(row, COL_WARN,  _cell(_num(s.warnings)))
+            self._table.setItem(row, COL_OK, _cell(_num(s.success)))
+            self._table.setItem(row, COL_WARN, _cell(_num(s.warnings)))
 
             fail_cell = _cell(_num(s.failures))
             if s.failures:
                 fail_cell.setForeground(QBrush(_RED_FAIL))
-                if not is_current:             # bold already set for current row
+                if not is_current:  # bold already set for current row
                     fail_cell.setFont(bold_font)
             self._table.setItem(row, COL_FAIL, fail_cell)
 
@@ -495,26 +480,16 @@ class LogFolderDialog(QDialog):
 
     # ── Geometry persistence ──────────────────────────────────────────────────
 
-    def showEvent(self, event) -> None:  # noqa: N802
+    @override
+    def showEvent(self, event) -> None:
         super().showEvent(event)
-        s = QSettings(
-            QSettings.Format.IniFormat,
-            QSettings.Scope.UserScope,
-            APP_ORG,
-            APP_NAME_SHORT,
-        )
-        raw = s.value(self._GEOM_KEY)
-        if raw:
+        raw = self._settings.get_geometry(self._geom_key)
+        if raw is not None:
             self.restoreGeometry(raw)
         else:
             self.resize(560, 380)
 
-    def closeEvent(self, event) -> None:  # noqa: N802
-        s = QSettings(
-            QSettings.Format.IniFormat,
-            QSettings.Scope.UserScope,
-            APP_ORG,
-            APP_NAME_SHORT,
-        )
-        s.setValue(self._GEOM_KEY, self.saveGeometry())
+    @override
+    def closeEvent(self, event) -> None:
+        self._settings.set_geometry(self.saveGeometry(), self._geom_key)
         super().closeEvent(event)

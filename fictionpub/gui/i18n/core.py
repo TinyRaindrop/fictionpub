@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/i18n/core.py
-
 i18n core: language state, lookup, and listener registry.
 
 String data is loaded from lang.json (same directory) via the shared
@@ -26,10 +24,10 @@ from ...utils.term_lookup import TermLookup
 
 # ---------------------------------------------------------------------------
 # Load translation data once at import time.
-# lang.json lives alongside this file in the fictionpub.pyside6.i18n package.
+# lang.json lives alongside this file in the fictionpub.gui.i18n package.
 # ---------------------------------------------------------------------------
 
-_raw: dict[str, dict[str, str]] = load_json("fictionpub.pyside6.i18n", "lang.json")
+_raw: dict[str, dict[str, str]] = load_json("fictionpub.gui.i18n", "lang.json")
 _lookup = TermLookup(_raw, default_lang="en")
 
 SUPPORTED_LANGS: frozenset[str] = _lookup.languages()
@@ -41,7 +39,7 @@ _listeners: list[weakref.ref] = []
 
 
 # ---------------------------------------------------------------------------
-# Public API  (unchanged from previous version)
+# Public API
 # ---------------------------------------------------------------------------
 
 
@@ -49,7 +47,7 @@ def t(key: str, **kwargs) -> str:
     """
     Return the UI string for *key* in the current language.
     Falls back to English when the key is missing in the active language.
-    Supports named .format() substitutions:  t("bar.ready_n_files", n=5)
+    Supports named .format() substitutions: t("bar.ready_n_files", n=5)
     """
     text = _lookup.get(key, _LANG, default=key)
     if kwargs:

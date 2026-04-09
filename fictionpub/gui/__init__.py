@@ -1,17 +1,16 @@
 """
-PySide6 GUI entry point for fictionpub.
-Drop-in replacement for the Tkinter gui.py module:
+GUI entry point for fictionpub.
 
-    from fictionpub.pyside6 import run_gui
+    from fictionpub.gui import run_gui
     run_gui()
 
 Language bootstrap order
 ------------------------
 1. If the user has previously saved a language preference it is loaded from
    QSettings and used as-is.
-2. On the very first launch (no saved preference) the OS locale is inspected
-   via QLocale.system().  If it resolves to a supported language ('en' or
-   'uk') that language is pre-selected.  Otherwise 'en' is the fallback.
+2. On the very first launch (no saved pref.) the OS locale is inspected via QLocale.system().
+   If it resolves to a supported language ('en' / 'uk') that language is pre-selected.
+   Otherwise 'en' is the fallback.
 """
 
 import logging
@@ -39,7 +38,7 @@ def _detect_os_language() -> str:
     Uses Qt's QLocale so it is consistent with Qt's own locale handling
     across all platforms (Windows, macOS, Linux).
 
-    QLocale.system().name() returns e.g. "uk_UA", "en_GB", "de_DE".
+    QLocale.system().name() returns "uk_UA", "en_GB", "de_DE".
     We take the first two characters as the ISO 639-1 code.
     """
     locale_name = QLocale.system().name()
@@ -92,7 +91,7 @@ def run_gui() -> None:
     # --- Main window ---
     window = MainWindow(settings)
 
-    geometry = settings.geometry()
+    geometry = settings.get_geometry()
     if geometry:
         window.restoreGeometry(geometry)
     else:

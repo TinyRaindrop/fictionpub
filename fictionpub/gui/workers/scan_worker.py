@@ -18,7 +18,7 @@ from PySide6.QtCore import QThread, Signal
 
 class ScanWorker(QThread):
     # list[tuple[Path, Path]]  — (scan_root, file_path)
-    filesFound = Signal(list)
+    files_found = Signal(list)
 
     def __init__(self, input_paths: list[Path], parent=None) -> None:
         super().__init__(parent)
@@ -35,4 +35,4 @@ class ScanWorker(QThread):
                 for pattern in ("**/*.fb2", "**/*.fb2.zip"):
                     for f in p.rglob(pattern):
                         found.append((p, f))
-        self.filesFound.emit(found)
+        self.files_found.emit(found)

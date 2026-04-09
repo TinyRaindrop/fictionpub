@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/dialogs/highlighters.py
-
 Lightweight QSyntaxHighlighter subclasses that require no external
 libraries — everything is built on Qt's document-model primitives.
 
@@ -33,6 +31,7 @@ Colors entire lines based on the most severe keyword found:
 from __future__ import annotations
 
 import re
+from typing import override
 
 from PySide6.QtCore import QRegularExpression
 from PySide6.QtGui import QColor, QFont, QSyntaxHighlighter, QTextCharFormat
@@ -107,7 +106,8 @@ class CssSyntaxHighlighter(QSyntaxHighlighter):
 
     # ------------------------------------------------------------------
 
-    def highlightBlock(self, text: str) -> None:  # noqa: N802
+    @override
+    def highlightBlock(self, text: str) -> None:
         self.setCurrentBlockState(0)
         pos = 0
 
@@ -197,7 +197,8 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
         self._fmt_warning = _fmt("#e07000")
         self._fmt_debug = _fmt("#888888")
 
-    def highlightBlock(self, text: str) -> None:  # noqa: N802
+    @override
+    def highlightBlock(self, text: str) -> None:
         if not text:
             return
 
@@ -205,7 +206,8 @@ class LogSyntaxHighlighter(QSyntaxHighlighter):
             self.setFormat(0, len(text), self._fmt_boundary)
             return
 
-        # upper = text.upper()
+        # TODO: match Level in its position only, not in entire line.
+        # Change logger formatting if needed or use _RE_LOG_LINE as base
 
         if any(k in text for k in _ERROR_KEYS):
             self.setFormat(0, len(text), self._fmt_error)

@@ -76,12 +76,12 @@
         "uk": "Виведення: {path}"
     },
     "bar.last_log": {
-        "en": "📋 Last log",
-        "uk": "📋 Останній журнал"
+        "en": "📋 Current log",
+        "uk": "📋 Поточний журнал"
     },
     "bar.logs_folder": {
-        "en": "📂 Logs folder",
-        "uk": "📂 Папка журналів"
+        "en": "📂 Logs",
+        "uk": "📂 Журнали"
     },
     "bar.ready": {
         "en": "Ready",
@@ -584,8 +584,8 @@
         "uk": "Видалити всі"
     },
     "logfolder.open_folder": {
-        "en": "Open Folder",
-        "uk": "Відкрити папку"
+        "en": "📂 Open folder",
+        "uk": "📂 Відкрити папку"
     },
     "logfolder.col_date": {
         "en": "Date",

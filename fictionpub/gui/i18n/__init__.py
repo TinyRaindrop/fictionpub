@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/i18n/__init__.py
-
 Package entry point — re-exports the full public API from core.
 
 Import from here everywhere:
@@ -8,7 +6,7 @@ Import from here everywhere:
     from .i18n import register_listener, unregister_listener, SUPPORTED_LANGS
 """
 
-from .core import (  # noqa: F401
+from .core import (
     SUPPORTED_LANGS,
     get_language,
     register_listener,
@@ -16,3 +14,12 @@ from .core import (  # noqa: F401
     t,
     unregister_listener,
 )
+
+__all__ = [
+    "SUPPORTED_LANGS",
+    "get_language",
+    "register_listener",
+    "set_language",
+    "t",
+    "unregister_listener",
+]

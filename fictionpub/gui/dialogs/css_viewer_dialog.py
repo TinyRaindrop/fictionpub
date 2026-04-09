@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/dialogs/css_viewer_dialog.py
-
 Non-modal CSS viewer / editor built on TextViewerDialog.
 
 Two modes
@@ -10,17 +8,15 @@ editable=False  Read-only view of the built-in default stylesheet.
 editable=True   Editable; Save button writes changes back to disk.
 
 Both modes share:
-  • CssSyntaxHighlighter for /* comments */, @rules, properties, strings,
+  * CssSyntaxHighlighter for /* comments */, @rules, properties, strings,
     hex colours, numbers+units, and !important
-  • "Wrap lines" checkbox
-  • "Copy All" button
-  • Monospace font
+  * "Wrap lines" checkbox
+  * "Copy All" button
+  * Monospace font
 
 The dialog is non-modal (show(), not exec()) so the user can keep it
 open alongside the settings dialog.  WA_DeleteOnClose + WeakMethod in
 the i18n registry mean no manual cleanup is required.
-
-Geometry key : "css_viewer"  (width_fraction=0.50)
 """
 
 from __future__ import annotations

@@ -6,20 +6,17 @@ Single-row layout (left → right):
 
 Layout stability
 ────────────────
-• Progress bar and Cancel button use setRetainSizeWhenHidden(True) so
+* Progress bar and Counters use setRetainSizeWhenHidden(True) so
   their layout slot is preserved — nothing shifts when conversion starts.
-• Counters widget is also retain-size hidden at idle.
+* Counters widget is also retain-size hidden at idle.
 
 Counter icons
 ─────────────
-The three status counts use the shared QIcon instances from icons.py
-(same icons as FileTreeModel), rendered at 14 px.
+The three status counts use the shared QIcon instances from icons.py (same as FileTreeModel)
 
 QSS
 ───
-No inline button styles here.  All hover/press rules come from
-MainWindow._apply_stylesheet() via the descendant selector
-    BottomBarWidget QPushButton { … }
+Styling is handled by MainWindow._apply_stylesheet()
 """
 
 from PySide6.QtCore import Qt, Signal
@@ -56,10 +53,10 @@ _ICON_PX = 14  # status-icon render size inside the bar
 
 
 class BottomBarWidget(QWidget):
-    convertRequested = Signal()
-    cancelRequested = Signal()
-    openLogsDirRequested = Signal()
-    openLastLogRequested = Signal()
+    convert_requested = Signal()
+    cancel_requested = Signal()
+    open_logs_dir_requested = Signal()
+    open_last_log_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -103,11 +100,11 @@ class BottomBarWidget(QWidget):
 
         # Log access
         self._logs_dir = QPushButton()
-        self._logs_dir.clicked.connect(self.openLogsDirRequested)
+        self._logs_dir.clicked.connect(self.open_logs_dir_requested)
         layout.addWidget(self._logs_dir)
 
         self._last_log = QPushButton()
-        self._last_log.clicked.connect(self.openLastLogRequested)
+        self._last_log.clicked.connect(self.open_last_log_requested)
         layout.addWidget(self._last_log)
 
         layout.addWidget(_vsep())
@@ -115,7 +112,7 @@ class BottomBarWidget(QWidget):
         # Cancel — retains layout slot when hidden
         self._cancel = QPushButton()
         self._cancel.setMinimumWidth(150)
-        self._cancel.clicked.connect(self.cancelRequested)
+        self._cancel.clicked.connect(self.cancel_requested)
         self._cancel.hide()
         layout.addWidget(self._cancel)
 
@@ -123,7 +120,7 @@ class BottomBarWidget(QWidget):
         self._convert = QPushButton()
         self._convert.setObjectName("convertButton")
         self._convert.setMinimumWidth(150)
-        self._convert.clicked.connect(self.convertRequested)
+        self._convert.clicked.connect(self.convert_requested)
         layout.addWidget(self._convert)
 
         self._retranslate_ui()

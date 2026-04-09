@@ -10,16 +10,54 @@ Without this step, widgets like QTreeView that cache palette-derived brush
 values at paint time (alternating row colours, text colours) will not update
 until the next natural repaint event — producing the "partial theme change"
 symptom where some areas update and others do not.
+
+PLAIN_BUTTON_QSS
+────────────────
+Shared stylesheet for the plain QPushButtons throughout the application.
+
+It uses bare "QPushButton" selectors so it can be applied at any scope:
+  • MainWindow composes it into _WINDOW_QSS with ToolbarWidget /
+    BottomBarWidget ancestor selectors for correct specificity isolation.
+  • Modal / modeless dialogs (e.g. LogFolderDialog) set it directly on
+    themselves, so all their QPushButtons inherit the shared style.
 """
 
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication
 
+# ---------------------------------------------------------------------------
+# Shared button style — should be used by both MainWindow and standalone dialogs
+# ---------------------------------------------------------------------------
+# TODO: unify button styles across modules. Use palette colors.
+PLAIN_BUTTON_QSS = """
+QPushButton {
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 3px 8px;
+    background: transparent;
+}
+QPushButton:hover {
+    background-color: rgba(128, 128, 128, 0.20);
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}
+QPushButton:pressed {
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}
+QPushButton:checked {
+    background-color: rgba(128, 128, 128, 0.35);
+    border: 1px solid rgba(128, 128, 128, 0.50);
+}
+QPushButton:disabled {
+    color: palette(mid);
+}
+"""
+
 
 def _light_palette() -> QPalette:
     p = QPalette()
     window = QColor(240, 240, 240)
-    window_alt = QColor(248, 248, 248)
+    # window_alt = QColor(248, 248, 248)
     base = QColor(255, 255, 255)
     base_alt = QColor(245, 245, 245)
     text = QColor(30, 30, 30)
@@ -121,23 +159,6 @@ def _force_repaint(app: QApplication) -> None:
     """
     Push the new application palette to every widget and cycle them through
     the style engine so all cached colour values are replaced immediately.
-
-    Why explicit setPalette() is necessary
-    ---------------------------------------
-    QAbstractScrollArea (and therefore QTreeView) internally calls
-    setPalette() on its viewport child during construction, marking it with
-    WA_SetPalette = True.  A widget with an explicit palette ignores the
-    application palette change that app.setPalette() sends; it keeps its own
-    cached colours regardless of unpolish/polish calls.
-
-    Calling widget.setPalette(new_palette) on every widget — including those
-    viewports — overwrites the stale cached palette with the new one, after
-    which unpolish/polish/update() forces the style engine to recompute all
-    derived brush values (alternating row colours, text colours, borders).
-
-    Widgets styled exclusively via QSS (e.g. the Convert button) are
-    unaffected because Qt evaluates QSS after the palette, so their
-    appearance is determined by the stylesheet, not the palette.
     """
     new_palette = app.palette()
     style = app.style()

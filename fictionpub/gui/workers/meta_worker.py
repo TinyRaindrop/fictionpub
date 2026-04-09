@@ -15,8 +15,8 @@ from ...core.fb2_book import FB2Book
 class MetaSignals(QObject):
     """Signals companion for MetaWorker."""
 
-    metaParsed = Signal(object, object)  # (Path, QuickMetadata)
-    metaFailed = Signal(object, str)  # (Path, error_msg)
+    meta_parsed = Signal(object, object)  # (Path, QuickMetadata)
+    meta_failed = Signal(object, str)  # (Path, error_msg)
 
 
 class MetaWorker(QRunnable):
@@ -29,6 +29,6 @@ class MetaWorker(QRunnable):
     def run(self) -> None:
         try:
             meta = FB2Book.get_quick_metadata(self.path)
-            self.signals.metaParsed.emit(self.path, meta)
+            self.signals.meta_parsed.emit(self.path, meta)
         except Exception as e:
-            self.signals.metaFailed.emit(self.path, str(e))
+            self.signals.meta_failed.emit(self.path, str(e))

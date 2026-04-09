@@ -24,9 +24,9 @@ from ...models.conversion import ConversionConfig, ConversionResult
 
 
 class BatchWorker(QThread):
-    progressUpdate = Signal(object)  # ConversionResult
-    batchFinished = Signal(object)  # ConversionSession
-    errorOccurred = Signal(str)
+    progress_update = Signal(object)  # ConversionResult
+    batch_finished = Signal(object)  # ConversionSession
+    error_occurred = Signal(str)
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class BatchWorker(QThread):
         self._session = session
         self._cancel_requested = False  # always False on a fresh instance
 
-    def requestCancel(self) -> None:
+    def request_cancel(self) -> None:
         """
         Signal that the user wants to stop. Safe to call from the main thread.
         The flag is checked inside _callback (runs on this thread).
@@ -54,14 +54,14 @@ class BatchWorker(QThread):
             processor.run(self._files, self._callback)
         except Exception as e:
             if not self._cancel_requested:
-                self.errorOccurred.emit(str(e))
+                self.error_occurred.emit(str(e))
         finally:
             self._session.cancelled = self._cancel_requested
-            self.batchFinished.emit(self._session)
+            self.batch_finished.emit(self._session)
 
     def _callback(self, result: ConversionResult) -> None:
         """Called by BatchProcessor for each completed file (on this thread)."""
         if self._cancel_requested:
             return
         self._session.update(result)
-        self.progressUpdate.emit(result)
+        self.progress_update.emit(result)

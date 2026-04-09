@@ -431,7 +431,7 @@ class FB2ToHTMLConverter:
             html_tag, html_attrib = "div", {"class": fb2_tag}
 
         # Merge attributes with existing ones (typically only 'id', 'name')
-        # TODO: this would also merge style/align/valign attribs
+        # TODO: this would also merge style attrib
         attrib = xu.get_attrib_dict(element)
         attrib.update(html_attrib or {})
         return etree.Element(html_tag, attrib)

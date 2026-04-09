@@ -1,6 +1,4 @@
 """
-fictionpub/pyside6/status_bar.py
-
 Thin application-level status strip displayed between the file-tree and
 the bottom action bar.
 
@@ -19,18 +17,15 @@ Usage
 
 Design notes
 ────────────
-A single QLabel is sufficient for now.  The widget intentionally has no
-i18n listener of its own — the caller (MainWindow) handles translation
-and pushes translated strings in.
-
-The widget has no fixed height so it sizes to its font naturally, keeping
-the bottom bar properly vertically centred on all platforms.
+A single QLabel. The widget intentionally has no i18n listener of its own:
+the caller (MainWindow) handles translation and pushes translated strings in.
 """
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QWidget
 
 
+# TODO: remove / rework
 class AppStatusBar(QWidget):
     """
     Thin informational strip.

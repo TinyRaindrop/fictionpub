@@ -1,13 +1,5 @@
 """
-fictionpub/pyside6/state/settings.py
-
 Typed wrapper around QSettings.
-
-Geometry keys
-─────────────
-  app/geometry              — main window
-  geometry/log_viewer       — LogViewerDialog
-  geometry/css_viewer       — CSSViewerDialog
 
 reset_to_defaults() clears ALL keys so every size, preference, and
 conversion setting reverts to its hard-coded default on next launch.
@@ -24,6 +16,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSettings
 
+from ... import app_info
 from ...models.conversion import ConversionConfig
 
 
@@ -32,8 +25,8 @@ class AppSettings:
         self._s = QSettings(
             QSettings.Format.IniFormat,
             QSettings.Scope.UserScope,
-            "fictionpub",
-            "fb2converter",
+            app_info.APP_ORG,
+            app_info.APP_NAME_SHORT,
         )
 
     # ------------------------------------------------------------------
@@ -56,13 +49,14 @@ class AppSettings:
     # Window / dialog geometry
     # ------------------------------------------------------------------
 
-    def geometry(self) -> QByteArray | None:
-        """Main window geometry (key: app/geometry)."""
-        raw = self._s.value("app/geometry")
-        return raw if isinstance(raw, QByteArray) else None
+    def set_geometry(self, value: QByteArray, key: str = "main") -> None:
+        """Save geometry. Default key is 'main' for MainWindow."""
+        self._s.setValue(f"app/geometry/{key}", value)
 
-    def set_geometry(self, value: QByteArray) -> None:
-        self._s.setValue("app/geometry", value)
+    def get_geometry(self, key: str = "main") -> QByteArray | None:
+        """Retrieve geometry. Default key is 'main' for MainWindow."""
+        raw = self._s.value(f"app/geometry/{key}")
+        return raw if isinstance(raw, QByteArray) else None
 
     # TextViewerDialog subclasses call QSettings directly via their own
     # instance using the same org/app strings, so their geometry keys
@@ -136,8 +130,8 @@ class AppSettings:
         Clear all persisted settings.
 
         After this call, every preference (language, theme, window sizes,
-        conversion settings) reverts to its hard-coded default on the next
-        read.  The caller is responsible for applying any immediate UI
+        conversion settings) reverts to its hard-coded default on the next read.
+        The caller is responsible for applying any immediate UI
         changes (theme, language) before closing the settings dialog.
         """
         self._s.clear()

@@ -1,12 +1,6 @@
 """
 Non-modal About dialog.
 Pulls app name, version and URL from the top-level app_info module.
-
-Listener cleanup
-----------------
-register_listener uses WeakMethod, so when this dialog is closed and
-garbage-collected (WA_DeleteOnClose), the listener is silently dropped
-on the next set_language call — no manual unregister required.
 """
 
 from PySide6.QtCore import Qt

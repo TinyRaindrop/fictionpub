@@ -1,20 +1,12 @@
 """
-fictionpub/pyside6/icons.py
-
 Shared status-icon registry for the whole GUI.
 
-Why a separate module?
-----------------------
-FileTreeModel and BottomBarWidget both need the same three status icons
-(success / warning / failure).  Keeping the loading logic here avoids
-duplication and ensures both consumers always display identical icons.
-
 The icons are loaded lazily on the first call to get_status_icons() so
-that no QPixmap is created before QApplication exists.  The result is
-cached for the lifetime of the process.
+that no QPixmap is created before QApplication exists.
+The result is cached for the lifetime of the process.
 
 Each icon is a QIcon sourced from resources/icons/*.png and downscaled to
-the requested size.  A glyph fallback is used when the PNG is unavailable.
+the requested size. A glyph fallback is used when the PNG is unavailable.
 """
 
 from __future__ import annotations
