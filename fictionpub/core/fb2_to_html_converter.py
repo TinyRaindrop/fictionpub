@@ -80,7 +80,6 @@ class FB2ToHTMLConverter:
             "empty-line": Tag("empty-line"),  # resolved up in post-processing
             "br": Tag("br"),  # not standard for FB2, but may occur
             # annotation, epigraph, poem, stanza -> div class=tag
-
             # Custom conversions
             "halftitle": Tag("div", {"class": "halftitle"}),
         }

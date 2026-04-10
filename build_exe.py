@@ -10,6 +10,8 @@ import sys
 
 from setuptools_scm import get_version
 
+from fictionpub import app_info
+
 ROOT = pathlib.Path(__file__).parent
 
 
@@ -35,32 +37,33 @@ VERSION = ".".join(map(str, get_version_tuple()))
 
 build_options = [
     # ---- Metadata
-    "--product-name=FictionPub",
-    "--company-name=TinyRaindrop",
-    "--file-description=FB2 to EPUB converter",
+    f"--product-name={app_info.APP_NAME}",
+    f"--company-name={app_info.APP_AUTHOR}",
+    f"--file-description={app_info.APP_DESCRIPTION}",
     f"--file-version={VERSION}",
     f"--product-version={VERSION}",
     # ---- Output
-    "--onefile",  # Single .exe
+    "--onefile",
     "--standalone",
     "--output-dir=./dist/",
     # ---- Compilation
     "--lto=yes",
     "--static-libpython=auto",
     # "--follow-imports",
+    # ---- Build tool (use either one)
     # "--msvc=latest",  # Requires Windows SDK
     "--mingw64",
+    "--assume-yes-for-downloads",
     # ---- Size reduction
     "--python-flag=no_docstrings",
-    "--nofollow-import-to=importlib.metadata",  # exclude csv
     # ---- Resources
-    "--assume-yes-for-downloads",
     "--include-package=fictionpub.resources",
     "--include-data-dir=fictionpub/resources=fictionpub/resources",
+    "--include-data-file=fictionpub/gui/i18n/lang.json=fictionpub/gui/i18n/lang.json",
 ]
 
 PLUGIN_EXCLUDES = [
-    # Pillow - unused image formats
+    # ---- Pillow - unused image formats
     "PIL.BlpImagePlugin",
     "PIL.BufrStubImagePlugin",
     "PIL.CurImagePlugin",
@@ -109,10 +112,10 @@ PLUGIN_EXCLUDES = [
     "PIL.ImageEnhance",
     "PIL.ImageDraw",
     "PIL.ImageFont",
-    # lxml extras
+    # ---- lxml extras
     "lxml.html",  # we only use lxml.etree
     "lxml.objectify",
-    # stdlib test/dev, setuptools
+    # ---- stdlib test/dev, setuptools
     "unittest",
     "doctest",
     "pdb",
@@ -120,6 +123,8 @@ PLUGIN_EXCLUDES = [
     "py_compile",
     "compileall",
     "setuptools",
+    "setuptools_scm",  # used to get current version in dev env only
+    "importlib.metadata",  # pulls csv, etc.
     "pkg_resources",
     "distutils",
 ]

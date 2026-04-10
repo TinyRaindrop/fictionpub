@@ -4,9 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fictionpub"
-description = "Convert FB2 eBooks to EPUB3."
-authors = [{ name = "TinyRaindrop" }]
-dynamic = ["version"]
+dynamic = ["version", "description", "authors"]
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -52,6 +50,13 @@ packages = ["fictionpub"]
 version_scheme = "post-release"
 local_scheme = "no-local-version"
 version_file = "fictionpub/_version.py"
+
+[tool.setuptools.dynamic]
+description = {attr = "fictionpub.app_info.APP_DESCRIPTION"}
+
+# Authors require a specific dictionary format in app_info.py
+# APP_AUTHORS = [{"name": "author"}]
+authors = {attr = "fictionpub.app_info.APP_AUTHORS"}
 
 [tool.ruff]
 exclude = ["dist", "build", ".venv", ".*", "typography.py"]

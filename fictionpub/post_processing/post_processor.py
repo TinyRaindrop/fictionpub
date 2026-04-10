@@ -96,11 +96,11 @@ class PostProcessor:
             # No children
             if h_length < 1:
                 continue
-            
+
             # 2. Single <p>: unwrap directly
             if h_length == 1:
                 if xu.get_tag_name(heading[0]) == "p":
-                    if heading.get("id") == None:
+                    if heading.get("id") is None:
                         # Retain <p> id if <h> has no own id
                         xu.copy_id(heading[0], heading)
                         etree.strip_tags(heading, "p")

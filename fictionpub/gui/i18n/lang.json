@@ -4,8 +4,8 @@
         "uk": "<b>Створено за допомогою:</b> Python 3 · PySide6 / Qt 6"
     },
     "about.description": {
-        "en": "FictionPub converts FB2 e-books to the EPUB 3 format. It supports batch processing, parallel conversion, custom stylesheets, and typography post-processing.",
-        "uk": "FictionPub конвертує електронні книги у форматі FB2 до формату EPUB 3. Підтримує пакетну обробку, паралельну конвертацію, власні таблиці стилів та постобробку типографіки."
+        "en": "FictionPub converts FB2 e-books to the EPUB 3 format. It supports batch processing, parallel conversion, custom stylesheets.",
+        "uk": "FictionPub конвертує електронні книги у форматі FB2 до формату EPUB 3. Підтримує пакетну обробку, паралельну конвертацію, власні таблиці стилів."
     },
     "about.title": {
         "en": "About FictionPub",

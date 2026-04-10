@@ -162,7 +162,7 @@ class LinkResolver:
         if target_doc.body_type == BodyType.NOTE:
             # note criteria 2
             return LinkType.NOTE
-        
+
         if (
             target_doc.body_type == BodyType.COMMENT
             and target_doc.id != self._current_doc_id
