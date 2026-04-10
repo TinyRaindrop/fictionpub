@@ -47,7 +47,7 @@ build_options = [
     # ---- Compilation
     "--lto=yes",
     "--static-libpython=auto",
-    "--follow-imports",
+    # "--follow-imports",
     # "--msvc=latest",  # Requires Windows SDK
     "--mingw64",
     # ---- Size reduction
@@ -102,7 +102,6 @@ PLUGIN_EXCLUDES = [
     "PIL.XpmImagePlugin",
     # "PIL.WebpImagePlugin",   # WebP is not supported in FB2
     # "PIL.TiffImagePlugin",
-    "PIL.ImageQt",
     "PIL.ImageShow",  # opens images in external viewer
     "PIL.ImageWin",  # Windows printing API
     "PIL.ImageCms",  # ICC color profiles
@@ -126,10 +125,12 @@ PLUGIN_EXCLUDES = [
 ]
 
 PLUGIN_EXCLUDES_CLI = [
-    "tkinter",
-    "tkinterdnd2",
-    "PIL.ImageTk",
+    "PySide6",
+    "shiboken6",
 ]
+
+# To debug run:
+# python -m nuitka run_app_cli.py --standalone --show-modules
 
 exclude_options = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
 exclude_options_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
@@ -160,7 +161,7 @@ def compile_gui() -> None:
             "--output-filename=fictionpub.exe",
             "--windows-icon-from-ico=fictionpub/resources/icons/app.ico",
             "--windows-console-mode=disable",  # Hide console for GUI
-            "--enable-plugin=tk-inter",
+            "--enable-plugin=pyside6",
             "run_app_gui.py",
         ]
     )

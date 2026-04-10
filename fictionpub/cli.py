@@ -62,10 +62,10 @@ def run_cli() -> None:
     )
     parser.add_argument(
         "-o",
-        "--output",
+        "--outfolder",
         type=Path,
         default=None,
-        help="Output folder or filename (for single input). If omitted, each output is placed next to the input file.",
+        help="Output folder. If omitted, each output is placed next to the input file.",
     )
     parser.add_argument(
         "-t",
@@ -120,6 +120,9 @@ def run_cli() -> None:
 
     console_level = logging.ERROR
     setup_main_logger(console_level)
+
+    # Write a session marker for log folder viewer.
+    log.info("APP_START mode=cli")
 
     app_name_version = f"{app_info.APP_NAME} {app_info.VERSION}"
     print(app_name_version)
@@ -202,4 +205,16 @@ def run_cli() -> None:
         )
     print(
         f"\nTotal: {num_files} | ✅ Success: {success_count} | ⚠️  Warnings: {warning_count} | ❌ Failed: {failure_count}"
+    )
+
+    # Write a machine-readable summary line for the log folder viewer.
+    # Uses the actual processed counts, which may be less than num_files
+    # if some files were skipped due to errors before they entered the processing queue.
+    processed = success_count + warning_count + failure_count
+    log.info(
+        "SESSION_REPORT mode=cli total=%d success=%d warnings=%d failures=%d",
+        processed,
+        success_count,
+        warning_count,
+        failure_count,
     )

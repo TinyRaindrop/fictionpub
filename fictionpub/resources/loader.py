@@ -52,3 +52,8 @@ def load_terms_json(filename: str) -> dict:
 def get_css_path(filename="default.css") -> Path | None:
     """Return filesystem path to a CSS file inside resources/css."""
     return _resource_path(CSS_PACKAGE, filename)
+
+
+def get_icon_path(filename: str) -> Path | None:
+    """Return filesystem path to an image inside resources/icons."""
+    return _resource_path(ICONS_PACKAGE, filename)

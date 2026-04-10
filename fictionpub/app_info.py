@@ -19,6 +19,7 @@ from importlib.metadata import version as _meta_version
 APP_NAME = "FictionPub"
 APP_NAME_SHORT = "fictionpub"
 APP_URL = "https://github.com/TinyRaindrop/fictionpub"
+APP_ORG = "TinyRaindrop"
 
 try:
     from ._version import __version__ as VERSION
@@ -28,4 +29,4 @@ except ImportError:
     except PackageNotFoundError:
         VERSION = "0.0.0+unknown"
 
-__all__ = ["APP_NAME", "APP_NAME_SHORT", "APP_URL", "VERSION"]
+__all__ = ["APP_NAME", "APP_NAME_SHORT", "APP_ORG", "APP_URL", "VERSION"]

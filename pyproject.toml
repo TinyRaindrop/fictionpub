@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "lxml>=5.2.0",
     "pillow>=11.0.0",
-    "tkinterdnd2>=0.4.3",
+    "PySide6>=6.11.0",
 ]
 
 [project.optional-dependencies]
@@ -78,6 +78,9 @@ select = [
 ignore = [
     "E501",   # line too long — handled by formatter
     "E203",   # whitespace before ':' — conflicts with formatter
+    "N812",   # Lowercase `a` imported as non-lowercase `A`
+    "N817",   # CamelCase `FNames` imported as acronym `FN`
+    "ERA001", # Commented-out code
 ]
 
 [tool.ruff.format]

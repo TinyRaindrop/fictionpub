@@ -78,7 +78,7 @@ class FB2ToHTMLConverter:
             "ul": Tag("ul"),
             "li": Tag("li"),
             "empty-line": Tag("empty-line"),  # resolved up in post-processing
-            "br": Tag("br"),    # not standard for FB2, but may occur
+            "br": Tag("br"),  # not standard for FB2, but may occur
             # annotation, epigraph, poem, stanza -> div class=tag
 
             # Custom conversions
@@ -430,7 +430,7 @@ class FB2ToHTMLConverter:
             html_tag, html_attrib = "div", {"class": fb2_tag}
 
         # Merge attributes with existing ones (typically only 'id', 'name')
-        # TODO: this would also merge style/align/valign attribs
+        # TODO: this would also merge style attrib
         attrib = xu.get_attrib_dict(element)
         attrib.update(html_attrib or {})
         return etree.Element(html_tag, attrib)

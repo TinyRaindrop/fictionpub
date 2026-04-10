@@ -1,0 +1,646 @@
+{
+    "about.built_with": {
+        "en": "<b>Built with:</b> Python 3 · PySide6 / Qt 6",
+        "uk": "<b>Створено за допомогою:</b> Python 3 · PySide6 / Qt 6"
+    },
+    "about.description": {
+        "en": "FictionPub converts FB2 e-books to the EPUB 3 format. It supports batch processing, parallel conversion, custom stylesheets, and typography post-processing.",
+        "uk": "FictionPub конвертує електронні книги у форматі FB2 до формату EPUB 3. Підтримує пакетну обробку, паралельну конвертацію, власні таблиці стилів та постобробку типографіки."
+    },
+    "about.title": {
+        "en": "About FictionPub",
+        "uk": "Про FictionPub"
+    },
+    "appsettings.appearance": {
+        "en": "Appearance",
+        "uk": "Зовнішній вигляд"
+    },
+    "appsettings.language": {
+        "en": "Language:",
+        "uk": "Мова:"
+    },
+    "appsettings.theme": {
+        "en": "Theme:",
+        "uk": "Тема:"
+    },
+    "appsettings.theme_dark": {
+        "en": "Dark",
+        "uk": "Темна"
+    },
+    "appsettings.theme_light": {
+        "en": "Light",
+        "uk": "Світла"
+    },
+    "appsettings.theme_system": {
+        "en": "System",
+        "uk": "Системна"
+    },
+    "appsettings.title": {
+        "en": "Application Settings",
+        "uk": "Налаштування програми"
+    },
+    "bar.cancel": {
+        "en": "Cancel",
+        "uk": "Скасувати"
+    },
+    "bar.cancelled": {
+        "en": "Cancelled.",
+        "uk": "Скасовано."
+    },
+    "bar.cancelling": {
+        "en": "Cancelling…",
+        "uk": "Скасування…"
+    },
+    "bar.convert": {
+        "en": "Convert",
+        "uk": "Конвертувати"
+    },
+    "bar.converting_n": {
+        "en": "Converting {n} file(s)…",
+        "uk": "Конвертація {n} файл(ів)…"
+    },
+    "bar.converting_progress": {
+        "en": "Converting… {done} / {total}",
+        "uk": "Конвертація… {done} / {total}"
+    },
+    "bar.done": {
+        "en": "Done — {total} file(s) processed.",
+        "uk": "Готово — оброблено {total} файл(ів)."
+    },
+    "bar.hint_same_folder": {
+        "en": "EPUBs will be saved alongside source files",
+        "uk": "Файли EPUB будуть збережені поряд із вихідними файлами"
+    },
+    "bar.hint_output_dir": {
+        "en": "Output: {path}",
+        "uk": "Виведення: {path}"
+    },
+    "bar.last_log": {
+        "en": "📋 Current log",
+        "uk": "📋 Поточний журнал"
+    },
+    "bar.logs_folder": {
+        "en": "📂 Logs",
+        "uk": "📂 Журнали"
+    },
+    "bar.ready": {
+        "en": "Ready",
+        "uk": "Готово"
+    },
+    "bar.ready_n_files": {
+        "en": "Ready — {n} file(s) in list",
+        "uk": "Готово — {n} файл(ів) у списку"
+    },
+    "bar.scanning": {
+        "en": "Scanning…",
+        "uk": "Сканування…"
+    },
+    "cssviewer.error_text": {
+        "en": "Could not save the file:\n{error}",
+        "uk": "Не вдалося зберегти файл:\n{error}"
+    },
+    "cssviewer.error_title": {
+        "en": "Save Error",
+        "uk": "Помилка збереження"
+    },
+    "cssviewer.no_file": {
+        "en": "No file selected",
+        "uk": "Файл не вибрано"
+    },
+    "cssviewer.readonly_note": {
+        "en": "This is the built-in stylesheet — changes are not saved.",
+        "uk": "Це вбудована таблиця стилів — зміни не зберігаються."
+    },
+    "cssviewer.saved_text": {
+        "en": "CSS file saved to:\n{path}",
+        "uk": "CSS файл збережено до:\n{path}"
+    },
+    "cssviewer.saved_title": {
+        "en": "Saved",
+        "uk": "Збережено"
+    },
+    "cssviewer.title_custom": {
+        "en": "Custom Stylesheet — {name}",
+        "uk": "Власна таблиця стилів — {name}"
+    },
+    "cssviewer.title_default": {
+        "en": "Default Stylesheet (read-only)",
+        "uk": "Стандартна таблиця стилів (тільки читання)"
+    },
+    "ctx.open_epub": {
+        "en": "Open EPUB",
+        "uk": "Відкрити EPUB"
+    },
+    "ctx.open_fb2": {
+        "en": "Open source FB2",
+        "uk": "Відкрити вихідний FB2"
+    },
+    "ctx.open_folder": {
+        "en": "Open containing folder",
+        "uk": "Відкрити папку"
+    },
+    "ctx.remove": {
+        "en": "Remove",
+        "uk": "Видалити"
+    },
+    "ctx.view_log": {
+        "en": "View Log",
+        "uk": "Переглянути журнал"
+    },
+    "dlg.cancel": {
+        "en": "Cancel",
+        "uk": "Скасувати"
+    },
+    "dlg.close": {
+        "en": "Close",
+        "uk": "Закрити"
+    },
+    "dlg.copy": {
+        "en": "Copy All",
+        "uk": "Копіювати все"
+    },
+    "dlg.no": {
+        "en": "No",
+        "uk": "Ні"
+    },
+    "dlg.ok": {
+        "en": "OK",
+        "uk": "OK"
+    },
+    "dlg.save": {
+        "en": "Save",
+        "uk": "Зберегти"
+    },
+    "dlg.yes": {
+        "en": "Yes",
+        "uk": "Так"
+    },
+    "filter.all": {
+        "en": "All Files (*)",
+        "uk": "Усі файли (*)"
+    },
+    "filter.css": {
+        "en": "CSS Files (*.css)",
+        "uk": "CSS файли (*.css)"
+    },
+    "filter.fb2": {
+        "en": "FB2 Files (*.fb2 *.fb2.zip)",
+        "uk": "FB2 файли (*.fb2 *.fb2.zip)"
+    },
+    "logviewer.filter_all": {
+        "en": "All",
+        "uk": "Усі"
+    },
+    "logviewer.filter_errors": {
+        "en": "Errors",
+        "uk": "Помилки"
+    },
+    "logviewer.filter_label": {
+        "en": "Filter:",
+        "uk": "Фільтр:"
+    },
+    "logviewer.filter_tip": {
+        "en": "Type to filter lines…",
+        "uk": "Введіть текст для фільтрації рядків…"
+    },
+    "logviewer.filter_warnings": {
+        "en": "Warnings",
+        "uk": "Попередження"
+    },
+    "logviewer.title_file": {
+        "en": "Log — {name}",
+        "uk": "Журнал — {name}"
+    },
+    "msg.close_text": {
+        "en": "A conversion is still running. Cancel it and quit?",
+        "uk": "Конвертація ще виконується. Скасувати та вийти?"
+    },
+    "msg.close_title": {
+        "en": "Conversion in Progress",
+        "uk": "Виконується конвертація"
+    },
+    "msg.no_epub_text": {
+        "en": "The output EPUB file was not found:\n{path}",
+        "uk": "Результуючий EPUB файл не знайдено:\n{path}"
+    },
+    "msg.no_epub_title": {
+        "en": "File Not Found",
+        "uk": "Файл не знайдено"
+    },
+    "msg.no_files_text": {
+        "en": "Please mark at least one file before converting.",
+        "uk": "Оберіть хоча б один файл для конвертації."
+    },
+    "msg.no_files_title": {
+        "en": "No Files Selected",
+        "uk": "Файли не вибрані"
+    },
+    "msg.no_logs_dir": {
+        "en": "No log directory found yet.",
+        "uk": "Тека журналів не існує."
+    },
+    "msg.no_logs_files": {
+        "en": "No log files found.",
+        "uk": "Файли журналів не знайдені."
+    },
+    "msg.no_logs_title": {
+        "en": "Logs",
+        "uk": "Журнали"
+    },
+    "msg.remove_all_text": {
+        "en": "Remove all files from the list?",
+        "uk": "Видалити всі файли зі списку?"
+    },
+    "msg.remove_all_title": {
+        "en": "Remove All",
+        "uk": "Видалити всі"
+    },
+    "settings.css_custom": {
+        "en": "Custom stylesheet:",
+        "uk": "Власна таблиця стилів:"
+    },
+    "settings.css_default": {
+        "en": "Use default stylesheet",
+        "uk": "Використовувати вбудовану таблицю стилів"
+    },
+    "settings.css_path_hint": {
+        "en": "Path to custom CSS file…",
+        "uk": "Шлях до власного CSS файлу…"
+    },
+    "settings.custom_css": {
+        "en": "Custom CSS:",
+        "uk": "Власний CSS:"
+    },
+    "settings.nbsp_range": {
+        "en": "NBSP word length range:",
+        "uk": "Діапазон довжини слів для NBSP:"
+    },
+    "settings.nobr_range": {
+        "en": "No-break word length range:",
+        "uk": "Діапазон довжини слів для nobreak:"
+    },
+    "settings.out_same_folder": {
+        "en": "Same folder as source file",
+        "uk": "В тій же папці, що й вихідний файл"
+    },
+    "settings.out_to_folder": {
+        "en": "All outputs to folder:",
+        "uk": "Усі файли до папки:"
+    },
+    "settings.output": {
+        "en": "Output",
+        "uk": "Виведення"
+    },
+    "settings.output_folder": {
+        "en": "Output folder:",
+        "uk": "Папка виведення:"
+    },
+    "settings.output_placeholder": {
+        "en": "Select output folder…",
+        "uk": "Оберіть папку виведення…"
+    },
+    "settings.performance": {
+        "en": "Performance",
+        "uk": "Продуктивність"
+    },
+    "settings.processing": {
+        "en": "Processing",
+        "uk": "Обробка"
+    },
+    "settings.remove_images": {
+        "en": "Remove unused images",
+        "uk": "Видалити невикористані зображення"
+    },
+    "settings.remove_images_tip": {
+        "en": "Strip images that are not referenced in the text.",
+        "uk": "Видалити зображення, на які немає посилань у тексті."
+    },
+    "settings.retain_structure": {
+        "en": "Retain original folder structure",
+        "uk": "Зберігати оригінальну структуру папок"
+    },
+    "settings.split_level": {
+        "en": "Split level (1–6):",
+        "uk": "Рівень розбивки (1–6):"
+    },
+    "settings.split_level_tip": {
+        "en": "Split the EPUB into separate files at this heading level.",
+        "uk": "Розбити EPUB на окремі файли на цьому рівні заголовків."
+    },
+    "settings.split_size": {
+        "en": "Max file size:",
+        "uk": "Макс. розмір файлу:"
+    },
+    "settings.split_size_off": {
+        "en": "Disabled",
+        "uk": "Вимкнено"
+    },
+    "settings.split_size_tip": {
+        "en": "Raise split level if XHTML files exceed this size. 0 = disabled.",
+        "uk": "Підвищити рівень розбивки, якщо файли XHTML перевищують цей розмір. 0 = вимкнено."
+    },
+    "settings.split_size_unit": {
+        "en": " KB",
+        "uk": " КБ"
+    },
+    "settings.structure": {
+        "en": "Document Structure",
+        "uk": "Структура документа"
+    },
+    "settings.stylesheet_group": {
+        "en": "Stylesheet",
+        "uk": "Таблиця стилів"
+    },
+    "settings.threads": {
+        "en": "Worker threads (0=auto):",
+        "uk": "Робочих потоків (0=авто):"
+    },
+    "settings.threads_auto": {
+        "en": "Auto",
+        "uk": "Авто"
+    },
+    "settings.threads_tip": {
+        "en": "Number of parallel worker processes. 0 = auto-detect.",
+        "uk": "Кількість паралельних робочих процесів. 0 = автовизначення."
+    },
+    "settings.title": {
+        "en": "Conversion Settings",
+        "uk": "Налаштування конвертації"
+    },
+    "settings.toc_depth": {
+        "en": "TOC depth (1–6):",
+        "uk": "Глибина змісту (1–6):"
+    },
+    "settings.toc_depth_tip": {
+        "en": "Maximum heading level to include in the table of contents.",
+        "uk": "Максимальний рівень заголовків у змісті."
+    },
+    "settings.typography": {
+        "en": "Improve typography",
+        "uk": "Покращити типографіку"
+    },
+    "settings.typography_off": {
+        "en": "Off",
+        "uk": "Вимкнено"
+    },
+    "settings.typography_tip": {
+        "en": "Enable post-processing: non-breaking spaces, no-break spans, etc.",
+        "uk": "Увімкнути постобробку: нерозривні пробіли, span.nobreak тощо."
+    },
+    "settings.typography_wip": {
+        "en": "In development",
+        "uk": "В розробці"
+    },
+    "settings.typography_wip_tip": {
+        "en": "Typography post-processing is under development and not yet available.",
+        "uk": "Постобробка типографіки знаходиться в розробці і поки недоступна."
+    },
+    "settings.view_default_css": {
+        "en": "View Default",
+        "uk": "Переглянути стандартний"
+    },
+    "settings.view_edit_css": {
+        "en": "View / Edit",
+        "uk": "Переглянути / Змінити"
+    },
+    "settings.wrap_lines": {
+        "en": "Wrap lines",
+        "uk": "Переносити рядки"
+    },
+    "toolbar.about": {
+        "en": "ℹ About",
+        "uk": "ℹ Про програму"
+    },
+    "toolbar.add_files": {
+        "en": "Add Files",
+        "uk": "Додати файли"
+    },
+    "toolbar.add_folder": {
+        "en": "Add Folder",
+        "uk": "Додати папку"
+    },
+    "toolbar.app_settings": {
+        "en": "🔧",
+        "uk": "🔧"
+    },
+    "toolbar.app_settings_label": {
+        "en": "🔧 Preferences",
+        "uk": "🔧 Параметри"
+    },
+    "toolbar.logs": {
+        "en": "📋 Logs",
+        "uk": "📋 Журнали"
+    },
+    "toolbar.remove": {
+        "en": "Remove",
+        "uk": "Видалити"
+    },
+    "toolbar.remove_all": {
+        "en": "Remove All",
+        "uk": "Видалити всі"
+    },
+    "toolbar.remove_done": {
+        "en": "Remove Done",
+        "uk": "Видалити готові"
+    },
+    "toolbar.select_toggle": {
+        "en": "{checked} of {total} selected",
+        "uk": "{checked} з {total} вибрано"
+    },
+    "toolbar.settings": {
+        "en": "⚙ Settings",
+        "uk": "⚙ Налаштування"
+    },
+    "tooltip.about": {
+        "en": "About this application",
+        "uk": "Про цю програму"
+    },
+    "tooltip.add_files": {
+        "en": "Add individual .fb2 or .fb2.zip files",
+        "uk": "Додати файли .fb2 або .fb2.zip"
+    },
+    "tooltip.add_folder": {
+        "en": "Scan a directory recursively for FB2 files",
+        "uk": "Рекурсивно знайти FB2 файли в директорії"
+    },
+    "tooltip.app_settings": {
+        "en": "Application preferences",
+        "uk": "Налаштування програми"
+    },
+    "tooltip.css_default": {
+        "en": "Use the built-in stylesheet for all conversions",
+        "uk": "Використовувати вбудовану таблицю стилів для всіх конвертацій"
+    },
+    "tooltip.last_log": {
+        "en": "View the log from the most recent run",
+        "uk": "Переглянути журнал останнього запуску"
+    },
+    "tooltip.logs": {
+        "en": "Open the logs directory",
+        "uk": "Відкрити директорію журналів"
+    },
+    "tooltip.logs_folder": {
+        "en": "Open the logs directory in your file manager",
+        "uk": "Відкрити папку журналів у файловому менеджері"
+    },
+    "tooltip.remove": {
+        "en": "Remove selected items from the list",
+        "uk": "Видалити вибрані елементи зі списку"
+    },
+    "tooltip.remove_all": {
+        "en": "Clear the entire file list",
+        "uk": "Очистити весь список файлів"
+    },
+    "tooltip.remove_done": {
+        "en": "Remove all successfully converted files",
+        "uk": "Видалити всі успішно конвертовані файли"
+    },
+    "tooltip.retain_structure": {
+        "en": "Mirror the source file's parent folder name under the output directory.\ne.g. /books/fantasy/book.fb2 → /output/fantasy/book.epub",
+        "uk": "Відтворити назву батьківської папки вихідного файлу в папці виведення.\nНаприклад: /books/fantasy/book.fb2 → /output/fantasy/book.epub"
+    },
+    "tooltip.select_toggle": {
+        "en": "Click to select all / deselect all",
+        "uk": "Клікніть, щоб вибрати всі / зняти вибір"
+    },
+    "tooltip.settings": {
+        "en": "Configure conversion options",
+        "uk": "Налаштування конвертації"
+    },
+    "tooltip.view_default_css": {
+        "en": "Inspect the built-in default stylesheet (read-only)",
+        "uk": "Переглянути вбудовану таблицю стилів (тільки читання)"
+    },
+    "tooltip.view_edit_css": {
+        "en": "Open the selected CSS file to view or edit it",
+        "uk": "Відкрити вибраний CSS файл для перегляду або редагування"
+    },
+    "tooltip.warning_status": {
+        "en": "Conversion finished with warnings — check logs for details.",
+        "uk": "Конвертацію завершено з попередженнями — перевірте журнали."
+    },
+    "tree.col_author": {
+        "en": "Author",
+        "uk": "Автор"
+    },
+    "tree.col_date": {
+        "en": "Date",
+        "uk": "Дата"
+    },
+    "tree.col_lang": {
+        "en": "Lang",
+        "uk": "Мова"
+    },
+    "tree.col_name": {
+        "en": "Filename",
+        "uk": "Назва файлу"
+    },
+    "tree.col_status": {
+        "en": "Status",
+        "uk": "Статус"
+    },
+    "tree.col_title": {
+        "en": "Title",
+        "uk": "Назва"
+    },
+    "appsettings.reset_defaults": {
+        "en": "Reset to defaults…",
+        "uk": "Скинути до стандартних…"
+    },
+    "appsettings.reset_title": {
+        "en": "Reset Settings",
+        "uk": "Скидання налаштувань"
+    },
+    "appsettings.reset_text": {
+        "en": "This will clear all preferences — language, theme, window sizes, and conversion settings. Continue?",
+        "uk": "Це очистить усі налаштування — мову, тему, розміри вікон та налаштування конвертації. Продовжити?"
+    },
+    "dlg.maximize": {
+        "en": "Maximize / restore window",
+        "uk": "Розгорнути / відновити вікно"
+    },
+    "logviewer.filter_info": {
+        "en": "Info",
+        "uk": "Інфо"
+    },
+    "tooltip.reset_defaults": {
+        "en": "Clear all saved preferences and restore factory defaults",
+        "uk": "Очистити всі збережені налаштування та відновити стандартні"
+    },
+    "logfolder.title": {
+        "en": "Log Files",
+        "uk": "Файли журналів"
+    },
+    "logfolder.open_log": {
+        "en": "Open Log",
+        "uk": "Відкрити журнал"
+    },
+    "logfolder.delete": {
+        "en": "Delete",
+        "uk": "Видалити"
+    },
+    "logfolder.delete_all": {
+        "en": "Delete All",
+        "uk": "Видалити всі"
+    },
+    "logfolder.open_folder": {
+        "en": "📂 Open folder",
+        "uk": "📂 Відкрити папку"
+    },
+    "logfolder.col_date": {
+        "en": "Date",
+        "uk": "Дата"
+    },
+    "logfolder.col_time": {
+        "en": "Time",
+        "uk": "Час"
+    },
+    "logfolder.col_mode": {
+        "en": "Mode",
+        "uk": "Режим"
+    },
+    "logfolder.col_total": {
+        "en": "Total",
+        "uk": "Всього"
+    },
+    "logfolder.confirm_title": {
+        "en": "Delete Logs",
+        "uk": "Видалення журналів"
+    },
+    "logfolder.confirm_delete": {
+        "en": "Delete this log file?\n{name}",
+        "uk": "Видалити цей файл журналу?\n{name}"
+    },
+    "logfolder.confirm_delete_all": {
+        "en": "Delete all {n} log file(s)?",
+        "uk": "Видалити всі {n} файл(ів) журналів?"
+    },
+    "logfolder.delete_error_title": {
+        "en": "Delete Failed",
+        "uk": "Помилка видалення"
+    },
+    "logfolder.delete_error": {
+        "en": "Could not delete:\n{name}\n\n{error}",
+        "uk": "Не вдалося видалити:\n{name}\n\n{error}"
+    },
+    "logfolder.delete_error_multi": {
+        "en": "Could not delete some files:\n{errors}",
+        "uk": "Не вдалося видалити деякі файли:\n{errors}"
+    },
+    "tooltip.logfolder_open": {
+        "en": "Open the selected log in the viewer",
+        "uk": "Відкрити вибраний журнал у переглядачі"
+    },
+    "tooltip.logfolder_delete": {
+        "en": "Delete the selected log file",
+        "uk": "Видалити вибраний файл журналу"
+    },
+    "tooltip.logfolder_delete_all": {
+        "en": "Delete all log files",
+        "uk": "Видалити всі файли журналів"
+    },
+    "tooltip.logfolder_open_folder": {
+        "en": "Open log directory in file manager",
+        "uk": "Відкрити папку журналів у файловому менеджері"
+    }
+}

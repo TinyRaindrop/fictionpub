@@ -30,16 +30,14 @@ def elem_findtext(element: etree._Element, tag, namespaces=NS.FB2_MAP, default="
 def get_halftitle(body: etree._Element) -> etree._Element | None:
     """Helper to find `div.halftitle` in a converted body."""
     # div.halftitle is always a direct child of body (placed there by the converter)
-    return next(
-        (el for el in body if "halftitle" in (el.get("class") or "")), None
-    )
+    return next((el for el in body if "halftitle" in (el.get("class") or "")), None)
 
 
 def match_halftitle(halftitle: etree._Element | None, combinations: tuple) -> bool:
     if halftitle is not None:
         ht_text = itertext(halftitle)
         ht = ht_text.lower()
-        
+
         for part in combinations:
             if part.lower() in ht:
                 ht = ht.replace(part.lower(), "").strip()
