@@ -115,7 +115,13 @@ PLUGIN_EXCLUDES = [
     # ---- lxml extras
     "lxml.html",  # we only use lxml.etree
     "lxml.objectify",
-    # ---- stdlib test/dev, setuptools
+    # ---- PySide6 / Qt
+    "PySide6.QtNetwork",
+    # ---- Python stdlib misc, test/dev, setuptools
+    "ssl",
+    "_ssl",
+    "bz2",
+    "lzma",
     "unittest",
     "doctest",
     "pdb",
@@ -134,19 +140,37 @@ PLUGIN_EXCLUDES_CLI = [
     "shiboken6",
 ]
 
-# To debug run:
+DLL_EXCLUDES_GUI = [
+    # ---- Qt6
+    "qt6network.dll",
+    "qt6pdf.dll",
+    # "qt6svg.dll",
+    # ---- PySide6\qt-plugins\imageformats\
+    "qpdf.dll",
+    # "qsvg.dll",
+    # "qsvgicon.dll",
+    "qtiff.dll",
+    "qwebp.dll",
+    "qtga.dll",
+    "qwbmp.dll",
+    "qgif.dll",
+    "qicns.dll",
+    "libcrypto-3.dll",
+]
+
+exclude_plugins = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
+exclude_plugins_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
+exclude_dlls_gui = [f"--noinclude-dlls=*{dll}" for dll in DLL_EXCLUDES_GUI]
+
+# To inspect plugin usage run:
 # python -m nuitka run_app_cli.py --standalone --show-modules
-
-exclude_options = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
-exclude_options_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
-
 
 def compile_cli() -> None:
     print("\n--- Building CLI Version ---")
     options = (
         build_options
-        + exclude_options
-        + exclude_options_cli
+        + exclude_plugins
+        + exclude_plugins_cli
         + [
             "--output-filename=fictionpub_cli.exe",
             "--windows-icon-from-ico=fictionpub/resources/icons/app_cli.ico",
@@ -161,7 +185,8 @@ def compile_gui() -> None:
     print("\n--- Building GUI Version ---")
     options = (
         build_options
-        + exclude_options
+        + exclude_plugins
+        + exclude_dlls_gui
         + [
             "--output-filename=fictionpub.exe",
             "--windows-icon-from-ico=fictionpub/resources/icons/app.ico",
