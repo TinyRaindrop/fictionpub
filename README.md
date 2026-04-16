@@ -1,79 +1,144 @@
 # FictionPub
-FB2 to EPUB3 ebook converter with CLI / GUI.
 
-## Features:
-* Fast batch processing of multiple files/folders.
-* Resulting EPUB retains original FB2 structure, content and metadata.
-* Creates Table of Contents with specified depth.
-* Support for EPUB2 readers via NCX/guide generation.
-* EPUB3 semantics for footnotes (allows readers to embed them on a page or in popups).
-* Valid XHTML, proper tags are used. No more `<div class="calibre19">` for everything.
-* Built-in default CSS. Support for custom CSS.
-* Passes epubcheck.
+**FB2 → EPUB3 converter** — batch-capable, with a GUI and a CLI.
 
-*Future*
-* Gracefully handle uncommon FB2 structures.
-* Image optimization (jpeg resize, pngquant).
-* Typographic improvements for better text flow.
+<table>
+  <tr>
+    <td><img src="docs/screenshots/01_main_window.png" alt="Main window" width="420"/></td>
+    <td><img src="docs/screenshots/02_conversion_settings.png" alt="Conversion settings" width="420"/></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/03_converted_dark.png" alt="Conversion complete" width="420"/></td>
+    <td><img src="docs/screenshots/04_log_viewer.png" alt="Log viewer" width="420"/></td>
+  </tr>
+</table>
 
+---
+
+## Features
+
+- **Batch conversion** — add individual files, entire folders, or any mix; all processed in parallel.
+- **Faithful output** — original FB2 structure, content, and metadata are preserved in the EPUB.
+- **Proper markup** — valid XHTML with semantic tags; no generic `<div class="calibre19">` soup.
+- **Table of Contents** — configurable heading depth (h1–h6) for both EPUB3 nav and EPUB2 NCX.
+- **Footnote semantics** — EPUB3 `epub:type` markup lets readers render footnotes as popups or side panels.
+- **EPUB2 compatibility** — NCX and `<guide>` are generated alongside EPUB3 structures.
+- **Stylesheet support** — ships with a clean built-in CSS; any custom `.css` file can be substituted.
+- **Passes epubcheck** — output is spec-compliant.
+
+**User interface**
+- Ukrainian / English language.
+- Light / Dark themes.
+- CSS viewer/editor.
+- Log viewer.
+
+
+**Planned**
+- Typography post-processing (non-breaking spaces, no-break spans).
+- Image optimization (JPEG downscaling, pngquant for grayscale PNGs).
+- Splitting of huge XHTML files into smaller chunks for faster rendering.
+- Graceful handling of non-standard FB2 structures.
+
+---
 
 ## Usage
-### Use the [latest compiled exe](https://github.com/TinyRaindrop/fictionpub/releases/latest)
-Run GUI: 
-    
-    fictionpub.exe
 
-Run CLI:
-    
-    fictionpub_cli.exe [input] [args]
+### GUI (primary)
 
-**Input** can be file/folder path, or paths separated with spaces.
-Run `fictionpub --help` to see the list of possible **arguments**.
+Download the latest portable `fictionpub.exe` from the [Releases](https://github.com/TinyRaindrop/fictionpub/releases/latest) page — no installation required, just run it.
 
-### When installed as a Python package
-Run GUI (running without arguments launches the graphical interface)
+**Basic workflow:**
 
-    python fictionpub
+1. **Add files** — use *Add Files* / *Add Folder* in the toolbar. Subfolders are scanned recursively.
+2. **Tweak settings** — click *⚙ Settings* to adjust TOC depth, chapter split level, output folder, and stylesheet.
+3. **Select output** — choose *Same folder as source* (default) or specify a destination folder, optionally mirroring the original directory structure.
+4. **Convert** — press **Convert**. Progress and per-file status (✓ / ⚠ / ✗) are shown in real time.
+5. **Inspect logs** — click any status icon to view that file's conversion log, or open the full log from the bottom bar.
 
-Run CLI
+Double-clicking a successfully converted file opens the EPUB directly.
+Right click opens a context menu.
 
-    python fictionpub [input] [args]
+---
+
+### CLI
+
+```
+fictionpub_cli.exe <input> [options]
+```
+
+`<input>` can be one or more `.fb2` / `.fb2.zip` files or folders, separated by spaces.
+
+| Option | Default | Description |
+|---|---|---|
+| `-o, --output PATH` | next to source | Output folder. |
+| `-t, --toc-depth N` | `4` | Maximum heading level to include in TOC (1–6). |
+| `-s, --split-level N` | `2` | Split chapters into separate files at this heading level (1–6). |
+| `-c, --css PATH` | built-in | Path to a custom CSS file. |
+| `--threads N` | `0` | Number of parallel worker processes. `0` = auto-detect. |
+
+**Examples:**
+
+```bash
+# Convert a single file, output next to source
+fictionpub_cli.exe book.fb2
+
+# Convert a folder, send all EPUBs to E:\output\
+fictionpub_cli.exe D:\books\ -o E:\output\
+
+# Convert multiple folders, deeper TOC, 4 threads
+# Usage of -o mirrors folder structure: will create d\books and e\docs folders inside E:\output
+fictionpub_cli.exe D:\books\ E:\docs\ -o E:\output\ -t 6 --threads 4
+```
+
+Run `fictionpub_cli.exe --help` to see all options.
+
+---
 
 ## Installation
 
-    pip install git+https://github.com/TinyRaindrop/fictionpub.git
+### As a Python package
 
-or manually
+Requires **Python 3.12+**.
 
-    git clone https://github.com/TinyRaindrop/fictionpub
-    cd fictionpub
-    pip install .
+```bash
+pip install git+https://github.com/TinyRaindrop/fictionpub.git
+```
 
+Run GUI (no arguments):
 
-## Development
+```bash
+python -m fictionpub
+```
 
-Build package
+Run CLI:
 
-    python -m pip install build
-    python -m build
-    pip install dist/fictionpub-*.whl
+```bash
+python -m fictionpub <input> [options]
+```
 
-Prerequisites
-- **MSVC** compiler (or switch to Mingw64 in build_exe.py)
-- **Make** for makefile scripts (optional)
-    
-    `winget install GnuWin32.Make`
+Works on Windows, macOS, and Linux. The GUI requires Qt6/PySide6, which is installed automatically as a dependency.
 
-Install in editable mode with dev dependencies
-    
-    pip install -e .[dev]
+---
 
-**Compile .exe with Nuitka**
+### For development
 
-Use Python 3.12. TkInter isn't supported in 3.13, and 3.14 isn't supported by Nuitka at all.
+```bash
+git clone https://github.com/TinyRaindrop/fictionpub
+cd fictionpub
+pip install -e ".[dev]"
+```
 
-    python build.py
+**Building a portable `.exe` with Nuitka** (Windows, Python 3.12):
 
+```bash
+python build.py
+```
 
-# Credits
+Prerequisites for building:
+- MSVC compiler (or switch to MinGW-w64 in `build_exe.py`)
+- `make` is optional for makefile scripts (`make exe`) (install with `winget install GnuWin32.Make`)
+
+---
+
+## Credits
 Icons by Freepik - [Flaticon](www.flaticon.com)
