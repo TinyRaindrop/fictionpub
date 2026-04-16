@@ -148,7 +148,7 @@ def run_cli() -> None:
 
     # Create configuration and run batch processor
     config = ConversionConfig(
-        output_path=args.output,
+        output_path=args.outfolder,
         toc_depth=args.toc_depth,
         split_level=args.split_level,
         split_size_kb=args.split_size,
