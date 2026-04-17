@@ -109,7 +109,8 @@ class CSSViewerDialog(TextViewerDialog):
     def _load_content(self) -> None:
         if self._path and self._path.is_file():
             try:
-                text = self._path.read_text(encoding="utf-8", errors="replace")
+                with open(self._path, encoding="utf-8", errors="replace") as f:
+                    text = f.read()
             except OSError as exc:
                 text = f"/* Could not read file:\n   {exc} */"
         else:
