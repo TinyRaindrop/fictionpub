@@ -1,3 +1,5 @@
+🇬🇧 [English](README.md) | 🇺🇦 [Українська](README.uk.md)
+
 # FictionPub
 
 **FB2 → EPUB3 converter** — batch-capable, with a GUI and a CLI.
@@ -19,9 +21,9 @@
 
 - **Batch conversion** — add individual files, entire folders, or any mix; all processed in parallel.
 - **Faithful output** — original FB2 structure, content, and metadata are preserved in the EPUB.
-- **Proper markup** — valid XHTML with semantic tags; no generic `<div class="calibre19">` soup.
+- **Proper markup** — valid XHTML with semantic tags; no generic `<div class="123">` tags.
 - **Table of Contents** — configurable heading depth (h1–h6) for both EPUB3 nav and EPUB2 NCX.
-- **Footnote semantics** — EPUB3 `epub:type` markup lets readers render footnotes as popups or side panels.
+- **Footnote semantics** — EPUB3 `epub:type` markup lets readers render footnotes as popups or at the bottom of a page.
 - **EPUB2 compatibility** — NCX and `<guide>` are generated alongside EPUB3 structures.
 - **Stylesheet support** — ships with a clean built-in CSS; any custom `.css` file can be substituted.
 - **Passes epubcheck** — output is spec-compliant.
@@ -29,7 +31,7 @@
 **User interface**
 - Ukrainian / English language.
 - Light / Dark themes.
-- CSS viewer/editor.
+- CSS viewer / editor.
 - Log viewer.
 
 
@@ -38,6 +40,7 @@
 - Image optimization (JPEG downscaling, pngquant for grayscale PNGs).
 - Splitting of huge XHTML files into smaller chunks for faster rendering.
 - Graceful handling of non-standard FB2 structures.
+- Auto updater.
 
 ---
 
@@ -49,12 +52,12 @@ Download the latest portable `fictionpub.exe` from the [Releases](https://github
 
 **Basic workflow:**
 
-1. **Add files** — use *Add Files* / *Add Folder* in the toolbar. Subfolders are scanned recursively.
+1. **Add files** — use *Add Files* / *Add Folder* in the toolbar or drag&drop. Subfolders are scanned recursively.
 2. **Tweak settings** — click *⚙ Settings* to adjust TOC depth, chapter split level, output folder, and stylesheet.
 3. **Select output** — choose *Same folder as source* (default) or specify a destination folder, optionally mirroring the original directory structure.
 4. **Convert** — press **Convert**. Progress and per-file status (✓ / ⚠ / ✗) are shown in real time.
 5. **Inspect logs** — click any status icon to view that file's conversion log, or open the full log from the bottom bar.
-
+Status ⚠ Warning means successful conversion, but source FB2 had some minor errors (missing image, broken link or footnote, etc). Status ✗ Failure means that Epub was not created.
 Double-clicking a successfully converted file opens the EPUB directly.
 Right click opens a context menu.
 

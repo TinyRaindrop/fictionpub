@@ -19,6 +19,18 @@
         "en": "Language:",
         "uk": "Мова:"
     },
+    "appsettings.reset_defaults": {
+        "en": "Reset to defaults…",
+        "uk": "Скинути до стандартних…"
+    },
+    "appsettings.reset_text": {
+        "en": "This will clear all preferences — language, theme, window sizes, and conversion settings. Continue?",
+        "uk": "Це очистить усі налаштування — мову, тему, розміри вікон та налаштування конвертації. Продовжити?"
+    },
+    "appsettings.reset_title": {
+        "en": "Reset Settings",
+        "uk": "Скидання налаштувань"
+    },
     "appsettings.theme": {
         "en": "Theme:",
         "uk": "Тема:"
@@ -67,13 +79,13 @@
         "en": "Done — {total} file(s) processed.",
         "uk": "Готово — оброблено {total} файл(ів)."
     },
+    "bar.hint_output_dir": {
+        "en": "Output: {path}",
+        "uk": "Збереження: {path}"
+    },
     "bar.hint_same_folder": {
         "en": "EPUBs will be saved alongside source files",
         "uk": "Файли EPUB будуть збережені поряд із вихідними файлами"
-    },
-    "bar.hint_output_dir": {
-        "en": "Output: {path}",
-        "uk": "Виведення: {path}"
     },
     "bar.last_log": {
         "en": "📋 Current log",
@@ -159,6 +171,10 @@
         "en": "Copy All",
         "uk": "Копіювати все"
     },
+    "dlg.maximize": {
+        "en": "Maximize / restore window",
+        "uk": "Розгорнути / відновити вікно"
+    },
     "dlg.no": {
         "en": "No",
         "uk": "Ні"
@@ -187,6 +203,66 @@
         "en": "FB2 Files (*.fb2 *.fb2.zip)",
         "uk": "FB2 файли (*.fb2 *.fb2.zip)"
     },
+    "logfolder.col_date": {
+        "en": "Date",
+        "uk": "Дата"
+    },
+    "logfolder.col_mode": {
+        "en": "Mode",
+        "uk": "Режим"
+    },
+    "logfolder.col_time": {
+        "en": "Time",
+        "uk": "Час"
+    },
+    "logfolder.col_total": {
+        "en": "Total",
+        "uk": "Всього"
+    },
+    "logfolder.confirm_delete": {
+        "en": "Delete this log file?\n{name}",
+        "uk": "Видалити цей файл журналу?\n{name}"
+    },
+    "logfolder.confirm_delete_all": {
+        "en": "Delete all {n} log file(s)?",
+        "uk": "Видалити всі {n} файл(ів) журналів?"
+    },
+    "logfolder.confirm_title": {
+        "en": "Delete Logs",
+        "uk": "Видалення журналів"
+    },
+    "logfolder.delete": {
+        "en": "Delete",
+        "uk": "Видалити"
+    },
+    "logfolder.delete_all": {
+        "en": "Delete All",
+        "uk": "Видалити всі"
+    },
+    "logfolder.delete_error": {
+        "en": "Could not delete:\n{name}\n\n{error}",
+        "uk": "Не вдалося видалити:\n{name}\n\n{error}"
+    },
+    "logfolder.delete_error_multi": {
+        "en": "Could not delete some files:\n{errors}",
+        "uk": "Не вдалося видалити деякі файли:\n{errors}"
+    },
+    "logfolder.delete_error_title": {
+        "en": "Delete Failed",
+        "uk": "Помилка видалення"
+    },
+    "logfolder.open_folder": {
+        "en": "📂 Open folder",
+        "uk": "📂 Відкрити папку"
+    },
+    "logfolder.open_log": {
+        "en": "Open Log",
+        "uk": "Відкрити журнал"
+    },
+    "logfolder.title": {
+        "en": "Log Files",
+        "uk": "Файли журналів"
+    },
     "logviewer.filter_all": {
         "en": "All",
         "uk": "Усі"
@@ -194,6 +270,10 @@
     "logviewer.filter_errors": {
         "en": "Errors",
         "uk": "Помилки"
+    },
+    "logviewer.filter_info": {
+        "en": "Info",
+        "uk": "Інфо"
     },
     "logviewer.filter_label": {
         "en": "Filter:",
@@ -289,15 +369,15 @@
     },
     "settings.output": {
         "en": "Output",
-        "uk": "Виведення"
+        "uk": "Збереження"
     },
     "settings.output_folder": {
         "en": "Output folder:",
-        "uk": "Папка виведення:"
+        "uk": "Папка збереження:"
     },
     "settings.output_placeholder": {
         "en": "Select output folder…",
-        "uk": "Оберіть папку виведення…"
+        "uk": "Оберіть папку збереження…"
     },
     "settings.performance": {
         "en": "Performance",
@@ -324,8 +404,8 @@
         "uk": "Рівень розбивки (1–6):"
     },
     "settings.split_level_tip": {
-        "en": "Split the EPUB into separate files at this heading level.",
-        "uk": "Розбити EPUB на окремі файли на цьому рівні заголовків."
+        "en": "Split XHTML into separate files at this heading level.",
+        "uk": "Розбивати XHTML на окремі файли на цьому рівні заголовків."
     },
     "settings.split_size": {
         "en": "Max file size:",
@@ -352,8 +432,8 @@
         "uk": "Таблиця стилів"
     },
     "settings.threads": {
-        "en": "Worker threads (0=auto):",
-        "uk": "Робочих потоків (0=авто):"
+        "en": "Parallel threads (0=auto):",
+        "uk": "Паралельних потоків (0=авто):"
     },
     "settings.threads_auto": {
         "en": "Auto",
@@ -475,6 +555,22 @@
         "en": "View the log from the most recent run",
         "uk": "Переглянути журнал останнього запуску"
     },
+    "tooltip.logfolder_delete": {
+        "en": "Delete the selected log file",
+        "uk": "Видалити вибраний файл журналу"
+    },
+    "tooltip.logfolder_delete_all": {
+        "en": "Delete all log files",
+        "uk": "Видалити всі файли журналів"
+    },
+    "tooltip.logfolder_open": {
+        "en": "Open the selected log in the viewer",
+        "uk": "Відкрити вибраний журнал у переглядачі"
+    },
+    "tooltip.logfolder_open_folder": {
+        "en": "Open log directory in file manager",
+        "uk": "Відкрити папку журналів у файловому менеджері"
+    },
     "tooltip.logs": {
         "en": "Open the logs directory",
         "uk": "Відкрити директорію журналів"
@@ -492,8 +588,12 @@
         "uk": "Очистити весь список файлів"
     },
     "tooltip.remove_done": {
-        "en": "Remove all successfully converted files",
-        "uk": "Видалити всі успішно конвертовані файли"
+        "en": "Remove all successfully converted files from the list",
+        "uk": "Видалити зі списку всі успішно конвертовані файли"
+    },
+    "tooltip.reset_defaults": {
+        "en": "Clear all saved preferences and restore factory defaults",
+        "uk": "Очистити всі збережені налаштування та відновити стандартні"
     },
     "tooltip.retain_structure": {
         "en": "Mirror the source file's parent folder name under the output directory.\ne.g. /books/fantasy/book.fb2 → /output/fantasy/book.epub",
@@ -542,105 +642,5 @@
     "tree.col_title": {
         "en": "Title",
         "uk": "Назва"
-    },
-    "appsettings.reset_defaults": {
-        "en": "Reset to defaults…",
-        "uk": "Скинути до стандартних…"
-    },
-    "appsettings.reset_title": {
-        "en": "Reset Settings",
-        "uk": "Скидання налаштувань"
-    },
-    "appsettings.reset_text": {
-        "en": "This will clear all preferences — language, theme, window sizes, and conversion settings. Continue?",
-        "uk": "Це очистить усі налаштування — мову, тему, розміри вікон та налаштування конвертації. Продовжити?"
-    },
-    "dlg.maximize": {
-        "en": "Maximize / restore window",
-        "uk": "Розгорнути / відновити вікно"
-    },
-    "logviewer.filter_info": {
-        "en": "Info",
-        "uk": "Інфо"
-    },
-    "tooltip.reset_defaults": {
-        "en": "Clear all saved preferences and restore factory defaults",
-        "uk": "Очистити всі збережені налаштування та відновити стандартні"
-    },
-    "logfolder.title": {
-        "en": "Log Files",
-        "uk": "Файли журналів"
-    },
-    "logfolder.open_log": {
-        "en": "Open Log",
-        "uk": "Відкрити журнал"
-    },
-    "logfolder.delete": {
-        "en": "Delete",
-        "uk": "Видалити"
-    },
-    "logfolder.delete_all": {
-        "en": "Delete All",
-        "uk": "Видалити всі"
-    },
-    "logfolder.open_folder": {
-        "en": "📂 Open folder",
-        "uk": "📂 Відкрити папку"
-    },
-    "logfolder.col_date": {
-        "en": "Date",
-        "uk": "Дата"
-    },
-    "logfolder.col_time": {
-        "en": "Time",
-        "uk": "Час"
-    },
-    "logfolder.col_mode": {
-        "en": "Mode",
-        "uk": "Режим"
-    },
-    "logfolder.col_total": {
-        "en": "Total",
-        "uk": "Всього"
-    },
-    "logfolder.confirm_title": {
-        "en": "Delete Logs",
-        "uk": "Видалення журналів"
-    },
-    "logfolder.confirm_delete": {
-        "en": "Delete this log file?\n{name}",
-        "uk": "Видалити цей файл журналу?\n{name}"
-    },
-    "logfolder.confirm_delete_all": {
-        "en": "Delete all {n} log file(s)?",
-        "uk": "Видалити всі {n} файл(ів) журналів?"
-    },
-    "logfolder.delete_error_title": {
-        "en": "Delete Failed",
-        "uk": "Помилка видалення"
-    },
-    "logfolder.delete_error": {
-        "en": "Could not delete:\n{name}\n\n{error}",
-        "uk": "Не вдалося видалити:\n{name}\n\n{error}"
-    },
-    "logfolder.delete_error_multi": {
-        "en": "Could not delete some files:\n{errors}",
-        "uk": "Не вдалося видалити деякі файли:\n{errors}"
-    },
-    "tooltip.logfolder_open": {
-        "en": "Open the selected log in the viewer",
-        "uk": "Відкрити вибраний журнал у переглядачі"
-    },
-    "tooltip.logfolder_delete": {
-        "en": "Delete the selected log file",
-        "uk": "Видалити вибраний файл журналу"
-    },
-    "tooltip.logfolder_delete_all": {
-        "en": "Delete all log files",
-        "uk": "Видалити всі файли журналів"
-    },
-    "tooltip.logfolder_open_folder": {
-        "en": "Open log directory in file manager",
-        "uk": "Відкрити папку журналів у файловому менеджері"
     }
 }
