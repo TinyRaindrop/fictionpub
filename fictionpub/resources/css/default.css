@@ -38,9 +38,11 @@ p.subtitle {
     font-family: serif;
     hyphens: none;
     -epub-hyphens: none;
+    /* Newer readers */
     break-inside: avoid;
-    page-break-inside: avoid;
     break-after: avoid;
+    /* Older readers */
+    page-break-inside: avoid;
     page-break-after: avoid;
 }
 
@@ -378,13 +380,60 @@ a.broken-link {
     -epub-hyphens: none;
 }
 
-/* Document info page */
+/* ---- Docinfo page ---- */
 .docinfo-body {
     font-size: 0.9em;
     hyphens: none;
     -epub-hyphens: none;
 }
 
+.docinfo-body h1 {
+    margin-bottom: 1.5em;
+}
+
+.docinfo-body .subtitle {
+    margin-left: 0;
+    text-align: left;
+    font-style: normal;
+    break-after: avoid;
+}
+
+.docinfo-body dl {
+    margin: 1.5em 0 1.5em 1.5rem;
+    padding: 0;
+}
+
+/* The Grouping Container */
+.docinfo-body dl div {
+    display: block;
+    margin-bottom: 0.8em;
+    padding-bottom: 0.4em;
+    border-bottom: 1px solid #e8e8e8;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+/* Remove separator from the last item in a list */
+.docinfo-body dl div:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.docinfo-body dt {
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    /* muted label */
+    margin: 1em 0 0.1em 0;
+    padding: 0;
+}
+
+.docinfo-body dd {
+    margin: 0;
+    padding: 0 0 0.4em 0;
+}
 
 /* ==== TYPOGRAPHY, FIXES ==== */
 

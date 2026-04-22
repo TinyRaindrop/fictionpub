@@ -7,9 +7,7 @@
             "request": "launch",
             "module": "fictionpub.main",
             "args": [
-                "books/bierce.fb2",
-                "-o",
-                "books"
+                "books",
             ]
         },
         {

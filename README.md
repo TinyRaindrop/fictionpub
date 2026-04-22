@@ -36,6 +36,7 @@
 
 
 **Planned**
+- UI to perform CSS tweaks
 - Typography post-processing (non-breaking spaces, no-break spans).
 - Image optimization (JPEG downscaling, pngquant for grayscale PNGs).
 - Splitting of huge XHTML files into smaller chunks for faster rendering.

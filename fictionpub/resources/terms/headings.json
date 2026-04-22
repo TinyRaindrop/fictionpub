@@ -1,42 +1,187 @@
 {
-    "cover": {
-        "uk": "Обкладинка",
-        "ru": "Обложка",
-        "en": "Cover"
-    },
-    "titlepage": {
-        "uk": "Титульна",
-        "ru": "Титульная",
-        "en": "Title page"
-    },
     "annotation": {
-        "uk": "Анотація",
+        "en": "Annotation",
         "ru": "Аннотация",
-        "en": "Annotation"
-    },
-    "docinfo": {
-        "uk": "Інформація",
-        "ru": "Информация",
-        "en": "Information"
-    },
-    "notes": {
-        "uk": "Примітки",
-        "ru": "Примечания",
-        "en": "Notes"
+        "uk": "Анотація"
     },
     "comments": {
-        "uk": "Коментарі",
+        "en": "Comments",
         "ru": "Комментарии",
-        "en": "Comments"
+        "uk": "Коментарі"
     },
-    "toc": {
-        "uk": "Зміст",
-        "ru": "Содержание",
-        "en": "Table of Contents"
+    "cover": {
+        "en": "Cover",
+        "ru": "Обложка",
+        "uk": "Обкладинка"
+    },
+    "docinfo": {
+        "en": "Information",
+        "ru": "Информация",
+        "uk": "Інформація"
+    },
+    "docinfo_book_info": {
+        "en": "Book Info",
+        "ru": "Информация о книге",
+        "uk": "Інформація про книгу"
+    },
+    "docinfo_converter": {
+        "en": "Converter",
+        "ru": "Конвертер",
+        "uk": "Конвертер"
+    },
+    "docinfo_doc_info": {
+        "en": "FB2 Document Info",
+        "ru": "Информация о FB2",
+        "uk": "Інформація про FB2"
+    },
+    "docinfo_field_author": {
+        "en": "Author",
+        "ru": "Автор",
+        "uk": "Автор"
+    },
+    "docinfo_field_authors": {
+        "en": "Authors",
+        "ru": "Авторы",
+        "uk": "Автори"
+    },
+    "docinfo_field_book_name": {
+        "en": "Book name",
+        "ru": "Название книги",
+        "uk": "Назва книги"
+    },
+    "docinfo_field_city": {
+        "en": "City",
+        "ru": "Город",
+        "uk": "Місто"
+    },
+    "docinfo_field_converter_app": {
+        "en": "Application",
+        "ru": "Программа",
+        "uk": "Програма"
+    },
+    "docinfo_field_converter_date": {
+        "en": "EPUB creation date",
+        "ru": "Дата создания EPUB",
+        "uk": "Дата створення EPUB"
+    },
+    "docinfo_field_converter_url": {
+        "en": "URL",
+        "ru": "URL",
+        "uk": "URL"
+    },
+    "docinfo_field_date": {
+        "en": "Date",
+        "ru": "Дата",
+        "uk": "Дата"
+    },
+    "docinfo_field_doc_id": {
+        "en": "Document ID",
+        "ru": "ID документа",
+        "uk": "ID документа"
+    },
+    "docinfo_field_genres": {
+        "en": "Genres",
+        "ru": "Жанры",
+        "uk": "Жанри"
+    },
+    "docinfo_field_isbn": {
+        "en": "ISBN",
+        "ru": "ISBN",
+        "uk": "ISBN"
+    },
+    "docinfo_field_keywords": {
+        "en": "Keywords",
+        "ru": "Ключевые слова",
+        "uk": "Ключові слова"
+    },
+    "docinfo_field_lang": {
+        "en": "Language",
+        "ru": "Язык",
+        "uk": "Мова"
+    },
+    "docinfo_field_program_used": {
+        "en": "Program used",
+        "ru": "Программа",
+        "uk": "Програма"
+    },
+    "docinfo_field_publisher": {
+        "en": "Publisher",
+        "ru": "Издатель",
+        "uk": "Видавець"
+    },
+    "docinfo_field_sequence": {
+        "en": "Series",
+        "ru": "Серия",
+        "uk": "Серія"
+    },
+    "docinfo_field_sequence_number": {
+        "en": "Series number",
+        "ru": "Номер в серии",
+        "uk": "Номер у серії"
+    },
+    "docinfo_field_src_lang": {
+        "en": "Original language",
+        "ru": "Язык оригинала",
+        "uk": "Мова оригіналу"
+    },
+    "docinfo_field_src_ocr": {
+        "en": "OCR source",
+        "ru": "Источник OCR",
+        "uk": "Джерело OCR"
+    },
+    "docinfo_field_title": {
+        "en": "Title",
+        "ru": "Название",
+        "uk": "Назва"
+    },
+    "docinfo_field_translators": {
+        "en": "Translators",
+        "ru": "Переводчики",
+        "uk": "Перекладачі"
+    },
+    "docinfo_field_url": {
+        "en": "URL",
+        "ru": "URL",
+        "uk": "URL"
+    },
+    "docinfo_field_version": {
+        "en": "Version",
+        "ru": "Версия",
+        "uk": "Версія"
+    },
+    "docinfo_field_year": {
+        "en": "Year",
+        "ru": "Год",
+        "uk": "Рік"
+    },
+    "docinfo_orig_pub": {
+        "en": "Original Publication",
+        "ru": "Оригинальное издание",
+        "uk": "Оригінальне видання"
+    },
+    "docinfo_pub_info": {
+        "en": "Publication Info",
+        "ru": "Издательская информация",
+        "uk": "Видавнича інформація"
+    },
+    "notes": {
+        "en": "Notes",
+        "ru": "Примечания",
+        "uk": "Примітки"
     },
     "part_1": {
-        "uk": "Початок",
+        "en": "Start here",
         "ru": "Начало",
-        "en": "Start here"
+        "uk": "Початок"
+    },
+    "titlepage": {
+        "en": "Title page",
+        "ru": "Титульная",
+        "uk": "Титульна"
+    },
+    "toc": {
+        "en": "Table of Contents",
+        "ru": "Содержание",
+        "uk": "Зміст"
     }
 }

@@ -3,14 +3,13 @@ Utilities for constructing the OPF metadata section.
 """
 
 import logging
-from datetime import UTC, datetime
 
 from lxml import etree
 
 from ..models import namespaces as NS
 from ..models.metadata import BookMetadata, EpubMetadata
-from ..models.structures import BinaryInfo, FileInfo
-from .constants import EPUB_TYPES_MAP
+from ..models.structures import BinaryInfo, BodyType, FileInfo
+from .constants import EPUB_TYPES
 from .constants import FNames as FN
 
 log = logging.getLogger("fb2_converter")
@@ -126,8 +125,7 @@ class OpfBuilder:
             _add_meta_custom(m, name="generator", content=gen_name)
 
         # Modification timestamp
-        modified = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        _add_meta(m, prop="dcterms:modified", value=modified)
+        _add_meta(m, prop="dcterms:modified", value=self.epub_meta.date_opf)
 
     def _fill_manifest_and_spine(self, root: etree._Element) -> None:
         """
@@ -174,15 +172,16 @@ class OpfBuilder:
                 item.set("properties", doc.prop)
 
             # 2.2. Spine
-            if doc.is_note or doc.id == "nav":  # ? make 'cover' non-linear as well ?
-                # Footnote bodies are non-linear
+            if doc.body_type != BodyType.MAIN or doc.id == "nav":
+                # TODO: make 'cover' non-linear as well ?
+                # Footnote bodies and Nav are non-linear
                 spine.append(etree.Element("itemref", idref=doc.id, linear="no"))
             else:
                 spine.append(etree.Element("itemref", idref=doc.id))
 
             # 2.3. Guide
-            if doc.id in EPUB_TYPES_MAP:
-                guide_type = EPUB_TYPES_MAP[doc.id].guide_type
+            if doc.id in EPUB_TYPES:
+                guide_type = EPUB_TYPES[doc.id].guide_type
                 etree.SubElement(
                     guide, "reference", type=guide_type, title=doc.title, href=href
                 )

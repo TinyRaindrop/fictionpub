@@ -16,6 +16,7 @@ class BodyType(Enum):
     MAIN = auto()
     NOTE = auto()
     COMMENT = auto()
+    # TODO: consider whether we need a separate COMMENT body type
 
 
 class FB2Body(NamedTuple):
@@ -41,7 +42,6 @@ class FileInfo:
     html: etree._Element
     prop: str = ""
     body_type: BodyType = BodyType.MAIN
-    is_note: bool = False
     order: int | None = None
     """Sorting order is [positive, None, negative reversed]: 0, 1, 2, None, -2, -1"""
 
@@ -53,14 +53,18 @@ class FileInfo:
 
     def _sort_key(self):
         # Tuples are compared by first element, then second
-        if self.is_note:
-            return (3, 0)  # Group 3: notes/comments at the very end
+        if self.body_type != BodyType.MAIN:
+            # Group 3: notes/comments at the very end
+            return (3, 0)
         if self.order is None:
-            return (1, 0)  # Group 1: None values in the middle
+            # Group 1: None values in the middle
+            return (1, 0)
         elif self.order < 0:
-            return (2, -self.order)  # Group 2: Negative values, sorted descending
+            # Group 2: Negative values, sorted descending
+            return (2, self.order)
         else:
-            return (0, self.order)  # Group 0: Positive values, sorted ascending
+            # Group 0: Positive values, sorted ascending
+            return (0, self.order)
 
 
 @dataclass

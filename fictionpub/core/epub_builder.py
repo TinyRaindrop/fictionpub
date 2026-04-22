@@ -15,7 +15,7 @@ from typing import NamedTuple
 from lxml import etree
 
 from .. import app_info
-from ..epub.constants import EPUB_TYPES_MAP
+from ..epub.constants import EPUB_TYPES
 from ..epub.constants import FNames as FN
 from ..epub.link_resolver import LinkResolver
 from ..epub.opf_builder import OpfBuilder
@@ -104,7 +104,8 @@ class EpubBuilder:
             app_version=app_info.VERSION,
             app_url=app_info.APP_URL,
             lang_genres=tr_genres,
-            description=None,
+            # description: set in set_annotation()
+            # timestamp: automatically generated
         )
 
     def set_annotation(self, xhtml_annotation: etree._Element | None) -> None:
@@ -339,18 +340,29 @@ class EpubBuilder:
 
     def _create_docinfo_page(self) -> FileInfo | None:
         """Creates Docinfo.xhtml"""
-        info_sections = {
-            "Book Info": self.metadata.title_info.todict(),
-            "Publication Info": self.metadata.pub._asdict(),
-            "Original Publication": self.metadata.src._asdict(),
-            "Document Info": self.metadata.doc._asdict(),
-            "Converter": {
-                "Program used": f"{self.epub_meta.app_name} {self.epub_meta.app_version}",
-                "URL": self.epub_meta.app_url,
-            },
-        }
+        book_info = self.metadata.title_info.todict()
+        book_info["genres"] = (
+            self.epub_meta.lang_genres
+        )  # replace keys with translated strings
 
-        has_metadata = any(info_sections.values())
+        info_sections = [
+            ("docinfo_book_info", book_info),
+            ("docinfo_pub_info", self.metadata.pub._asdict()),
+            ("docinfo_orig_pub", self.metadata.src._asdict()),
+            ("docinfo_doc_info", self.metadata.doc._asdict()),
+            # TODO: add <history> and <custom-info>
+            (
+                "docinfo_converter",
+                {
+                    "converter_app": f"{self.epub_meta.app_name} {self.epub_meta.app_version}",
+                    "converter_url": self.epub_meta.app_url,
+                    "converter_date": self.epub_meta.date_plain,
+                    # TODO: add Epub author name (set in app preferences)
+                },
+            ),
+        ]
+
+        has_metadata = any(data for _, data in info_sections)
         if not has_metadata:
             log.info("No metadata available for docinfo page. Skipping.")
             return None
@@ -360,25 +372,51 @@ class EpubBuilder:
         html, body = self._create_html(fileid, local_title)
         etree.SubElement(body, "h1").text = local_title
 
-        for section_title, data in info_sections.items():
-            if data:
-                etree.SubElement(
-                    body, "p", attrib={"class": "subtitle"}
-                ).text = section_title
-                dl = etree.SubElement(body, "dl")  # Definition list for semantics
-                for key, value in data.items():
-                    # Skip adding annotation
-                    if key == "annotation" or not value:
-                        continue
+        def _make_dd_content(dd: etree._Element, value: str) -> None:
+            """Sets dd text content, wrapping URLs in an anchor element."""
+            if isinstance(value, str) and value.startswith(("http://", "https://")):
+                a = etree.SubElement(dd, "a", href=value)
+                a.text = value
+            else:
+                dd.text = value
 
-                    dt = etree.SubElement(dl, "dt")
-                    dt.text = key.replace("-", " ").replace("_", " ").capitalize()
+        for heading_key, data in info_sections:
+            if not data:
+                continue
 
-                    dd = etree.SubElement(dl, "dd")
-                    if isinstance(value, list):
-                        dd.text = ", ".join(value)
-                    else:
-                        dd.text = str(value)
+            # Filter out empty values and the annotation blob up front
+            pairs = [
+                (key, value)
+                for key, value in data.items()
+                if key != "annotation" and value not in (None, "", [], 0)
+            ]
+            if not pairs:
+                continue
+
+            section_title = self.local_terms.get_heading(heading_key, heading_key)
+            etree.SubElement(body, "p", attrib={"class": "subtitle"}).text = section_title
+            dl = etree.SubElement(body, "dl")
+
+            for key, value in pairs:
+                # Normalize key to lookup format: "My Key" or "my_key" → "docinfo_field_my_key"
+                lookup_key = "docinfo_field_" + key.lower().replace(" ", "_").replace(
+                    "-", "_"
+                )
+                # Fall back to the auto-formatted raw key if no translation exists
+                fallback = key.replace("-", " ").replace("_", " ").capitalize()
+                label = self.local_terms.get_heading(lookup_key, fallback)
+
+                # Wrap each pair in a <div> for reliable CSS :last-child targeting
+                pair_div = etree.SubElement(dl, "div")
+
+                dt = etree.SubElement(pair_div, "dt")
+                dt.text = label
+
+                dd = etree.SubElement(pair_div, "dd")
+                if isinstance(value, list):
+                    dd.text = ", ".join(str(v) for v in value if v)
+                else:
+                    _make_dd_content(dd, str(value))
 
         return FileInfo(fileid, local_title, html, order=-2)  # -2 = second last
 
@@ -451,7 +489,7 @@ class EpubBuilder:
         for doc in self.doc_list:
             # limit TOC depth for note documents to at most 2 levels
             max_depth = self.config.toc_depth
-            if doc.is_note:
+            if doc.body_type != BodyType.MAIN:
                 max_depth = min(max_depth, 2)
 
             heading_tags = [f"h{i}" for i in range(1, max_depth + 1)]
@@ -507,11 +545,11 @@ class EpubBuilder:
     def _create_nav(self) -> None:
         """Creates the EPUB3 nav.xhtml file with proper nesting."""
         fileid = "nav"
-        if fileid not in EPUB_TYPES_MAP:
+        if fileid not in EPUB_TYPES:
             log.warning("missing EPUB:type for NAV. Skipping.")
             return
 
-        epub_type = EPUB_TYPES_MAP[fileid].epub_type
+        epub_type = EPUB_TYPES[fileid].epub_type
 
         local_title = self.local_terms.get_heading("toc", "Table of Contents")
         html, body = self._create_html(fileid, local_title, add_body_type=False)
@@ -539,9 +577,13 @@ class EpubBuilder:
         nav_landmarks = etree.SubElement(
             body,
             "nav",
-            attrib={"id": "landmarks", f"{{{NS.EPUB}}}type": "landmarks", "hidden": ""},
+            attrib={
+                "id": "landmarks",
+                f"{{{NS.EPUB}}}type": "landmarks",
+                "hidden": "hidden",
+            },
         )
-        etree.SubElement(nav_landmarks, "h1", attrib={"hidden": ""}).text = "Landmarks"
+        etree.SubElement(nav_landmarks, "h1").text = "Landmarks"
         ol_landmarks = etree.SubElement(nav_landmarks, "ol")
 
         # First, add a self-referential link to the Table of Contents
@@ -550,9 +592,9 @@ class EpubBuilder:
         a.text = local_title
 
         for doc in self.doc_list:
-            if doc.id in EPUB_TYPES_MAP:
+            if doc.id in EPUB_TYPES:
                 li = etree.SubElement(ol_landmarks, "li")
-                epub_type = EPUB_TYPES_MAP[doc.id].epub_type
+                epub_type = EPUB_TYPES[doc.id].epub_type
                 a = etree.SubElement(
                     li,
                     "a",
@@ -733,8 +775,8 @@ class EpubBuilder:
         if file_id:
             body_class = f"{file_id}-body"
             body.set("class", body_class)
-            if add_body_type and file_id in EPUB_TYPES_MAP:
-                body_type = EPUB_TYPES_MAP[file_id].epub_type
+            if add_body_type and file_id in EPUB_TYPES:
+                body_type = EPUB_TYPES[file_id].epub_type
                 if body_type:
                     body.set(f"{{{NS.EPUB}}}type", body_type)
         return html, body

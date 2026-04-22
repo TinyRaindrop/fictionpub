@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import NamedTuple
 
 from lxml import etree
@@ -146,3 +147,15 @@ class EpubMetadata:
     app_url: str = ""
     lang_genres: list[str] = field(default_factory=list)
     description: str | None = None
+    # Generate a fresh timestamp when the object is instantiated
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+
+    @property
+    def date_opf(self) -> str:
+        """Returns the strict ISO 8601 format needed for the OPF."""
+        return self.timestamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    @property
+    def date_plain(self) -> str:
+        """Returns a human-readable format for the xhtml page."""
+        return self.timestamp.strftime("%Y-%m-%d %H:%M")

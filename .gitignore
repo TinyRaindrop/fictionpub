@@ -110,9 +110,9 @@ books/
 sample-books/*
 !sample-books/*.fb2
 *epub_temp/
-{F}
-{FB2}
-{EPUB}
+\{F\}/
+\{FB2\}/
+\{EPUB\}/
 _notes/
 _FB2*/
 bak/

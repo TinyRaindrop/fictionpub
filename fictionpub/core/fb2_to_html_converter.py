@@ -401,6 +401,7 @@ class FB2ToHTMLConverter:
 
     def _handle_table(self, element: etree._Element) -> etree._Element | None:
         # TODO: handle align, valign, colspan, rowspan
+        # FIXME: align/valign results in Epubcheck ERROR(RSC-005)
         pass
 
     def _handle_style(self, element: etree._Element) -> etree._Element | None:

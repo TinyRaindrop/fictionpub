@@ -165,6 +165,7 @@ exclude_dlls_gui = [f"--noinclude-dlls=*{dll}" for dll in DLL_EXCLUDES_GUI]
 # To inspect plugin usage run:
 # python -m nuitka run_app_cli.py --standalone --show-modules
 
+
 def compile_cli() -> None:
     print("\n--- Building CLI Version ---")
     options = (
