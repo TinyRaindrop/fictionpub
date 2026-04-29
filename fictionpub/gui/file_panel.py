@@ -125,6 +125,8 @@ class FileTreeView(QTreeView):
     selection_remove_requested = Signal()
     has_view_selection_changed = Signal(bool)
     files_dropped = Signal(list)  # list[Path] — files and/or folders
+    add_files_requested = Signal()
+    add_folder_requested = Signal()
 
     def __init__(self, model: FileTreeModel, parent=None):
         super().__init__(parent)
@@ -311,6 +313,17 @@ class FileTreeView(QTreeView):
         node = self._node_for_proxy(proxy_index)
         menu = QMenu(self)
 
+        # Background click: offer adding files
+        if not proxy_index.isValid():
+            menu.addAction(t("toolbar.add_files")).triggered.connect(
+                self.add_files_requested
+            )
+            menu.addAction(t("toolbar.add_folder")).triggered.connect(
+                self.add_folder_requested
+            )
+            menu.exec(self.viewport().mapToGlobal(pos))
+            return
+
         if isinstance(node, FileNode):
             if node.status is not None:
                 act = menu.addAction(t("ctx.open_epub"))
@@ -349,8 +362,24 @@ class FileTreeView(QTreeView):
     def keyPressEvent(self, event) -> None:
         if event.key() == Qt.Key.Key_Delete:
             self.selection_remove_requested.emit()
+        elif event.key() == Qt.Key.Key_Space:
+            self._toggle_selected_checks()
         else:
             super().keyPressEvent(event)
+
+    def _toggle_selected_checks(self) -> None:
+        """Toggle check state for all currently highlighted rows."""
+        indices = self.selected_source_indices()
+        if not indices:
+            return
+        all_checked = all(
+            node.check_state == Qt.CheckState.Checked
+            for idx in indices
+            if (node := self._source_model.node_for_index(idx)) is not None
+        )
+        new_state = Qt.CheckState.Unchecked if all_checked else Qt.CheckState.Checked
+        for idx in indices:
+            self._source_model.setData(idx, new_state.value, Qt.ItemDataRole.CheckStateRole)
 
     def _on_language_changed(self) -> None:
         self._source_model.headerDataChanged.emit(

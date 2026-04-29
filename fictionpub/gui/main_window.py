@@ -44,7 +44,6 @@ from pathlib import Path
 from typing import override
 
 from PySide6.QtCore import QThreadPool
-from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -185,7 +184,6 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._connect_signals()
-        self._apply_shortcuts()
         self._apply_stylesheet()
 
         register_listener(self._retranslate_ui)
@@ -236,6 +234,8 @@ class MainWindow(QMainWindow):
         fv: FileTreeView = self._file_view
         fv.status_clicked.connect(self._on_status_clicked)
         fv.folder_double_clicked.connect(self._on_folder_double_clicked)
+        fv.add_files_requested.connect(self._on_add_files)
+        fv.add_folder_requested.connect(self._on_add_folder)
         fv.open_epub_requested.connect(self._on_open_epub)
         fv.open_fb2_requested.connect(self._on_open_fb2)
         fv.open_folder_requested.connect(self._on_open_folder)
@@ -248,14 +248,6 @@ class MainWindow(QMainWindow):
         bb.cancel_requested.connect(self._on_cancel)
         bb.open_logs_dir_requested.connect(self._on_open_logs)
         bb.open_last_log_requested.connect(self._on_open_last_log)
-
-    def _apply_shortcuts(self) -> None:
-        QShortcut(QKeySequence.StandardKey.Delete, self._file_view).activated.connect(
-            self._on_remove_selected
-        )
-        QShortcut(QKeySequence.StandardKey.SelectAll, self).activated.connect(
-            lambda: self._model.set_all_checked(True)
-        )
 
     def _apply_stylesheet(self) -> None:
         """Single stylesheet for the whole window."""
