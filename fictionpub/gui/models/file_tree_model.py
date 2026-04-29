@@ -224,7 +224,7 @@ class FileTreeModel(QAbstractItemModel):
             if parent_idx.isValid():
                 self._recalc_ancestors(parent_idx.internalPointer(), parent_idx)
 
-        self._emit_selection_count()
+        self._emit_file_counts()
         return True
 
     # ── Public mutation API ───────────────────────────────────────────────────
@@ -258,7 +258,7 @@ class FileTreeModel(QAbstractItemModel):
             added += 1
 
         if added:
-            self._emit_selection_count()
+            self._emit_file_counts()
         return added
 
     def update_meta(self, path: Path, meta) -> None:
@@ -347,7 +347,7 @@ class FileTreeModel(QAbstractItemModel):
                     self.endRemoveRows()
                 self._prune_empty_ancestors(parent)
 
-        self._emit_selection_count()
+        self._emit_file_counts()
 
     def remove_all(self) -> None:
         if not self._root_folders:
@@ -357,7 +357,7 @@ class FileTreeModel(QAbstractItemModel):
         self._path_to_node.clear()
         self._folder_map.clear()
         self.endResetModel()
-        self._emit_selection_count()
+        self._emit_file_counts()
 
     def remove_completed(self) -> None:
         """Remove all SUCCESS files; prune folders that become empty."""
@@ -391,7 +391,7 @@ class FileTreeModel(QAbstractItemModel):
                 self._prune_empty_ancestors(folder)
                 seen.add(id(folder))
 
-        self._emit_selection_count()
+        self._emit_file_counts()
 
     def set_all_checked(self, is_checked: bool) -> None:
         state = Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked
@@ -400,7 +400,7 @@ class FileTreeModel(QAbstractItemModel):
             root_idx = self.index(i, 0)
             self.dataChanged.emit(root_idx, root_idx, [Qt.ItemDataRole.CheckStateRole])
             self._cascade_check(folder, state, root_idx)
-        self._emit_selection_count()
+        self._emit_file_counts()
 
     def checked_file_paths(self) -> list[Path]:
         return [
@@ -539,7 +539,7 @@ class FileTreeModel(QAbstractItemModel):
             return QModelIndex()
         return self.createIndex(row, 0, node)
 
-    def _emit_selection_count(self) -> None:
+    def _emit_file_counts(self) -> None:
         total = len(self._path_to_node)
         checked = sum(
             1 for n in self._path_to_node.values() if n.check_state == Qt.CheckState.Checked

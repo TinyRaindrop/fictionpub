@@ -228,6 +228,7 @@ class MainWindow(QMainWindow):
         tb.about_requested.connect(self._on_about)
 
         self._model.selection_count_changed.connect(self._toolbar.update_selection_count)
+        self._model.selection_count_changed.connect(self._on_file_count_changed)
 
         fv = self._file_view
         fv.status_clicked.connect(self._on_status_clicked)
@@ -335,8 +336,18 @@ class MainWindow(QMainWindow):
             self._bottom_bar.set_idle()
 
     def _on_remove_completed(self) -> None:
-        if not self._is_converting():
-            self._model.remove_completed()
+        if self._is_converting():
+            return
+        self._model.remove_completed()
+
+    def _on_file_count_changed(self, _checked: int, total: int) -> None:
+        """Keep the bottom-bar status text in sync whenever files are added or removed."""
+        self._bottom_bar.update_file_count(total)
+        if self._is_converting():
+            return
+        if self._scan_worker and self._scan_worker.isRunning():
+            return
+        self._bottom_bar.set_idle()
 
     def _on_select_all(self) -> None:
         self._model.set_all_checked(True)
@@ -445,8 +456,7 @@ class MainWindow(QMainWindow):
 
     def _on_scan_finished(self) -> None:
         self._toolbar.set_busy(False)
-        total = self._model.total_file_count()
-        self._bottom_bar.set_idle(t("bar.ready_n_files", n=total))
+        self._bottom_bar.set_idle()
 
     # ------------------------------------------------------------------
     # Conversion

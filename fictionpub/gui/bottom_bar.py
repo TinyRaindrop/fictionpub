@@ -61,6 +61,7 @@ class BottomBarWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedHeight(44)
+        self._total_files: int = 0
         self._build_ui()
         self.set_idle()
         register_listener(self._retranslate_ui)
@@ -177,26 +178,37 @@ class BottomBarWidget(QWidget):
     # Counter helpers
     # ------------------------------------------------------------------
 
-    def _update_counters(self, success: int, warnings: int, failures: int) -> None:
+    def _update_res_counters(self, success: int, warnings: int, failures: int) -> None:
         self._ok_count.setText(str(success))
         self._warn_count.setText(str(warnings))
         self._fail_count.setText(str(failures))
 
-    def _reset_counters(self) -> None:
+    def _reset_res_counters(self) -> None:
         for lbl in (self._ok_count, self._warn_count, self._fail_count):
             lbl.setText("—")
+
+    def update_file_count(self, total: int) -> None:
+        """Called whenever the model's file count changes."""
+        self._total_files: int = total
 
     # ------------------------------------------------------------------
     # State transitions
     # ------------------------------------------------------------------
 
     def set_idle(self, message: str | None = None) -> None:
+        if message is None:
+            message = (
+                t("bar.ready_n_files", n=self._total_files)
+                if self._total_files
+                else t("bar.ready")
+            )
+        self._status.setText(message)
         self._status.setText(message if message is not None else t("bar.ready"))
         self._progress.hide()
         self._cancel.hide()
         self._convert.show()
         self._convert.setEnabled(True)
-        self._reset_counters()
+        self._reset_res_counters()
         self._counters_widget.hide()
 
     def set_scanning(self) -> None:
@@ -208,7 +220,7 @@ class BottomBarWidget(QWidget):
         self._progress.setRange(0, total)
         self._progress.setValue(0)
         self._progress.show()
-        self._update_counters(0, 0, 0)
+        self._update_res_counters(0, 0, 0)
         self._counters_widget.show()
         self._convert.hide()
         self._cancel.show()
@@ -228,7 +240,7 @@ class BottomBarWidget(QWidget):
     ) -> None:
         self._progress.setValue(completed)
         self._status.setText(t("bar.converting_progress", done=completed, total=total))
-        self._update_counters(success, warnings, failures)
+        self._update_res_counters(success, warnings, failures)
 
     def set_done(
         self,
@@ -245,5 +257,5 @@ class BottomBarWidget(QWidget):
         self._cancel.hide()
         self._convert.show()
         self._convert.setEnabled(True)
-        self._update_counters(success, warnings, failures)
+        self._update_res_counters(success, warnings, failures)
         self._counters_widget.show()
