@@ -95,8 +95,8 @@ class FileTreeModel(QAbstractItemModel):
     FileNodes at any depth.
     """
 
-    # (checked_count, total_count)
-    selection_count_changed = Signal(int, int)
+    selection_count_changed = Signal(int, int)  # (checked_count, total_count)
+    status_counts_changed = Signal(int, int, int)  # (success, warnings, failures)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -301,6 +301,7 @@ class FileTreeModel(QAbstractItemModel):
                 status_idx,
                 [Qt.ItemDataRole.DecorationRole, Qt.ItemDataRole.UserRole],
             )
+        self._emit_status_counts()
 
     def remove_nodes(self, indices: list[QModelIndex]) -> None:
         """Remove selected nodes (folders recursively, files individually)."""
@@ -348,6 +349,7 @@ class FileTreeModel(QAbstractItemModel):
                 self._prune_empty_ancestors(parent)
 
         self._emit_file_counts()
+        self._emit_status_counts()
 
     def remove_all(self) -> None:
         if not self._root_folders:
@@ -358,6 +360,7 @@ class FileTreeModel(QAbstractItemModel):
         self._folder_map.clear()
         self.endResetModel()
         self._emit_file_counts()
+        self._emit_status_counts()
 
     def remove_completed(self) -> None:
         """Remove all SUCCESS files; prune folders that become empty."""
@@ -392,6 +395,7 @@ class FileTreeModel(QAbstractItemModel):
                 seen.add(id(folder))
 
         self._emit_file_counts()
+        self._emit_status_counts()
 
     def set_all_checked(self, is_checked: bool) -> None:
         state = Qt.CheckState.Checked if is_checked else Qt.CheckState.Unchecked
@@ -545,6 +549,17 @@ class FileTreeModel(QAbstractItemModel):
             1 for n in self._path_to_node.values() if n.check_state == Qt.CheckState.Checked
         )
         self.selection_count_changed.emit(checked, total)
+
+    def _emit_status_counts(self) -> None:
+        success = warnings = failures = 0
+        for n in self._path_to_node.values():
+            if n.status == ConversionStatus.SUCCESS:
+                success += 1
+            elif n.status == ConversionStatus.WARNING:
+                warnings += 1
+            elif n.status == ConversionStatus.FAILURE:
+                failures += 1
+        self.status_counts_changed.emit(success, warnings, failures)
 
     # ── Private: data helpers ─────────────────────────────────────────────────
 

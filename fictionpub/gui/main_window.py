@@ -215,12 +215,14 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._bottom_bar)
 
     def _connect_signals(self) -> None:
-        tb = self._toolbar
+        tb: ToolbarWidget = self._toolbar
         tb.add_files_requested.connect(self._on_add_files)
         tb.add_folder_requested.connect(self._on_add_folder)
         tb.remove_selected_requested.connect(self._on_remove_selected)
         tb.remove_all_requested.connect(self._on_remove_all)
         tb.remove_completed_requested.connect(self._on_remove_completed)
+        tb.expand_all_requested.connect(self._file_view.expandAll)
+        tb.collapse_all_requested.connect(self._file_view.collapseAll)
         tb.select_all_requested.connect(self._on_select_all)
         tb.deselect_all_requested.connect(self._on_deselect_all)
         tb.conversion_settings_requested.connect(self._on_conversion_settings)
@@ -229,17 +231,19 @@ class MainWindow(QMainWindow):
 
         self._model.selection_count_changed.connect(self._toolbar.update_selection_count)
         self._model.selection_count_changed.connect(self._on_file_count_changed)
+        self._model.status_counts_changed.connect(self._toolbar.update_status_counts)
 
-        fv = self._file_view
+        fv: FileTreeView = self._file_view
         fv.status_clicked.connect(self._on_status_clicked)
         fv.folder_double_clicked.connect(self._on_folder_double_clicked)
         fv.open_epub_requested.connect(self._on_open_epub)
         fv.open_fb2_requested.connect(self._on_open_fb2)
         fv.open_folder_requested.connect(self._on_open_folder)
+        fv.has_view_selection_changed.connect(self._toolbar.update_view_selection)
         fv.selection_remove_requested.connect(self._on_remove_selected)
         fv.files_dropped.connect(self._start_scan)
 
-        bb = self._bottom_bar
+        bb: BottomBarWidget = self._bottom_bar
         bb.convert_requested.connect(self._on_convert)
         bb.cancel_requested.connect(self._on_cancel)
         bb.open_logs_dir_requested.connect(self._on_open_logs)
@@ -342,6 +346,7 @@ class MainWindow(QMainWindow):
 
     def _on_file_count_changed(self, _checked: int, total: int) -> None:
         """Keep the bottom-bar status text in sync whenever files are added or removed."""
+        # TODO: ensure all counts are queried from a single source of truth
         self._bottom_bar.update_file_count(total)
         if self._is_converting():
             return
@@ -445,6 +450,9 @@ class MainWindow(QMainWindow):
 
         new_roots = [f for f in self._model._root_folders if f.path not in existing_roots]
         self._file_view.expand_new_folders(new_roots)
+
+        if new_roots:
+            self._toolbar.set_tree_expanded()
 
         for _root, file_path in found:
             node = self._model._path_to_node.get(file_path)

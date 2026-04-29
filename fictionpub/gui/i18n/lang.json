@@ -507,6 +507,14 @@
         "en": "🔧 Preferences",
         "uk": "🔧 Параметри"
     },
+    "toolbar.collapse_all": {
+        "en": "Collapse All",
+        "uk": "Згорнути всі"
+    },
+    "toolbar.expand_all": {
+        "en": "Expand All",
+        "uk": "Розгорнути всі"
+    },
     "toolbar.logs": {
         "en": "📋 Logs",
         "uk": "📋 Журнали"
@@ -524,8 +532,8 @@
         "uk": "Видалити готові"
     },
     "toolbar.select_toggle": {
-        "en": "{checked} of {total} selected",
-        "uk": "{checked} з {total} вибрано"
+        "en": "{checked} / {total} selected",
+        "uk": "{checked} / {total} вибрано"
     },
     "toolbar.settings": {
         "en": "⚙ Settings",
@@ -547,9 +555,17 @@
         "en": "Application preferences",
         "uk": "Налаштування програми"
     },
+    "tooltip.collapse_all": {
+        "en": "Collapse all folders in the tree",
+        "uk": "Згорнути всі папки"
+    },
     "tooltip.css_default": {
         "en": "Use the built-in stylesheet for all conversions",
         "uk": "Використовувати вбудовану таблицю стилів для всіх конвертацій"
+    },
+    "tooltip.expand_all": {
+        "en": "Expand all folders in the tree",
+        "uk": "Розгорнути всі папки"
     },
     "tooltip.last_log": {
         "en": "View the log from the most recent run",

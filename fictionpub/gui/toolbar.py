@@ -10,6 +10,7 @@ Clicking it alternates between "select all" and "deselect all":
 """
 
 from PySide6.QtCore import Signal
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QApplication,
     QFrame,
@@ -48,6 +49,10 @@ class ToolbarWidget(QWidget):
     select_all_requested = Signal()
     deselect_all_requested = Signal()
 
+    # Tree view
+    expand_all_requested = Signal()
+    collapse_all_requested = Signal()
+
     # App
     conversion_settings_requested = Signal()
     app_settings_requested = Signal()
@@ -56,6 +61,10 @@ class ToolbarWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._all_selected = False  # tracks whether all files are currently checked
+        self._tree_expanded = True  # tracks last intentional expand/collapse state
+        self._busy = False
+        self._has_view_selection = False
+        self._has_success = False
         self._build_ui()
         register_listener(self._retranslate_ui)
 
@@ -68,8 +77,11 @@ class ToolbarWidget(QWidget):
         self._add_files = _btn()
         self._add_folder = _btn()
         self._remove = _btn()
+        self._remove.setEnabled(False)
         self._remove_all = _btn()
+        self._remove_all.setEnabled(False)
         self._remove_done = _btn()
+        self._remove_done.setEnabled(False)
 
         for w in (
             self._add_files,
@@ -81,16 +93,25 @@ class ToolbarWidget(QWidget):
         ):
             layout.addWidget(w)
 
+        # Expand / Collapse toggle
+        self._expand_sep = _vsep()
+        self._expand_toggle = _btn()
+        layout.addWidget(self._expand_sep)
+        layout.addWidget(self._expand_toggle)
+        self._expand_sep.hide()
+        self._expand_toggle.hide()
+
         spacer1 = QWidget()
         spacer1.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
         layout.addWidget(spacer1)
 
-        # Single select-toggle button
+        # Select / Deselect toggle
         self._select_toggle = _btn()
         self._select_toggle.setCheckable(True)
         self._select_toggle.setChecked(False)
         self._select_toggle.setMinimumWidth(130)
         layout.addWidget(self._select_toggle)
+        self._select_toggle.hide()
 
         spacer2 = QWidget()
         spacer2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
@@ -117,12 +138,22 @@ class ToolbarWidget(QWidget):
         self._remove.clicked.connect(self.remove_selected_requested)
         self._remove_all.clicked.connect(self.remove_all_requested)
         self._remove_done.clicked.connect(self.remove_completed_requested)
+        self._expand_toggle.clicked.connect(self._on_expand_toggle)
         self._select_toggle.clicked.connect(self._on_select_toggle)
         self._conv_settings.clicked.connect(self.conversion_settings_requested)
         self._app_settings.clicked.connect(self.app_settings_requested)
         self._about.clicked.connect(self.about_requested)
 
         self._retranslate_ui()
+
+    def _on_expand_toggle(self) -> None:
+        if self._tree_expanded:
+            self._tree_expanded = False
+            self.collapse_all_requested.emit()
+        else:
+            self._tree_expanded = True
+            self.expand_all_requested.emit()
+        self._refresh_expand_label()
 
     def _on_select_toggle(self) -> None:
         if self._all_selected:
@@ -148,6 +179,8 @@ class ToolbarWidget(QWidget):
         self._about.setToolTip(t("tooltip.about"))
         self._select_toggle.setToolTip(t("tooltip.select_toggle"))
         self._refresh_toggle_label()
+        self._refresh_expand_label()
+        self._fix_expand_width()
 
     def _refresh_toggle_label(self) -> None:
         checked = getattr(self, "_last_checked", 0)
@@ -157,23 +190,67 @@ class ToolbarWidget(QWidget):
         )
         self._select_toggle.setChecked(self._all_selected)
 
+    def _refresh_expand_label(self) -> None:
+        if self._tree_expanded:
+            self._expand_toggle.setText(t("toolbar.collapse_all"))
+            self._expand_toggle.setToolTip(t("tooltip.collapse_all"))
+        else:
+            self._expand_toggle.setText(t("toolbar.expand_all"))
+            self._expand_toggle.setToolTip(t("tooltip.expand_all"))
+
+    def _fix_expand_width(self) -> None:
+        """
+        Lock button width to the wider of the two labels,
+        so toggling never shifts neighbours.
+        """
+        fm: QFontMetrics = self._expand_toggle.fontMetrics()
+        w = (
+            max(
+                fm.horizontalAdvance(t("toolbar.expand_all")),
+                fm.horizontalAdvance(t("toolbar.collapse_all")),
+            )
+            + 18
+        )  # 24 px ≈ standard QPushButton horizontal padding
+        self._expand_toggle.setFixedWidth(w)
+
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
     def set_busy(self, busy: bool) -> None:
+        self._busy = busy
         for w in (
             self._add_files,
             self._add_folder,
-            self._remove,
-            self._remove_all,
-            self._remove_done,
+            self._expand_toggle,
             self._select_toggle,
         ):
             w.setEnabled(not busy)
+        self._refresh_remove_buttons()
+
+    def _refresh_remove_buttons(self) -> None:
+        self._remove.setEnabled(not self._busy and self._has_view_selection)
+        self._remove_all.setEnabled(not self._busy and self._last_total > 0)
+        self._remove_done.setEnabled(not self._busy and self._has_success)
+
+    def update_view_selection(self, has_selection: bool) -> None:
+        self._has_view_selection = has_selection
+        self._refresh_remove_buttons()
+
+    def update_status_counts(self, success: int, warnings: int, failures: int) -> None:
+        self._has_success = success > 0
+        self._refresh_remove_buttons()
+
+    def set_tree_expanded(self) -> None:
+        """Call after programmatically expanding the tree (e.g. after scan)."""
+        self._tree_expanded = True
+        self._refresh_expand_label()
 
     def update_selection_count(self, checked: int, total: int) -> None:
         self._last_checked = checked
         self._last_total = total
         self._all_selected = total > 0 and checked == total
         self._refresh_toggle_label()
+        self._select_toggle.setVisible(total > 0)
+        self._expand_sep.setVisible(total > 0)
+        self._expand_toggle.setVisible(total > 0)

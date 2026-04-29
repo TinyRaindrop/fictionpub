@@ -65,7 +65,7 @@ from .models.file_node import FileNode, FolderNode
 from .models.file_tree_model import Col, FileTreeModel
 
 _COL_NAME_MIN = 120  # px — filename col is never auto-shrunk below this
-_COL_STATUS_W = 36  # px — fixed status column width
+_COL_STATUS_W = 42  # px — fixed status column width
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -123,6 +123,7 @@ class FileTreeView(QTreeView):
     open_fb2_requested = Signal(object)  # Path
     open_folder_requested = Signal(object)  # Path
     selection_remove_requested = Signal()
+    has_view_selection_changed = Signal(bool)
     files_dropped = Signal(list)  # list[Path] — files and/or folders
 
     def __init__(self, model: FileTreeModel, parent=None):
@@ -132,7 +133,6 @@ class FileTreeView(QTreeView):
         self._proxy = NaturalSortProxyModel(self)
         self._proxy.setSourceModel(model)
         self._proxy.setDynamicSortFilter(True)
-        # TODO: add drag&drop support
         self.setModel(self._proxy)
         self.setSortingEnabled(True)
         self.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
@@ -148,6 +148,7 @@ class FileTreeView(QTreeView):
         self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
         self.setDropIndicatorShown(False)  # no insertion-point caret needed
 
+        self.selectionModel().selectionChanged.connect(self._on_view_selection_changed)
         self._setup_header()
 
         self.clicked.connect(self._on_clicked)
@@ -208,20 +209,21 @@ class FileTreeView(QTreeView):
     # ------------------------------------------------------------------
     # Selective expand — called by MainWindow after each scan
     # ------------------------------------------------------------------
-
     def expand_new_folders(self, new_root_nodes: list[FolderNode]) -> None:
         """
-        Expand only freshly added root FolderNodes.
+        Fully expand all freshly added root FolderNodes and their entire subtree.
         Existing nodes keep whatever expanded/collapsed state the user set.
         """
-        # TODO: expand more than just 1 level
         for folder in new_root_nodes:
             src_idx = self._source_model._index_for_node(folder)
             if not src_idx.isValid():
                 continue
             proxy_idx = self._proxy.mapFromSource(src_idx)
             if proxy_idx.isValid():
-                self.expand(proxy_idx)
+                self.expandRecursively(proxy_idx)
+
+    def _on_view_selection_changed(self) -> None:
+        self.has_view_selection_changed.emit(self.selectionModel().hasSelection())
 
     # ------------------------------------------------------------------
     # Drag-drop — accept local file/folder URLs from the OS
