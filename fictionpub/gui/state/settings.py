@@ -1,6 +1,10 @@
 """
 Typed wrapper around QSettings.
 
+Geometry keys
+─────────────
+  app/geometry/{key} — key is window name: main or dialog
+
 reset_to_defaults() clears ALL keys so every size, preference, and
 conversion setting reverts to its hard-coded default on next launch.
 
@@ -10,14 +14,51 @@ Persisted as a string.  On load, the path is validated; if the file no
 longer exists the value is silently discarded (falls back to the built-in
 stylesheet) so a stale path from a previous session never silently breaks
 EPUB output.
+
+Update settings
+───────────────
+  app/update_frequency      — "launch" | "daily" | "weekly" | "never"
+  app/last_checked          — ISO-8601 datetime string (UTC), or ""
+  app/last_notified_version — tag string of the last version shown in
+                              the startup popup, or ""
 """
 
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSettings
 
 from ... import app_info
 from ...models.conversion import ConversionConfig
+
+
+class UpdateFrequency(StrEnum):
+    """
+    How often the app should contact GitHub to check for updates.
+
+    Because StrEnum members *are* strings, QSettings stores and restores
+    them without any conversion — ``settings.value(key, UpdateFrequency.LAUNCH)``
+    returns a value that compares equal to the enum member directly.
+    Declaration order defines the display order in the settings dialog.
+    """
+
+    LAUNCH = "launch"  # every startup
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    NEVER = "never"
+
+    @property
+    def delta(self) -> timedelta | None:
+        """Minimum elapsed time before the next check, or None for 'always/never'."""
+        return {
+            UpdateFrequency.LAUNCH: None,
+            UpdateFrequency.DAILY: timedelta(days=1),
+            UpdateFrequency.WEEKLY: timedelta(weeks=1),
+            UpdateFrequency.NEVER: None,
+        }[self]
 
 
 class AppSettings:
@@ -117,6 +158,72 @@ class AppSettings:
             str(cfg.custom_stylesheet) if cfg.custom_stylesheet else "",
         )
         s.setValue("conv/num_threads", cfg.num_threads)
+
+    # ------------------------------------------------------------------
+    # Update settings
+    # ------------------------------------------------------------------
+
+    def update_frequency(self) -> UpdateFrequency:
+        """Return the configured check frequency as an UpdateFrequency member."""
+        raw = str(self._s.value("app/update_frequency", UpdateFrequency.LAUNCH))
+        try:
+            return UpdateFrequency(raw)
+        except ValueError:
+            return UpdateFrequency.LAUNCH
+
+    def set_update_frequency(self, value: UpdateFrequency) -> None:
+        self._s.setValue("app/update_frequency", value)  # StrEnum → stored as its string
+
+    def last_checked(self) -> datetime | None:
+        """Return the UTC datetime of the last completed update check, or None."""
+        raw = str(self._s.value("app/last_checked", "")).strip()
+        if not raw:
+            return None
+        try:
+            return datetime.fromisoformat(raw)
+        except ValueError:
+            return None
+
+    def set_last_checked(self) -> None:
+        """Record now (UTC) as the last-checked timestamp."""
+        self._s.setValue("app/last_checked", datetime.now(UTC).isoformat())
+
+    def last_notified_version(self) -> str:
+        """Tag of the version last shown in the startup popup, or ''."""
+        return str(self._s.value("app/last_notified_version", ""))
+
+    def set_last_notified_version(self, tag: str) -> None:
+        self._s.setValue("app/last_notified_version", tag)
+
+    def should_check_now(self) -> bool:
+        """
+        Return True if an update check should be performed right now,
+        according to the configured frequency and last-check timestamp.
+        """
+        freq = self.update_frequency()
+
+        if freq == UpdateFrequency.NEVER:
+            return False
+        if freq == UpdateFrequency.LAUNCH:
+            return True
+
+        delta = freq.delta  # timedelta for DAILY / WEEKLY
+        last = self.last_checked()
+        if last is None:
+            return True  # never checked before
+
+        now = datetime.now(UTC)
+        # Make sure last is timezone-aware before comparing
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=UTC)
+        return (now - last) >= delta
+
+    def should_notify_popup(self, tag: str) -> bool:
+        """
+        Return True if we should show the startup popup for *tag*.
+        False when we already showed it for this version.
+        """
+        return self.last_notified_version() != tag
 
     def sync(self) -> None:
         self._s.sync()

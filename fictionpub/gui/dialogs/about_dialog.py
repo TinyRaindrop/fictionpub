@@ -1,14 +1,23 @@
 """
 Non-modal About dialog.
 Pulls app name, version and URL from the top-level app_info module.
+
+Update status
+-------------
+An update-status label and "Check Now" button are added below the tech-
+stack line.  The parent window calls set_update_status() whenever the
+check worker returns a result.  The "Check Now" button emits
+checkForUpdatesRequested so MainWindow can trigger a fresh check.
 """
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
+    QPushButton,
     QVBoxLayout,
 )
 
@@ -17,6 +26,8 @@ from ..i18n import register_listener, t
 
 
 class AboutDialog(QDialog):
+    check_for_updates_requested = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedWidth(420)
@@ -68,6 +79,27 @@ class AboutDialog(QDialog):
         self._tech_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
         layout.addWidget(self._tech_label)
 
+        # Thin separator before update area
+        sep2 = QLabel()
+        sep2.setFixedHeight(1)
+        sep2.setStyleSheet("background: palette(mid);")
+        layout.addWidget(sep2)
+
+        # Update status row
+        upd_row = QHBoxLayout()
+        upd_row.setSpacing(8)
+
+        self._update_status_label = QLabel()
+        self._update_status_label.setWordWrap(True)
+        self._update_status_label.setStyleSheet("font-size: 10px;")
+        upd_row.addWidget(self._update_status_label, stretch=1)
+
+        self._check_now_btn = QPushButton()
+        self._check_now_btn.clicked.connect(self.check_for_updates_requested)
+        upd_row.addWidget(self._check_now_btn)
+
+        layout.addLayout(upd_row)
+
         # Close button
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.close)
@@ -82,3 +114,36 @@ class AboutDialog(QDialog):
         self._url_label.setText(f'<a href="{app_info.APP_URL}">{app_info.APP_URL}</a>')
         self._desc_label.setText(t("about.description"))
         self._tech_label.setText(t("about.built_with"))
+        self._check_now_btn.setText(t("update.check_now"))
+        # Preserve existing status text through retranslate; only reset the button
+        if not self._update_status_label.text():
+            self._update_status_label.setText(t("update.status_checking"))
+
+    # ------------------------------------------------------------------
+    # Public API (called by MainWindow)
+    # ------------------------------------------------------------------
+
+    def set_update_status(self, new_version: str | None) -> None:
+        """
+        Update the status label.
+
+        Parameters
+        ----------
+        new_version : tag string (e.g. "v1.4.0") when update available,
+                      None when up to date,
+                      "" when check not performed / in progress
+        """
+        if new_version is None:
+            self._update_status_label.setStyleSheet("font-size: 10px; color: palette(mid);")
+            self._update_status_label.setText(t("update.status_up_to_date"))
+        elif new_version == "":
+            self._update_status_label.setStyleSheet("font-size: 10px; color: palette(mid);")
+            self._update_status_label.setText(t("update.status_checking"))
+        else:
+            ver = new_version.lstrip("v")
+            self._update_status_label.setStyleSheet(
+                "font-size: 10px; color: #27ae60; font-weight: bold;"
+            )
+            self._update_status_label.setText(
+                t("update.status_available", new=ver, current=app_info.VERSION)
+            )

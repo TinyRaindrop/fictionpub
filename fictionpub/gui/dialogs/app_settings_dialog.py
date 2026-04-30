@@ -2,15 +2,16 @@
 Modal dialog for application-level preferences.
 
 Changes applied immediately on OK:
-  * Theme (via apply_theme)
-  * Language (via set_language / i18n listeners)
+  • Theme (via apply_theme)
+  • Language (via set_language / i18n listeners)
+  • Update frequency (persisted, applied on next launch)
 
 "Reset to defaults" button:
-  * Asks for confirmation
-  * Calls AppSettings.reset_to_defaults() (clears ALL persisted keys
+  • Asks for confirmation
+  • Calls AppSettings.reset_to_defaults() (clears ALL persisted keys
     including language, theme, window geometries, conversion config)
-  * Re-applies the default theme (System) and detects the OS language
-  * Closes the dialog — the main window will re-read defaults at next
+  • Re-applies the default theme (System) and detects the OS language
+  • Closes the dialog — the main window will re-read defaults at next
     launch (or immediately for theme/language)
 """
 
@@ -21,14 +22,16 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFormLayout,
     QGroupBox,
-    QHBoxLayout,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
 )
 
 from ..i18n import get_language, register_listener, set_language, t
-from ..state.settings import AppSettings
+from ..state.settings import (
+    AppSettings,
+    UpdateFrequency,
+)
 from ..themes import apply_theme
 
 
@@ -72,24 +75,35 @@ class AppSettingsDialog(QDialog):
 
         outer.addWidget(self._appearance_group)
 
-        buttons = QHBoxLayout()
+        # ── Updates group ──────────────────────────────────────────────────
+        self._updates_group = QGroupBox()
+        upd_form = QFormLayout(self._updates_group)
 
-        # ── Reset button ──────────────────────
+        self._update_freq = QComboBox()
+        for freq in UpdateFrequency:
+            self._update_freq.addItem("", freq)
+        current_freq = self._settings.update_frequency()
+        for i, freq in enumerate(UpdateFrequency):
+            if freq == current_freq:
+                self._update_freq.setCurrentIndex(i)
+                break
+        upd_form.addRow("", self._update_freq)
+
+        outer.addWidget(self._updates_group)
+
+        # ── Main buttons ───────────────────────────────────────────────────
+        self._buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        self._buttons.accepted.connect(self._on_ok)
+        self._buttons.rejected.connect(self.reject)
+        outer.addWidget(self._buttons)
+
+        # ── Reset button (below the standard buttons) ──────────────────────
         self._reset_btn = QPushButton()
         self._reset_btn.setStyleSheet("color: palette(mid);")
         self._reset_btn.clicked.connect(self._on_reset)
-        buttons.addWidget(self._reset_btn)
-        buttons.addStretch()
-
-        # ── Main buttons ───────────────────────────────────────────────────
-        self.bbox = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.bbox.accepted.connect(self._on_ok)
-        self.bbox.rejected.connect(self.reject)
-        buttons.addWidget(self.bbox)
-
-        outer.addLayout(buttons)
+        outer.addWidget(self._reset_btn)
 
         self._retranslate_ui()
 
@@ -122,6 +136,27 @@ class AppSettingsDialog(QDialog):
                         elif widget is self._lang:
                             lw.setText(t("appsettings.language"))
 
+        # Updates group
+        self._updates_group.setTitle(t("appsettings.updates"))
+        freq_labels = [
+            t("appsettings.update_freq_launch"),
+            t("appsettings.update_freq_daily"),
+            t("appsettings.update_freq_weekly"),
+            t("appsettings.update_freq_never"),
+        ]
+        for i, label in enumerate(freq_labels):
+            self._update_freq.setItemText(i, label)
+
+        upd_layout = self._updates_group.layout()
+        if isinstance(upd_layout, QFormLayout):
+            for row in range(upd_layout.rowCount()):
+                field = upd_layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                label_item = upd_layout.itemAt(row, QFormLayout.ItemRole.LabelRole)
+                if field and label_item:
+                    lw = label_item.widget()
+                    if lw and field.widget() is self._update_freq:
+                        lw.setText(t("appsettings.check_for_updates"))
+
         self._reset_btn.setText(t("appsettings.reset_defaults"))
         self._reset_btn.setToolTip(t("tooltip.reset_defaults"))
 
@@ -135,6 +170,9 @@ class AppSettingsDialog(QDialog):
         new_lang = self._lang.currentData()
         self._settings.set_language(new_lang)
         set_language(new_lang)
+
+        new_freq = self._update_freq.currentData()
+        self._settings.set_update_frequency(new_freq)
 
         self.accept()
 

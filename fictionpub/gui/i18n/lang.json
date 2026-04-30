@@ -15,6 +15,10 @@
         "en": "Appearance",
         "uk": "Зовнішній вигляд"
     },
+    "appsettings.check_for_updates": {
+        "en": "Check for updates:",
+        "uk": "Перевіряти оновлення:"
+    },
     "appsettings.language": {
         "en": "Language:",
         "uk": "Мова:"
@@ -50,6 +54,26 @@
     "appsettings.title": {
         "en": "Application Settings",
         "uk": "Налаштування програми"
+    },
+    "appsettings.update_freq_daily": {
+        "en": "Daily",
+        "uk": "Щодня"
+    },
+    "appsettings.update_freq_launch": {
+        "en": "On Launch",
+        "uk": "При запуску"
+    },
+    "appsettings.update_freq_never": {
+        "en": "Never",
+        "uk": "Ніколи"
+    },
+    "appsettings.update_freq_weekly": {
+        "en": "Weekly",
+        "uk": "Щотижня"
+    },
+    "appsettings.updates": {
+        "en": "Updates",
+        "uk": "Оновлення"
     },
     "bar.cancel": {
         "en": "Cancel",
@@ -658,5 +682,85 @@
     "tree.col_title": {
         "en": "Title",
         "uk": "Назва"
+    },
+    "update.available_title": {
+        "en": "Update Available",
+        "uk": "Доступне оновлення"
+    },
+    "update.bat_error": {
+        "en": "Could not launch installer script:\n{error}",
+        "uk": "Не вдалося запустити скрипт встановлення:\n{error}"
+    },
+    "update.btn_dismiss": {
+        "en": "Dismiss",
+        "uk": "Закрити"
+    },
+    "update.btn_github": {
+        "en": "Open GitHub",
+        "uk": "Відкрити GitHub"
+    },
+    "update.btn_install": {
+        "en": "Install Update",
+        "uk": "Встановити оновлення"
+    },
+    "update.btn_later": {
+        "en": "Later",
+        "uk": "Пізніше"
+    },
+    "update.btn_restart": {
+        "en": "Restart & Install",
+        "uk": "Перезапустити та встановити"
+    },
+    "update.check_now": {
+        "en": "Check Now",
+        "uk": "Перевірити зараз"
+    },
+    "update.dialog_title": {
+        "en": "FictionPub Update",
+        "uk": "Оновлення FictionPub"
+    },
+    "update.download_done": {
+        "en": "Download complete. Restart to apply the update.",
+        "uk": "Завантаження завершено. Перезапустіть, щоб застосувати оновлення."
+    },
+    "update.download_error": {
+        "en": "Download failed: {error}",
+        "uk": "Помилка завантаження: {error}"
+    },
+    "update.downloading": {
+        "en": "Downloading…",
+        "uk": "Завантаження…"
+    },
+    "update.downloading_bytes": {
+        "en": "{n} MB downloaded",
+        "uk": "{n} МБ завантажено"
+    },
+    "update.file_done": {
+        "en": "Downloaded {name}",
+        "uk": "Завантажено {name}"
+    },
+    "update.include_cli": {
+        "en": "Update CLI companion (fictionpub_cli.exe) as well",
+        "uk": "Також оновити CLI-утиліту (fictionpub_cli.exe)"
+    },
+    "update.indicator_tooltip": {
+        "en": "A new version is available — click to update",
+        "uk": "Доступна нова версія — натисніть для оновлення"
+    },
+    "update.status_available": {
+        "en": "Update available: {new}\n(current version: {current})",
+        "uk": "Доступне оновлення: {new}\n(поточна версія: {current})"
+    },
+    "update.status_checking": {
+        "en": "Checking for updates…",
+        "uk": "Перевірка оновлень…"
+    },
+    "update.status_up_to_date": {
+        "en": "Up to date",
+        "uk": "Остання версія вже встановлена"
+    },
+    "update.version_info": {
+        "en": "Current version: {current}\nNew version: {new}",
+        "uk": "Поточна версія: {current}\nНова версія: {new}"
     }
 }

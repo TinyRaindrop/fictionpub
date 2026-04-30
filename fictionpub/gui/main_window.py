@@ -33,6 +33,19 @@ conversion runs in a single GUI session.
 A SESSION_REPORT line is written to the log after each run
 so the log folder viewer always shows up-to-date totals
 even if the application is closed unexpectedly.
+
+Auto-update
+───────────
+_start_update_check() is called from showEvent() with a short delay if
+AppSettings.should_check_now() returns True.  The check uses
+UpdateCheckWorker (QRunnable) submitted to QThreadPool.  Results are
+handled by _on_update_available() / _on_no_update():
+
+  • _on_update_available  → show toolbar indicator, update about dialog,
+                            optionally show startup popup (once per version)
+  • _on_no_update         → record last_checked, update about dialog
+  • toolbar indicator     → opens UpdateDialog on click
+  • About "Check Now"     → triggers a fresh check immediately
 """
 
 import logging
@@ -69,6 +82,7 @@ from .dialogs.app_settings_dialog import AppSettingsDialog
 from .dialogs.log_folder_dialog import LogFolderDialog
 from .dialogs.log_viewer_dialog import LogViewerDialog
 from .dialogs.settings_dialog import SettingsDialog
+from .dialogs.update_dialog import UpdateDialog
 from .file_panel import FileTreeView
 from .i18n import register_listener, t
 from .models.file_node import FileNode
@@ -79,6 +93,11 @@ from .toolbar import ToolbarWidget
 from .workers.batch_worker import BatchWorker
 from .workers.meta_worker import MetaSignals, MetaWorker
 from .workers.scan_worker import ScanWorker
+from .workers.update_worker import (
+    UpdateCheckSignals,
+    UpdateCheckWorker,
+    UpdateInfo,
+)
 
 log = logging.getLogger("fb2_converter")
 
@@ -173,6 +192,10 @@ class MainWindow(QMainWindow):
         self._scan_worker: ScanWorker | None = None
         self._batch_worker: BatchWorker | None = None
         self._batch_anchor: BatchAnchor | None = None
+
+        # Update state
+        self._update_info: UpdateInfo | None = None  # set when update available
+        self._about_dialog: AboutDialog | None = None  # current open About dialog
 
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
@@ -377,7 +400,15 @@ class MainWindow(QMainWindow):
         LogViewerDialog.from_file(logs[-1], parent=self).show()
 
     def _on_about(self) -> None:
-        AboutDialog(self).show()
+        dlg = AboutDialog(self)
+        # Connect Check Now button
+        dlg.check_for_updates_requested.connect(
+            lambda: self._start_update_check(force=True, about_dialog=dlg)
+        )
+        # Populate current update status
+        dlg.set_update_status(self._update_info.tag if self._update_info else None)
+        self._about_dialog = dlg
+        dlg.show()
 
     # ------------------------------------------------------------------
     # File view action handlers
@@ -533,6 +564,93 @@ class MainWindow(QMainWindow):
         self._toolbar.set_busy(False)
         self._bottom_bar.set_idle(t("bar.ready"))
         QMessageBox.critical(self, app_info.APP_NAME, message)
+
+    # ------------------------------------------------------------------
+    # Update check
+    # ------------------------------------------------------------------
+
+    def _start_update_check(
+        self,
+        force: bool = False,
+        about_dialog: AboutDialog | None = None,
+    ) -> None:
+        """
+        Submit an UpdateCheckWorker to the global thread pool.
+
+        Parameters
+        ----------
+        force        : skip the should_check_now() gate (used by "Check Now")
+        about_dialog : if provided, set its status to "checking…" immediately
+        """
+        if not force and not self._settings.should_check_now():
+            return
+
+        if about_dialog is not None:
+            about_dialog.set_update_status("")  # "Checking…"
+
+        signals = UpdateCheckSignals(self)
+        signals.update_available.connect(
+            lambda info: self._on_update_available(info, about_dialog)
+        )
+        signals.no_update.connect(lambda: self._on_no_update(about_dialog))
+
+        worker = UpdateCheckWorker(
+            app_url=app_info.APP_URL,
+            current_ver="0.3.0", #app_info.VERSION,
+            signals=signals,
+            startup_delay=0.0 if force else 3.0,
+        )
+        QThreadPool.globalInstance().start(worker)
+
+    def _on_update_available(
+        self,
+        info: UpdateInfo,
+        about_dialog: AboutDialog | None = None,
+    ) -> None:
+        """Called on the main thread when a newer release is found."""
+        self._update_info = info
+        self._settings.set_last_checked()
+        self._settings.sync()
+
+        # Update toolbar indicator
+        self._toolbar.set_update_available(True)
+
+        # Update About dialog if open
+        if about_dialog and not about_dialog.isHidden():
+            about_dialog.set_update_status(info.tag)
+        elif self._about_dialog and not self._about_dialog.isHidden():
+            self._about_dialog.set_update_status(info.tag)
+
+        # Show startup popup once per newly discovered version
+        if self._settings.should_notify_popup(info.tag):
+            self._show_update_popup(info, from_startup=True)
+
+    def _on_no_update(self, about_dialog: AboutDialog | None = None) -> None:
+        """Called on the main thread when we are already on the latest version."""
+        self._update_info = None
+        self._settings.set_last_checked()
+        self._settings.sync()
+
+        self._toolbar.set_update_available(False)
+
+        if about_dialog and not about_dialog.isHidden():
+            about_dialog.set_update_status(None)
+        elif self._about_dialog and not self._about_dialog.isHidden():
+            self._about_dialog.set_update_status(None)
+
+    def _on_update_indicator_clicked(self) -> None:
+        """Toolbar green arrow clicked — open the update dialog."""
+        if self._update_info:
+            self._show_update_popup(self._update_info, from_startup=False)
+
+    def _show_update_popup(self, info: UpdateInfo, *, from_startup: bool) -> None:
+        dlg = UpdateDialog(
+            info,
+            self._settings,
+            show_once=from_startup,
+            parent=self,
+        )
+        dlg.exec()
 
     # ------------------------------------------------------------------
     # Helpers

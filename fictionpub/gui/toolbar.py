@@ -7,6 +7,14 @@ A single QPushButton whose label shows the current selection count.
 Clicking it alternates between "select all" and "deselect all":
   - if every file is already checked  → deselect all
   - otherwise (none or partial)       → select all
+
+Update indicator
+----------------
+A small green "⬆" button (update_indicator_clicked signal) sits to the
+left of the About button.  It is hidden by default and becomes visible
+when MainWindow calls set_update_available(True).  Clicking it opens
+the update dialog via the signal.
+
 """
 
 from PySide6.QtCore import Signal
@@ -57,6 +65,9 @@ class ToolbarWidget(QWidget):
     conversion_settings_requested = Signal()
     app_settings_requested = Signal()
     about_requested = Signal()
+
+    # Update indicator
+    update_indicator_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -121,6 +132,16 @@ class ToolbarWidget(QWidget):
         self._conv_settings = _btn()
         self._app_settings = _btn()
 
+        # Update indicator button — hidden until an update is detected
+        self._update_indicator = QPushButton("⬆")
+        self._update_indicator.setFixedWidth(32)
+        self._update_indicator.setStyleSheet(
+            "QPushButton { color: #27ae60; font-weight: bold; font-size: 14px;"
+            " border: 1px solid #27ae60; border-radius: 4px; padding: 2px 4px; }"
+            "QPushButton:hover { background: rgba(39,174,96,0.15); }"
+        )
+        self._update_indicator.hide()
+
         self._about = _btn()
         self._about.setIcon(
             QApplication.style().standardIcon(
@@ -142,6 +163,7 @@ class ToolbarWidget(QWidget):
         self._select_toggle.clicked.connect(self._on_select_toggle)
         self._conv_settings.clicked.connect(self.conversion_settings_requested)
         self._app_settings.clicked.connect(self.app_settings_requested)
+        self._update_indicator.clicked.connect(self.update_indicator_clicked)
         self._about.clicked.connect(self.about_requested)
 
         self._retranslate_ui()
@@ -254,3 +276,7 @@ class ToolbarWidget(QWidget):
         self._select_toggle.setVisible(total > 0)
         self._expand_sep.setVisible(total > 0)
         self._expand_toggle.setVisible(total > 0)
+
+    def set_update_available(self, available: bool) -> None:
+        """Show or hide the green update indicator button."""
+        self._update_indicator.setVisible(available)
