@@ -78,6 +78,21 @@ def get_language() -> str:
     return _LANG
 
 
+def _fn_equal(a: Callable, b: Callable) -> bool:
+    """
+    Identity comparison that works for both plain callables and bound methods.
+
+    WeakMethod.ref() reconstructs a new bound-method object on every call,
+    so `ref() is fn` is always False for bound methods — 
+    even when they wrap the exact same (instance, function) pair.
+    Compare the underlying pieces instead.
+    """
+    a_func = getattr(a, "__func__", None)
+    if a_func is not None:
+        return a_func is getattr(b, "__func__", None) and a.__self__ is b.__self__  # type: ignore[union-attr]
+    return a is b
+
+
 def register_listener(fn: Callable[[], None]) -> None:
     """
     Register a zero-arg callable to be called on every set_language().
@@ -92,7 +107,8 @@ def register_listener(fn: Callable[[], None]) -> None:
         new_ref = weakref.ref(fn)
 
     for ref in _listeners:
-        if ref() is fn:
+        actual = ref()
+        if actual is not None and _fn_equal(actual, fn):
             return
 
     _listeners.append(new_ref)
@@ -100,4 +116,7 @@ def register_listener(fn: Callable[[], None]) -> None:
 
 def unregister_listener(fn: Callable[[], None]) -> None:
     """Remove a previously registered callable (no-op if not found)."""
-    _listeners[:] = [ref for ref in _listeners if ref() is not fn]
+    _listeners[:] = [
+        ref for ref in _listeners
+        if not ((actual := ref()) is not None and _fn_equal(actual, fn))
+    ]
