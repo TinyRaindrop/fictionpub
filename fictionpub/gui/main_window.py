@@ -56,7 +56,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import override
 
-from PySide6.QtCore import QThreadPool
+from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QFileDialog,
@@ -131,6 +131,8 @@ class ConversionSession:
 # Centralised QSS
 # ---------------------------------------------------------------------------
 
+# TODO: unify styling, use theme colors from themes.py instead of hardcoded values
+
 _WINDOW_QSS = """
 /* ── Toolbar and bottom-bar plain buttons ──────────────────────── */
 ToolbarWidget QPushButton,
@@ -160,8 +162,18 @@ BottomBarWidget QPushButton:disabled {
     color: palette(mid);
 }
 
-/* ── Convert button — primary action (higher specificity via #id) ── */
-QPushButton#convertButton {
+/* ── Toolbar ── */
+QPushButton#updateIndicator {
+    color: #27ae60; font-weight: bold;
+}
+QPushButton#updateIndicator:hover {
+    background: rgba(39,174,96,0.15); 
+}
+
+/* ── Action buttons ── */
+QPushButton#convertButton,
+QPushButton#installUpdate,
+QPushButton#restartUpdate {
     background-color: #2980b9;
     color: white;
     font-weight: bold;
@@ -169,12 +181,20 @@ QPushButton#convertButton {
     border-radius: 3px;
     border: none;
 }
-QPushButton#convertButton:hover {
+QPushButton#restartUpdate {
+    background-color: #27ae60;
+}
+QPushButton#convertButton:hover,
+QPushButton#installUpdate:hover {
     background-color: #3498db;
+}
+QPushButton#restartUpdate:hover {
+    background-color: #2fcc71;
 }
 QPushButton#convertButton:disabled {
     background-color: #7f8c8d;
 }
+
 """
 
 
@@ -193,10 +213,6 @@ class MainWindow(QMainWindow):
         self._batch_worker: BatchWorker | None = None
         self._batch_anchor: BatchAnchor | None = None
 
-        # Update state
-        self._update_info: UpdateInfo | None = None  # set when update available
-        self._about_dialog: AboutDialog | None = None  # current open About dialog
-
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
 
@@ -204,6 +220,13 @@ class MainWindow(QMainWindow):
         self._cumulative_success = 0
         self._cumulative_warnings = 0
         self._cumulative_failures = 0
+
+        # Update state
+        self._update_info: UpdateInfo | None = None  # set when update available
+        self._about_dialog: AboutDialog | None = None  # current open About dialog
+        self._update_check_signals: UpdateCheckSignals | None = None  # kept alive on self
+        self._update_check_running: bool = False  # prevents concurrent checks
+        self._startup_check_scheduled: bool = False  # showEvent one-shot guard
 
         self._build_ui()
         self._connect_signals()
@@ -248,6 +271,7 @@ class MainWindow(QMainWindow):
         tb.deselect_all_requested.connect(self._on_deselect_all)
         tb.conversion_settings_requested.connect(self._on_conversion_settings)
         tb.app_settings_requested.connect(self._on_app_settings)
+        tb.update_indicator_clicked.connect(self._on_update_indicator_clicked)
         tb.about_requested.connect(self._on_about)
 
         self._model.selection_count_changed.connect(self._toolbar.update_selection_count)
@@ -307,6 +331,11 @@ class MainWindow(QMainWindow):
         if paths:
             self._start_scan([Path(p) for p in paths])
 
+    def _on_add_folder_single(self) -> None:
+        folder = QFileDialog.getExistingDirectory(self, t("toolbar.add_folder"))
+        if folder:
+            self._start_scan([Path(folder)])
+
     def _on_add_folder(self) -> None:
         """
         Open a folder-picker that supports selecting multiple directories.
@@ -315,7 +344,7 @@ class MainWindow(QMainWindow):
         open the dialog manually with DontUseNativeDialog and extend the
         selection mode of its internal list- and tree-views at runtime.
         """
-        # TODO: consider falling back to the default folder picker
+        # TODO: consider falling back to the default picker (_on_add_folder_single)
         dlg = QFileDialog(self, t("toolbar.add_folder"))
         dlg.setFileMode(QFileDialog.FileMode.Directory)
         # Must disable the native dialog to be able to patch the internal views.
@@ -401,14 +430,22 @@ class MainWindow(QMainWindow):
 
     def _on_about(self) -> None:
         dlg = AboutDialog(self)
+        # Null out the stored reference the moment Qt destroys the C++ object
+        # (WA_DeleteOnClose).  This prevents any later code from calling into
+        # a deleted widget via self._about_dialog.
+        dlg.destroyed.connect(lambda: setattr(self, "_about_dialog", None))
         # Connect Check Now button
         dlg.check_for_updates_requested.connect(
-            lambda: self._start_update_check(force=True, about_dialog=dlg)
+            lambda: self._start_update_check(force=True)
         )
         # Populate current update status
         dlg.set_update_status(self._update_info.tag if self._update_info else None)
         self._about_dialog = dlg
         dlg.show()
+        # If we have no cached result yet (fresh launch before the timer fired,
+        # or check still in progress), kick off a check tied to this dialog.
+        if self._update_info is None and not self._update_check_running:
+            self._start_update_check(force=False)
 
     # ------------------------------------------------------------------
     # File view action handlers
@@ -581,32 +618,57 @@ class MainWindow(QMainWindow):
         ----------
         force        : skip the should_check_now() gate (used by "Check Now")
         about_dialog : if provided, set its status to "checking…" immediately
+
+        GC note
+        -------
+        UpdateCheckSignals is a QObject that carries the signal connections.
+        If it were a local variable it could be garbage-collected during the
+        worker's startup_delay sleep, silently breaking the connections.
+        Storing it on self keeps the Python wrapper alive until the next
+        check overwrites it (which is fine — the old signals object has
+        already fired by then).
+
+        self._about_dialog is used (not a captured local) so the dialog
+        reference is always current.  WA_DeleteOnClose nulls it via the
+        destroyed signal before any dangling call can occur.
         """
         if not force and not self._settings.should_check_now():
             return
 
-        if about_dialog is not None:
-            about_dialog.set_update_status("")  # "Checking…"
+        # Prevent a second concurrent check (e.g. About opened while timer
+        # callback is still pending).
+        if self._update_check_running:
+            if self._about_dialog is not None:
+                self._about_dialog.set_update_status("")
+            return
 
-        signals = UpdateCheckSignals(self)
-        signals.update_available.connect(
-            lambda info: self._on_update_available(info, about_dialog)
+        self._update_check_running = True
+
+        if self._about_dialog is not None:
+            self._about_dialog.set_update_status("")   # "Checking…"
+
+        # Store on self — prevents GC from collecting the QObject before
+        # the worker thread emits its signal after the startup_delay sleep.
+        self._update_check_signals = UpdateCheckSignals(self)
+        self._update_check_signals.update_available.connect(self._on_update_available)
+        self._update_check_signals.no_update.connect(self._on_no_update)
+        # Clear the running flag once either signal fires
+        self._update_check_signals.update_available.connect(
+            lambda _info: setattr(self, "_update_check_running", False)
         )
-        signals.no_update.connect(lambda: self._on_no_update(about_dialog))
+        self._update_check_signals.no_update.connect(
+            lambda: setattr(self, "_update_check_running", False)
+        )
 
         worker = UpdateCheckWorker(
             app_url=app_info.APP_URL,
-            current_ver="0.3.0", #app_info.VERSION,
-            signals=signals,
+            current_ver=app_info.VERSION,
+            signals=self._update_check_signals,
             startup_delay=0.0 if force else 3.0,
         )
         QThreadPool.globalInstance().start(worker)
 
-    def _on_update_available(
-        self,
-        info: UpdateInfo,
-        about_dialog: AboutDialog | None = None,
-    ) -> None:
+    def _on_update_available(self, info: UpdateInfo) -> None:
         """Called on the main thread when a newer release is found."""
         self._update_info = info
         self._settings.set_last_checked()
@@ -615,17 +677,15 @@ class MainWindow(QMainWindow):
         # Update toolbar indicator
         self._toolbar.set_update_available(True)
 
-        # Update About dialog if open
-        if about_dialog and not about_dialog.isHidden():
-            about_dialog.set_update_status(info.tag)
-        elif self._about_dialog and not self._about_dialog.isHidden():
+        # self._about_dialog is None when closed (cleared by destroyed signal)
+        if self._about_dialog is not None and not self._about_dialog.isHidden():
             self._about_dialog.set_update_status(info.tag)
 
         # Show startup popup once per newly discovered version
         if self._settings.should_notify_popup(info.tag):
             self._show_update_popup(info, from_startup=True)
 
-    def _on_no_update(self, about_dialog: AboutDialog | None = None) -> None:
+    def _on_no_update(self) -> None:
         """Called on the main thread when we are already on the latest version."""
         self._update_info = None
         self._settings.set_last_checked()
@@ -633,9 +693,8 @@ class MainWindow(QMainWindow):
 
         self._toolbar.set_update_available(False)
 
-        if about_dialog and not about_dialog.isHidden():
-            about_dialog.set_update_status(None)
-        elif self._about_dialog and not self._about_dialog.isHidden():
+        # self._about_dialog is None when closed (cleared by destroyed signal)
+        if self._about_dialog is not None and not self._about_dialog.isHidden():
             self._about_dialog.set_update_status(None)
 
     def _on_update_indicator_clicked(self) -> None:
@@ -662,6 +721,15 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     # Window lifecycle
     # ------------------------------------------------------------------
+
+    @override
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        # Schedule exactly one startup check, regardless of how many times
+        # showEvent fires (minimise/restore re-triggers it).
+        if not self._startup_check_scheduled and self._settings.should_check_now():
+            self._startup_check_scheduled = True
+            QTimer.singleShot(1500, self._start_update_check)
 
     @override
     def closeEvent(self, event) -> None:
