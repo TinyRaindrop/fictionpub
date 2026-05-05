@@ -91,6 +91,12 @@ class AppSettingsDialog(QDialog):
 
         outer.addWidget(self._updates_group)
 
+        # ── Reset button ──────────────────────
+        self._reset_btn = QPushButton()
+        self._reset_btn.setStyleSheet("color: palette(mid);")
+        self._reset_btn.clicked.connect(self._on_reset)
+        outer.addWidget(self._reset_btn)
+
         # ── Main buttons ───────────────────────────────────────────────────
         self._buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -98,12 +104,6 @@ class AppSettingsDialog(QDialog):
         self._buttons.accepted.connect(self._on_ok)
         self._buttons.rejected.connect(self.reject)
         outer.addWidget(self._buttons)
-
-        # ── Reset button (below the standard buttons) ──────────────────────
-        self._reset_btn = QPushButton()
-        self._reset_btn.setStyleSheet("color: palette(mid);")
-        self._reset_btn.clicked.connect(self._on_reset)
-        outer.addWidget(self._reset_btn)
 
         self._retranslate_ui()
 
@@ -120,8 +120,6 @@ class AppSettingsDialog(QDialog):
             self._theme.setItemText(i, label)
 
         # Update form row labels by iterating the QFormLayout
-        from PySide6.QtWidgets import QFormLayout
-
         layout = self._appearance_group.layout()
         if isinstance(layout, QFormLayout):
             for row in range(layout.rowCount()):

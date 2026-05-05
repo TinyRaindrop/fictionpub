@@ -69,7 +69,10 @@ class UpdateDialog(QDialog):
 
         self.setWindowTitle(t("update.dialog_title"))
         self.setFixedWidth(420)
-        self.setWindowFlags(self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
+        self.setWindowFlags(
+            (self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
+            | Qt.WindowType.WindowCloseButtonHint
+        )
 
         if show_once:
             settings.set_last_notified_version(info.tag)
@@ -126,42 +129,33 @@ class UpdateDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(6)
 
-        self._install_btn = QPushButton(t("update.btn_install"))
-        self._install_btn.setStyleSheet(
-            "background:#2980b9; color:white; font-weight:bold;"
-            " padding:4px 14px; border-radius:3px; border:none;"
-        )
-        self._install_btn.clicked.connect(self._on_install)
-        btn_row.addWidget(self._install_btn)
-
         self._github_btn = QPushButton(t("update.btn_github"))
         self._github_btn.clicked.connect(self._on_open_github)
         btn_row.addWidget(self._github_btn)
 
         btn_row.addStretch()
 
-        self._dismiss_btn = QPushButton(t("update.btn_dismiss"))
-        self._dismiss_btn.clicked.connect(self.reject)
-        btn_row.addWidget(self._dismiss_btn)
+        self._install_btn = QPushButton(t("update.btn_install"))
+        self._install_btn.setObjectName("installUpdate")
+        self._install_btn.clicked.connect(self._on_install)
+        btn_row.addWidget(self._install_btn)
 
         layout.addLayout(btn_row)
 
         # Restart / Later row (hidden until download finishes)
         restart_row = QHBoxLayout()
-        self._restart_btn = QPushButton(t("update.btn_restart"))
-        self._restart_btn.setStyleSheet(
-            "background:#27ae60; color:white; font-weight:bold;"
-            " padding:4px 14px; border-radius:3px; border:none;"
-        )
-        self._restart_btn.clicked.connect(self._on_restart)
-        self._restart_btn.hide()
-        restart_row.addWidget(self._restart_btn)
+        restart_row.addStretch()
 
         self._later_btn = QPushButton(t("update.btn_later"))
         self._later_btn.clicked.connect(self.reject)
         self._later_btn.hide()
         restart_row.addWidget(self._later_btn)
-        restart_row.addStretch()
+
+        self._restart_btn = QPushButton(t("update.btn_restart"))
+        self._restart_btn.setObjectName("restartUpdate")
+        self._restart_btn.clicked.connect(self._on_restart)
+        self._restart_btn.hide()
+        restart_row.addWidget(self._restart_btn)
 
         layout.addLayout(restart_row)
 
@@ -192,7 +186,6 @@ class UpdateDialog(QDialog):
         import webbrowser
 
         webbrowser.open(self._info.html_url)
-        self.reject()
 
     def _on_restart(self) -> None:
         """Write the batch script and quit the application."""
@@ -212,6 +205,8 @@ class UpdateDialog(QDialog):
     # ------------------------------------------------------------------
 
     def _on_progress(self, received: int, total: int) -> None:
+        self._install_btn.setEnabled(False)
+
         if total > 0:
             self._progress.setRange(0, total)
             self._progress.setValue(received)
@@ -240,7 +235,6 @@ class UpdateDialog(QDialog):
         self._later_btn.show()
         self._install_btn.hide()
         self._github_btn.hide()
-        self._dismiss_btn.hide()
         self._cli_cb.setEnabled(False)
         self._status.setText(t("update.download_done"))
         self._status.show()
@@ -258,7 +252,6 @@ class UpdateDialog(QDialog):
     def _set_downloading(self, active: bool) -> None:
         self._install_btn.setEnabled(not active)
         self._github_btn.setEnabled(not active)
-        self._dismiss_btn.setEnabled(not active)
         self._cli_cb.setEnabled(not active)
         self._progress.setVisible(active)
         if active:

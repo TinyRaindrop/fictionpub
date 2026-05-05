@@ -167,7 +167,7 @@ QPushButton#updateIndicator {
     color: #27ae60; font-weight: bold;
 }
 QPushButton#updateIndicator:hover {
-    background: rgba(39,174,96,0.15); 
+    background: rgba(39,174,96,0.15);
 }
 
 /* ── Action buttons ── */
@@ -191,7 +191,8 @@ QPushButton#installUpdate:hover {
 QPushButton#restartUpdate:hover {
     background-color: #2fcc71;
 }
-QPushButton#convertButton:disabled {
+QPushButton#convertButton:disabled,
+QPushButton#installUpdate:disabled {
     background-color: #7f8c8d;
 }
 
@@ -645,7 +646,7 @@ class MainWindow(QMainWindow):
         self._update_check_running = True
 
         if self._about_dialog is not None:
-            self._about_dialog.set_update_status("")   # "Checking…"
+            self._about_dialog.set_update_status("")  # "Checking…"
 
         # Store on self — prevents GC from collecting the QObject before
         # the worker thread emits its signal after the startup_delay sleep.

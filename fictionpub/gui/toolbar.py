@@ -135,11 +135,8 @@ class ToolbarWidget(QWidget):
         # Update indicator button — hidden until an update is detected
         self._update_indicator = QPushButton("⬆")
         self._update_indicator.setFixedWidth(32)
-        self._update_indicator.setStyleSheet(
-            "QPushButton { color: #27ae60; font-weight: bold; font-size: 14px;"
-            " border: 1px solid #27ae60; border-radius: 4px; padding: 2px 4px; }"
-            "QPushButton:hover { background: rgba(39,174,96,0.15); }"
-        )
+        self._update_indicator.setObjectName("updateIndicator")
+        layout.addWidget(self._update_indicator)
         self._update_indicator.hide()
 
         self._about = _btn()

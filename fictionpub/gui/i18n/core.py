@@ -83,7 +83,7 @@ def _fn_equal(a: Callable, b: Callable) -> bool:
     Identity comparison that works for both plain callables and bound methods.
 
     WeakMethod.ref() reconstructs a new bound-method object on every call,
-    so `ref() is fn` is always False for bound methods — 
+    so `ref() is fn` is always False for bound methods —
     even when they wrap the exact same (instance, function) pair.
     Compare the underlying pieces instead.
     """
@@ -117,6 +117,7 @@ def register_listener(fn: Callable[[], None]) -> None:
 def unregister_listener(fn: Callable[[], None]) -> None:
     """Remove a previously registered callable (no-op if not found)."""
     _listeners[:] = [
-        ref for ref in _listeners
+        ref
+        for ref in _listeners
         if not ((actual := ref()) is not None and _fn_equal(actual, fn))
     ]

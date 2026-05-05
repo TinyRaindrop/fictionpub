@@ -16,6 +16,7 @@ DownloadWorker  (QThread)
 
 from __future__ import annotations
 
+import logging
 import re
 import sys
 import urllib.request
@@ -24,6 +25,8 @@ from pathlib import Path
 from typing import NamedTuple
 
 from PySide6.QtCore import QObject, QRunnable, QThread, Signal
+
+log = logging.getLogger("fb2_converter")
 
 # ---------------------------------------------------------------------------
 # Version helpers
@@ -47,8 +50,23 @@ def parse_version(s: str) -> tuple[int, int, int]:
     return (major, minor, patch)
 
 
+def is_dev_build(version: str) -> bool:
+    """Return True for versions like '1.2.3.dev*'."""
+    return "dev" in version.lower()
+
+
 def is_newer(remote: str, local: str) -> bool:
-    """Return True if *remote* version is strictly newer than *local*."""
+    """Return True if *remote* version is newer than *local*.
+
+    Any tagged release is considered newer than a dev build so that
+    running from source always sees available updates.
+    This is intentional: set update frequency to 'Never' to disable.
+    """
+    log.debug(f"Local version: {local} | Remote version: {remote}")
+
+    if is_dev_build(local):
+        return True
+
     return parse_version(remote) > parse_version(local)
 
 
@@ -60,7 +78,7 @@ def is_newer(remote: str, local: str) -> bool:
 def _api_url_from_app_url(app_url: str) -> str:
     """
     Convert a GitHub repo URL to the Releases API endpoint.
-    e.g. "https://github.com/owner/repo" → "https://api.github.com/repos/owner/repo/releases/latest"
+    "https://github.com/owner/repo" → "https://api.github.com/repos/owner/repo/releases/latest"
     """
     # Strip trailing slash / .git
     clean = app_url.rstrip("/").removesuffix(".git")

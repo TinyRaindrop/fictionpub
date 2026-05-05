@@ -10,11 +10,12 @@ check worker returns a result.  The "Check Now" button emits
 checkForUpdatesRequested so MainWindow can trigger a fresh check.
 """
 
+from typing import override
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -22,7 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from ... import app_info
-from ..i18n import register_listener, t
+from ..i18n import register_listener, t, unregister_listener
 
 
 class AboutDialog(QDialog):
@@ -89,6 +90,7 @@ class AboutDialog(QDialog):
         upd_row = QHBoxLayout()
         upd_row.setSpacing(8)
 
+        # TODO: open UpdateDialog by clicking update_status_label
         self._update_status_label = QLabel()
         self._update_status_label.setWordWrap(True)
         self._update_status_label.setStyleSheet("font-size: 10px;")
@@ -100,17 +102,12 @@ class AboutDialog(QDialog):
 
         layout.addLayout(upd_row)
 
-        # Close button
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(self.close)
-        layout.addWidget(buttons)
-
         self._retranslate_ui()
 
     def _retranslate_ui(self) -> None:
         self.setWindowTitle(t("about.title"))
         self._name_label.setText(app_info.APP_NAME)
-        self._version_label.setText(f"v{app_info.VERSION}")
+        self._version_label.setText(f"version {app_info.VERSION}")
         self._url_label.setText(f'<a href="{app_info.APP_URL}">{app_info.APP_URL}</a>')
         self._desc_label.setText(t("about.description"))
         self._tech_label.setText(t("about.built_with"))
@@ -122,6 +119,14 @@ class AboutDialog(QDialog):
     # ------------------------------------------------------------------
     # Public API (called by MainWindow)
     # ------------------------------------------------------------------
+
+    @override
+    def closeEvent(self, event) -> None:
+        # Unregister *before* WA_DeleteOnClose lets Qt destroy the C++ object.
+        # Without this, set_language() may call _retranslate_ui() on an already-
+        # deleted widget if MainWindow still holds a Python reference to this dialog.
+        unregister_listener(self._retranslate_ui)
+        super().closeEvent(event)
 
     def set_update_status(self, new_version: str | None) -> None:
         """

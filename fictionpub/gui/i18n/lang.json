@@ -712,8 +712,8 @@
         "uk": "Перезапустити та встановити"
     },
     "update.check_now": {
-        "en": "Check Now",
-        "uk": "Перевірити зараз"
+        "en": "Check for Updates",
+        "uk": "Перевірити оновлення"
     },
     "update.dialog_title": {
         "en": "FictionPub Update",
@@ -748,8 +748,8 @@
         "uk": "Доступна нова версія — натисніть для оновлення"
     },
     "update.status_available": {
-        "en": "Update available: {new}\n(current version: {current})",
-        "uk": "Доступне оновлення: {new}\n(поточна версія: {current})"
+        "en": "Update available: {new}\nCurrent version: {current}",
+        "uk": "Доступне оновлення: {new}\nПоточна версія: {current}"
     },
     "update.status_checking": {
         "en": "Checking for updates…",
@@ -760,7 +760,7 @@
         "uk": "Остання версія вже встановлена"
     },
     "update.version_info": {
-        "en": "Current version: {current}\nNew version: {new}",
-        "uk": "Поточна версія: {current}\nНова версія: {new}"
+        "en": "Latest version: {new}\nCurrent version: {current}",
+        "uk": "Нова версія: {new}\nПоточна версія: {current}"
     }
 }
