@@ -140,7 +140,7 @@ python build.py
 
 Prerequisites for building:
 - MSVC compiler (or switch to MinGW-w64 in `build_exe.py`)
-- `make` is optional for makefile scripts (`make exe`) (install with `winget install GnuWin32.Make`)
+- `make` is optional for makefile scripts (`make exe`) (install with `winget install GnuWin32.Make`, add `c:\Program Files (x86)\GnuWin32\bin\` to PATH)
 
 ---
 

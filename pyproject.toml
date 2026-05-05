@@ -4,7 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fictionpub"
-dynamic = ["version", "description", "authors"]
+dynamic = ["version"]
+authors = [
+    { name = "TinyRaindrop" }
+]
+description = "FB2 to EPUB ebook converter"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -32,10 +36,6 @@ dev = [
     # Type checking
     "mypy>=1.11.0",
 
-    # Testing
-    # "pytest>=8.3.0",
-    # "pytest-cov>=5.0.0",
-
     # Build / packaging validation
     "nuitka>=2.8.8",
     "setuptools_scm>=9.0.0",
@@ -43,20 +43,15 @@ dev = [
     # "twine>=5.0.0",
 ]
 
-[tool.setuptools]
-packages = ["fictionpub"]
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["fictionpub*"]
 
 [tool.setuptools_scm]
 version_scheme = "post-release"
 local_scheme = "no-local-version"
 version_file = "fictionpub/_version.py"
 
-[tool.setuptools.dynamic]
-description = {attr = "fictionpub.app_info.APP_DESCRIPTION"}
-
-# Authors require a specific dictionary format in app_info.py
-# APP_AUTHORS = [{"name": "author"}]
-authors = {attr = "fictionpub.app_info.APP_AUTHORS"}
 
 [tool.ruff]
 exclude = ["dist", "build", ".venv", ".*", "typography.py"]
