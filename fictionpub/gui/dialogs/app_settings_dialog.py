@@ -19,9 +19,9 @@ from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFormLayout,
     QGroupBox,
+    QHBoxLayout,
     QMessageBox,
     QPushButton,
     QVBoxLayout,
@@ -91,19 +91,21 @@ class AppSettingsDialog(QDialog):
 
         outer.addWidget(self._updates_group)
 
-        # ── Reset button ──────────────────────
+        # ── Buttons ──────────────────────
+        btn_row = QHBoxLayout()
         self._reset_btn = QPushButton()
         self._reset_btn.setStyleSheet("color: palette(mid);")
         self._reset_btn.clicked.connect(self._on_reset)
-        outer.addWidget(self._reset_btn)
-
-        # ── Main buttons ───────────────────────────────────────────────────
-        self._buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._buttons.accepted.connect(self._on_ok)
-        self._buttons.rejected.connect(self.reject)
-        outer.addWidget(self._buttons)
+        btn_row.addWidget(self._reset_btn)
+        btn_row.addStretch()
+        self._ok_btn = QPushButton()
+        self._ok_btn.setDefault(True)
+        self._ok_btn.clicked.connect(self._on_ok)
+        self._cancel_btn = QPushButton()
+        self._cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(self._ok_btn)
+        btn_row.addWidget(self._cancel_btn)
+        outer.addLayout(btn_row)
 
         self._retranslate_ui()
 
@@ -155,8 +157,11 @@ class AppSettingsDialog(QDialog):
                     if lw and field.widget() is self._update_freq:
                         lw.setText(t("appsettings.check_for_updates"))
 
+        # Dialog buttons
         self._reset_btn.setText(t("appsettings.reset_defaults"))
         self._reset_btn.setToolTip(t("tooltip.reset_defaults"))
+        self._ok_btn.setText(t("dlg.ok"))
+        self._cancel_btn.setText(t("dlg.cancel"))
 
     # ── Handlers ──────────────────────────────────────────────────────────────
 

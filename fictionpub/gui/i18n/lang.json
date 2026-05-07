@@ -24,8 +24,8 @@
         "uk": "Мова:"
     },
     "appsettings.reset_defaults": {
-        "en": "Reset to defaults…",
-        "uk": "Скинути до стандартних…"
+        "en": "Reset",
+        "uk": "Скинути"
     },
     "appsettings.reset_text": {
         "en": "This will clear all preferences — language, theme, window sizes, and conversion settings. Continue?",

@@ -36,7 +36,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -60,7 +59,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.setFixedWidth(480)
         self._config: ConversionConfig = config
-        self.result: ConversionConfig | None = None
+        self._result: ConversionConfig | None = None
         self._build_ui()
         self._load(config)
         register_listener(self._retranslate_ui)
@@ -79,12 +78,16 @@ class SettingsDialog(QDialog):
         outer.addWidget(self._build_output_group())
         outer.addWidget(self._build_performance_group())
 
-        self._buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self._buttons.accepted.connect(self._on_ok)
-        self._buttons.rejected.connect(self.reject)
-        outer.addWidget(self._buttons)
+        btn_row = QHBoxLayout()
+        btn_row.addStretch()
+        self._ok_btn = QPushButton()
+        self._ok_btn.setDefault(True)
+        self._ok_btn.clicked.connect(self._on_ok)
+        self._cancel_btn = QPushButton()
+        self._cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(self._ok_btn)
+        btn_row.addWidget(self._cancel_btn)
+        outer.addLayout(btn_row)
 
         self._retranslate_ui()
 
@@ -301,6 +304,10 @@ class SettingsDialog(QDialog):
         self._threads.setToolTip(t("settings.threads_tip"))
         self._threads.setSpecialValueText(t("settings.threads_auto"))
 
+        # Dialog buttons
+        self._ok_btn.setText(t("dlg.ok"))
+        self._cancel_btn.setText(t("dlg.cancel"))
+
     # ------------------------------------------------------------------
     # Load / save config
     # ------------------------------------------------------------------
@@ -350,7 +357,7 @@ class SettingsDialog(QDialog):
             out_path = Path(text) if text else None
             retain = self._retain_structure.isChecked()
 
-        self.result = dataclasses.replace(
+        self._result = dataclasses.replace(
             self._config,
             toc_depth=self._toc_depth.value(),
             split_level=self._split_level.value(),
@@ -363,6 +370,9 @@ class SettingsDialog(QDialog):
             num_threads=self._threads.value(),
         )
         self.accept()
+
+    def get_result(self) -> ConversionConfig | None:
+        return self._result
 
     # ------------------------------------------------------------------
     # Radio / toggle handlers

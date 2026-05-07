@@ -21,7 +21,6 @@ running exe.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -69,10 +68,6 @@ class UpdateDialog(QDialog):
 
         self.setWindowTitle(t("update.dialog_title"))
         self.setFixedWidth(420)
-        self.setWindowFlags(
-            (self.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint)
-            | Qt.WindowType.WindowCloseButtonHint
-        )
 
         if show_once:
             settings.set_last_notified_version(info.tag)

@@ -59,6 +59,7 @@ from typing import override
 from PySide6.QtCore import QThreadPool, QTimer
 from PySide6.QtWidgets import (
     QAbstractItemView,
+    QDialog,
     QFileDialog,
     QMainWindow,
     QMessageBox,
@@ -407,10 +408,12 @@ class MainWindow(QMainWindow):
 
     def _on_conversion_settings(self) -> None:
         dlg = SettingsDialog(self._config, self)
-        if dlg.exec() and dlg.result:
-            self._config = dlg.result
-            self._settings.set_conversion_config(self._config)
-            self._update_output_hint()
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            result: ConversionConfig | None = dlg.get_result()
+            if result is not None:
+                self._config = result
+                self._settings.set_conversion_config(self._config)
+                self._update_output_hint()
 
     def _on_app_settings(self) -> None:
         AppSettingsDialog(self._settings, self).exec()
@@ -685,6 +688,8 @@ class MainWindow(QMainWindow):
         # Show startup popup once per newly discovered version
         if self._settings.should_notify_popup(info.tag):
             self._show_update_popup(info, from_startup=True)
+
+        log.info(f"Update available: {info.tag}")
 
     def _on_no_update(self) -> None:
         """Called on the main thread when we are already on the latest version."""
