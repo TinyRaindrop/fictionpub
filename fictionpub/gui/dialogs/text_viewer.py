@@ -16,7 +16,6 @@ Base QDialog that:
   * Hosts a CodeViewer with a Wrap-lines checkbox and Copy / Close buttons.
   * Provides extension hooks _build_top_controls(), _extra_bottom_buttons(),
     _attach_highlighter(), set_content().
-  * Persists and restores its geometry per dialog variant using QSettings.
   * Computes a sensible default size from the primary screen dimensions.
 """
 
@@ -26,7 +25,6 @@ from typing import override
 
 from PySide6.QtCore import (
     QRect,
-    QSettings,
     QSize,
     Qt,
 )
@@ -46,8 +44,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ... import app_info
 from ..i18n import register_listener, t
+from ..state.settings import GeometryStore
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Line-number gutter
@@ -161,10 +159,6 @@ class TextViewerDialog(QDialog):
     """
     Base class for all monospace text viewer / editor dialogs.
 
-    The OS maximize button is enabled via WindowMaximizeButtonHint so it
-    appears in the title bar in its standard position — no custom button
-    needed in the UI.
-
     Subclass hooks
     ──────────────
     _build_top_controls() → QWidget | None
@@ -184,7 +178,8 @@ class TextViewerDialog(QDialog):
         self,
         *,
         title: str,
-        geom_key: str,
+        geom: GeometryStore | None = None,
+        geom_key: str = "",
         width_fraction: float = 0.60,
         height_fraction: float = 0.85,
         parent=None,
@@ -199,7 +194,9 @@ class TextViewerDialog(QDialog):
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMaximizeButtonHint)
         self.setWindowFlags(self.windowFlags() | Qt.WindowType.WindowMinimizeButtonHint)
 
-        self._geom_key = f"geometry/{geom_key}"
+        # Geometry is optional
+        self._geom: GeometryStore | None = geom
+        self._geom_key = geom_key
         self._width_fraction = width_fraction
         self._height_fraction = height_fraction
 
@@ -283,14 +280,8 @@ class TextViewerDialog(QDialog):
     @override
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        s = QSettings(
-            QSettings.Format.IniFormat,
-            QSettings.Scope.UserScope,
-            app_info.APP_ORG,
-            app_info.APP_NAME_SHORT,
-        )
-        raw = s.value(self._geom_key)
-        if raw:
+
+        if self._geom and (raw := self._geom.load(self._geom_key)) is not None:
             self.restoreGeometry(raw)
         else:
             screen = QApplication.primaryScreen().availableGeometry()
@@ -305,11 +296,6 @@ class TextViewerDialog(QDialog):
 
     @override
     def closeEvent(self, event) -> None:
-        s = QSettings(
-            QSettings.Format.IniFormat,
-            QSettings.Scope.UserScope,
-            app_info.APP_ORG,
-            app_info.APP_NAME_SHORT,
-        )
-        s.setValue(self._geom_key, self.saveGeometry())
+        if self._geom:
+            self._geom.save(self._geom_key, self.saveGeometry())
         super().closeEvent(event)

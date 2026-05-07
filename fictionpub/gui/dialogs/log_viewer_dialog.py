@@ -56,6 +56,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..i18n import register_listener, t
+from ..state.settings import GeometryStore
 from .highlighters import LogSyntaxHighlighter
 from .text_viewer import TextViewerDialog
 
@@ -184,13 +185,16 @@ class LogViewerDialog(TextViewerDialog):
     def __init__(
         self,
         content: str,
+        *,
         title: str = "Log Viewer",
+        geom: GeometryStore | None = None,
         parent=None,
     ) -> None:
         self._raw_content = content
 
         super().__init__(
             title=title,
+            geom=geom,
             geom_key="log_viewer",
             width_fraction=0.80,
             height_fraction=0.85,
@@ -202,7 +206,9 @@ class LogViewerDialog(TextViewerDialog):
         register_listener(self._retranslate_controls)
 
     @classmethod
-    def from_file(cls, path: Path, parent=None) -> LogViewerDialog:
+    def from_file(
+        cls, path: Path, geom: GeometryStore | None = None, parent=None
+    ) -> LogViewerDialog:
         try:
             content = path.read_text(encoding="utf-8", errors="replace")
         except OSError as e:
@@ -210,6 +216,7 @@ class LogViewerDialog(TextViewerDialog):
         return cls(
             content,
             title=t("logviewer.title_file", name=path.name),
+            geom=geom,
             parent=parent,
         )
 

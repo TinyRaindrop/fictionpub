@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..i18n import register_listener, t
+from ..state.settings import GeometryStore
 from .highlighters import CssSyntaxHighlighter
 from .text_viewer import TextViewerDialog
 
@@ -45,6 +46,7 @@ class CSSViewerDialog(TextViewerDialog):
         *,
         editable: bool = False,
         title: str = "CSS Viewer",
+        geom: GeometryStore | None = None,
         parent=None,
     ) -> None:
         self._path = path
@@ -52,6 +54,7 @@ class CSSViewerDialog(TextViewerDialog):
 
         super().__init__(
             title=title,
+            geom=geom,
             geom_key="css_viewer",
             width_fraction=0.50,
             height_fraction=0.85,

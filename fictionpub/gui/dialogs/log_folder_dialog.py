@@ -44,7 +44,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from fictionpub.gui.state.settings import AppSettings
+from fictionpub.gui.state.settings import GeometryStore
 
 # TODO: switch to absolute imports everywhere
 from ...models.conversion import ConversionStatus
@@ -56,6 +56,7 @@ from .log_viewer_dialog import LogViewerDialog
 
 # ── Column indices ────────────────────────────────────────────────────────────
 
+# TODO: switch to IntEnum?
 COL_NUM = 0
 COL_DATE = 1
 COL_TIME = 2
@@ -175,12 +176,8 @@ class LogFolderDialog(QDialog):
     Double-click a row to open that log in LogViewerDialog.
     """
 
-    _GEOM_KEY = "geometry/log_folder"
-
-    def __init__(self, settings: AppSettings, parent=None) -> None:
+    def __init__(self, geom: GeometryStore, parent=None) -> None:
         super().__init__(parent)
-        self._settings = settings
-        self._geom_key = "log_folder"
 
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowFlags(
@@ -188,6 +185,9 @@ class LogFolderDialog(QDialog):
             | Qt.WindowType.WindowMaximizeButtonHint
             | Qt.WindowType.WindowMinimizeButtonHint
         )
+
+        self._geom: GeometryStore = geom
+        self._geom_key = "log_folder"
 
         self._status_icons = get_status_icons(_ICON_PX)
         self._current_log = get_current_log_path()
@@ -408,7 +408,7 @@ class LogFolderDialog(QDialog):
     def _on_open(self) -> None:
         path = self._current_path()
         if path:
-            LogViewerDialog.from_file(path, parent=self).show()
+            LogViewerDialog.from_file(path, self._geom, parent=self).show()
 
     def _on_delete(self) -> None:
         path = self._current_path()
@@ -483,13 +483,13 @@ class LogFolderDialog(QDialog):
     @override
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        raw = self._settings.get_geometry(self._geom_key)
+        raw = self._geom.load(self._geom_key)
         if raw is not None:
             self.restoreGeometry(raw)
         else:
-            self.resize(560, 380)
+            self.resize(self.minimumWidth(), 380)
 
     @override
     def closeEvent(self, event) -> None:
-        self._settings.set_geometry(self.saveGeometry(), self._geom_key)
+        self._geom.save(self._geom_key, self.saveGeometry())
         super().closeEvent(event)

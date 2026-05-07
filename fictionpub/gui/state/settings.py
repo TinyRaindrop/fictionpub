@@ -23,8 +23,11 @@ Update settings
                               the startup popup, or ""
 """
 
+# TODO: review all usages of annotations
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -61,6 +64,12 @@ class UpdateFrequency(StrEnum):
         }[self]
 
 
+@dataclass(frozen=True)
+class GeometryStore:
+    load: Callable[[str], QByteArray | None]
+    save: Callable[[str, QByteArray], None]
+
+
 class AppSettings:
     def __init__(self):
         self._s = QSettings(
@@ -90,13 +99,23 @@ class AppSettings:
     # Window / dialog geometry
     # ------------------------------------------------------------------
 
-    def set_geometry(self, value: QByteArray, key: str = "main") -> None:
-        """Save geometry. Default key is 'main' for MainWindow."""
-        self._s.setValue(f"app/geometry/{key}", value)
+    def geometry_store(self) -> GeometryStore:
+        """
+        Factory method for geometry store/retrieval.
+        Default key is 'main' for MainWindow.
+        """
+        return GeometryStore(
+            load=lambda key: self.load_geometry(key),
+            save=lambda key, g: self.save_geometry(g, key),
+        )
 
-    def get_geometry(self, key: str = "main") -> QByteArray | None:
-        """Retrieve geometry. Default key is 'main' for MainWindow."""
-        raw = self._s.value(f"app/geometry/{key}")
+    def save_geometry(self, value: QByteArray, key: str) -> None:
+        """Save geometry to app settings."""
+        self._s.setValue(f"geometry/{key}", value)
+
+    def load_geometry(self, key: str) -> QByteArray | None:
+        """Retrieve geometry from app settings."""
+        raw = self._s.value(f"geometry/{key}")
         return raw if isinstance(raw, QByteArray) else None
 
     # TextViewerDialog subclasses call QSettings directly via their own

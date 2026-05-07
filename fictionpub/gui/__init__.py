@@ -90,12 +90,5 @@ def run_gui() -> None:
 
     # --- Main window ---
     window = MainWindow(settings)
-
-    geometry = settings.get_geometry()
-    if geometry:
-        window.restoreGeometry(geometry)
-    else:
-        window.resize(1280, 720)
-
     window.show()
     sys.exit(app.exec())

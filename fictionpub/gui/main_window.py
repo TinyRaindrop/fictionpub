@@ -88,7 +88,7 @@ from .file_panel import FileTreeView
 from .i18n import register_listener, t
 from .models.file_node import FileNode
 from .models.file_tree_model import FileTreeModel
-from .state.settings import AppSettings
+from .state.settings import AppSettings, GeometryStore
 from .status_bar import AppStatusBar
 from .toolbar import ToolbarWidget
 from .workers.batch_worker import BatchWorker
@@ -208,7 +208,9 @@ QPushButton#installUpdate:disabled {
 class MainWindow(QMainWindow):
     def __init__(self, settings: AppSettings, parent=None):
         super().__init__(parent)
-        self._settings = settings
+        self._settings: AppSettings = settings
+        self._geom: GeometryStore = settings.geometry_store()
+        self._geom_key = "main"
         self._config: ConversionConfig = settings.conversion_config()
 
         self._scan_worker: ScanWorker | None = None
@@ -420,7 +422,7 @@ class MainWindow(QMainWindow):
 
     def _on_open_logs(self) -> None:
         """Open the log folder viewer dialog."""
-        LogFolderDialog(self._settings, parent=self).show()
+        LogFolderDialog(geom=self._geom, parent=self).show()
 
     def _on_open_last_log(self) -> None:
         if not LOG_DIR.exists():
@@ -430,7 +432,7 @@ class MainWindow(QMainWindow):
         if not logs:
             QMessageBox.information(self, t("msg.no_logs_title"), t("msg.no_logs_files"))
             return
-        LogViewerDialog.from_file(logs[-1], parent=self).show()
+        LogViewerDialog.from_file(logs[-1], self._geom, parent=self).show()
 
     def _on_about(self) -> None:
         dlg = AboutDialog(self)
@@ -730,7 +732,10 @@ class MainWindow(QMainWindow):
 
     @override
     def showEvent(self, event) -> None:
+        raw = self._geom.load(self._geom_key)
+        self.restoreGeometry(raw) if raw else self.resize(1280, 720)
         super().showEvent(event)
+
         # Schedule exactly one startup check, regardless of how many times
         # showEvent fires (minimise/restore re-triggers it).
         if not self._startup_check_scheduled and self._settings.should_check_now():
@@ -757,7 +762,7 @@ class MainWindow(QMainWindow):
         if self._batch_worker:
             self._batch_worker.wait(3000)
 
-        self._settings.set_geometry(self.saveGeometry())
+        self._geom.save(self._geom_key, self.saveGeometry())
         self._settings.set_conversion_config(self._config)
         self._settings.sync()
         super().closeEvent(event)
