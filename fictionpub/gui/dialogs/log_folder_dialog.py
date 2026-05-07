@@ -158,7 +158,7 @@ def _open_path(path: Path) -> None:
     """Open a file or directory using the OS default handler."""
     try:
         if platform.system() == "Windows":
-            os.startfile(path)  # type: ignore[attr-defined]
+            os.startfile(path)
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:

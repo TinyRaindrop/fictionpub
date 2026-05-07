@@ -102,7 +102,7 @@ def register_listener(fn: Callable[[], None]) -> None:
     _listeners[:] = [ref for ref in _listeners if ref() is not None]
 
     try:
-        new_ref: weakref.ref = weakref.WeakMethod(fn)  # type: ignore[assignment]
+        new_ref: weakref.ref = weakref.WeakMethod(fn)
     except TypeError:
         new_ref = weakref.ref(fn)
 

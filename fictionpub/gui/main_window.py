@@ -216,6 +216,7 @@ class MainWindow(QMainWindow):
         self._scan_worker: ScanWorker | None = None
         self._batch_worker: BatchWorker | None = None
         self._batch_anchor: BatchAnchor | None = None
+        self._update_check_worker: UpdateCheckWorker | None = None
 
         self._meta_pool = QThreadPool.globalInstance()
         self._meta_pool.setMaxThreadCount(8)
@@ -615,7 +616,6 @@ class MainWindow(QMainWindow):
     def _start_update_check(
         self,
         force: bool = False,
-        about_dialog: AboutDialog | None = None,
     ) -> None:
         """
         Submit an UpdateCheckWorker to the global thread pool.
@@ -633,10 +633,6 @@ class MainWindow(QMainWindow):
         Storing it on self keeps the Python wrapper alive until the next
         check overwrites it (which is fine — the old signals object has
         already fired by then).
-
-        self._about_dialog is used (not a captured local) so the dialog
-        reference is always current.  WA_DeleteOnClose nulls it via the
-        destroyed signal before any dangling call can occur.
         """
         if not force and not self._settings.should_check_now():
             return
@@ -672,6 +668,7 @@ class MainWindow(QMainWindow):
             signals=self._update_check_signals,
             startup_delay=0.0 if force else 3.0,
         )
+        self._update_check_worker = worker  # keep Python reference alive
         QThreadPool.globalInstance().start(worker)
 
     def _on_update_available(self, info: UpdateInfo) -> None:
@@ -756,6 +753,9 @@ class MainWindow(QMainWindow):
                 return
             self._batch_worker.request_cancel()  # type: ignore
 
+        if self._update_check_worker is not None:
+            self._update_check_worker.cancel()
+            self._update_check_worker = None
         if self._scan_worker:
             self._scan_worker.quit()
             self._scan_worker.wait(2000)
@@ -776,7 +776,7 @@ class MainWindow(QMainWindow):
 def _open_path(path: Path) -> None:
     try:
         if platform.system() == "Windows":
-            os.startfile(path)  # type: ignore[attr-defined]
+            os.startfile(path)
         elif platform.system() == "Darwin":
             subprocess.Popen(["open", str(path)])
         else:

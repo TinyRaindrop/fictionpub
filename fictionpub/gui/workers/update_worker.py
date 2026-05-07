@@ -152,6 +152,9 @@ class UpdateCheckWorker(QRunnable):
         import time
 
         time.sleep(self._delay)
+        if self._cancelled:
+            return
+
         try:
             api_url = _api_url_from_app_url(self._app_url)
             data = _fetch_json(api_url)
@@ -184,9 +187,13 @@ class UpdateCheckWorker(QRunnable):
             self.signals.update_available.emit(
                 UpdateInfo(tag=tag, html_url=html_url, main_url=main_url, cli_url=cli_url)
             )
-        except Exception:
-            # Silently ignore all network / parse errors
-            pass
+        except Exception as e:
+            log.warning(f"Update worker error: {e}")
+            log.exception("Update worker error")
+
+    def cancel(self) -> None:
+        """Safe to call from any thread (GIL makes bool assignment atomic)."""
+        self._cancelled = True
 
 
 # ---------------------------------------------------------------------------
@@ -342,14 +349,15 @@ def launch_installer_bat(download_cli: bool) -> None:
         'del "%~f0"',  # self-delete the bat
     ]
 
-    bat_path = Path(tempfile.mktemp(suffix=".bat", dir=exe_dir))
+    _, bat_path_str = tempfile.mkstemp(suffix=".bat", dir=exe_dir)
+    bat_path = Path(bat_path_str)
     bat_path.write_text("\r\n".join(lines) + "\r\n", encoding="ascii")
 
     # Launch the bat detached so it survives our process exit
     import subprocess
 
     subprocess.Popen(
-        ["cmd.exe", "/c", str(bat_path)],
+        ["cmd.exe", "/c", bat_path_str],
         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP,
         close_fds=True,
     )
