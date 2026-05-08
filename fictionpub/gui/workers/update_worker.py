@@ -52,7 +52,7 @@ def parse_version(s: str) -> tuple[int, int, int]:
 
 def is_dev_build(version: str) -> bool:
     """Return True for versions like '1.2.3.dev*'."""
-    return "dev" in version.lower()
+    return any(kw in version.lower() for kw in ["dev", "post"])
 
 
 def is_newer(remote: str, local: str) -> bool:
@@ -147,6 +147,7 @@ class UpdateCheckWorker(QRunnable):
         self._current_ver = current_ver
         self.signals = signals
         self._delay = startup_delay
+        self._cancelled = False
 
     def run(self) -> None:
         import time
@@ -294,19 +295,23 @@ class DownloadWorker(QThread):
 # ---------------------------------------------------------------------------
 
 
-def _exe_dir() -> Path:
-    """Return the directory that contains the running exe (or script in dev)."""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
-    # Development: place temp files next to the project root as a fallback
-    return Path(sys.executable).parent
-
-
 def exe_path() -> Path:
-    """Absolute path to the running fictionpub.exe (or interpreter in dev)."""
-    if getattr(sys, "frozen", False):
-        return Path(sys.executable)
-    return Path(sys.executable)
+    """
+    Absolute path to the running launcher exe.
+ 
+    sys.argv[0] is set by the OS before extraction of Nuitka --onefile builds
+    and always holds the real path.
+    In development sys.argv[0] is a .py script, so we fall back to sys.executable.
+    """
+    candidate = Path(sys.argv[0]).resolve()
+    if candidate.suffix.lower() == ".exe":
+        return candidate
+    return Path(sys.executable).resolve()
+ 
+ 
+def _exe_dir() -> Path:
+    """Directory that contains the running launcher exe (or dev interpreter)."""
+    return exe_path().parent
 
 
 def cli_exe_path() -> Path:
