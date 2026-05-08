@@ -1,6 +1,6 @@
 # Development Tasks
 
-.PHONY: install format lint typecheck check build exe clean
+.PHONY: install format lint typecheck check build exe gui cli clean
 
 install:
 	pip install -e .[dev]
@@ -27,6 +27,12 @@ build:
 
 exe:
 	python build_exe.py
+
+gui:
+	python build_exe.py --gui
+
+cli:
+	python build_exe.py --cli
 
 ## Cleanup
 

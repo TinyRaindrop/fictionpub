@@ -3,6 +3,7 @@ Nuitka build script.
 Compiles 2 separate executables for GUI and CLI.
 """
 
+import argparse
 import pathlib
 import re
 import subprocess
@@ -118,8 +119,6 @@ PLUGIN_EXCLUDES = [
     # ---- PySide6 / Qt
     "PySide6.QtNetwork",
     # ---- Python stdlib misc, test/dev, setuptools
-    "ssl",
-    "_ssl",
     "bz2",
     "lzma",
     "unittest",
@@ -138,6 +137,9 @@ PLUGIN_EXCLUDES = [
 PLUGIN_EXCLUDES_CLI = [
     "PySide6",
     "shiboken6",
+    # ---- HTTPS
+    "ssl",
+    "_ssl",
 ]
 
 DLL_EXCLUDES_GUI = [
@@ -155,12 +157,16 @@ DLL_EXCLUDES_GUI = [
     "qwbmp.dll",
     "qgif.dll",
     "qicns.dll",
+]
+
+DLL_EXCLUDES_CLI = [
     "libcrypto-3.dll",
 ]
 
 exclude_plugins = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES]
 exclude_plugins_cli = [f"--nofollow-import-to={module}" for module in PLUGIN_EXCLUDES_CLI]
 exclude_dlls_gui = [f"--noinclude-dlls=*{dll}" for dll in DLL_EXCLUDES_GUI]
+exclude_dlls_cli = [f"--noinclude-dlls=*{dll}" for dll in DLL_EXCLUDES_CLI]
 
 # To inspect plugin usage run:
 # python -m nuitka run_app_cli.py --standalone --show-modules
@@ -172,10 +178,12 @@ def compile_cli() -> None:
         build_options
         + exclude_plugins
         + exclude_plugins_cli
+        + exclude_dlls_cli
         + [
             "--output-filename=fictionpub_cli.exe",
             "--windows-icon-from-ico=fictionpub/resources/icons/app_cli.ico",
             "--windows-console-mode=force",  # Force console for CLI
+            "--include-windows-runtime-dlls=no",
             "run_app_cli.py",
         ]
     )
@@ -200,5 +208,23 @@ def compile_gui() -> None:
 
 
 if __name__ == "__main__":
-    compile_gui()
-    compile_cli()
+    # Parse command line args to optionally build only one of the executables
+    parser = argparse.ArgumentParser(description="Build executables with Nuitka")
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Build only the GUI executable (fictionpub.exe)",
+    )
+    parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="Build only the CLI executable (fictionpub_cli.exe)",
+    )
+    args = parser.parse_args()
+    if args.gui:
+        compile_gui()
+    elif args.cli:
+        compile_cli()
+    else:
+        compile_gui()
+        compile_cli()
