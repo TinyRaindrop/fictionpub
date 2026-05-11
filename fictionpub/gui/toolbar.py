@@ -29,7 +29,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .i18n import register_listener, t
+from fictionpub.gui.i18n import register_listener, t
 
 
 # FIXME: extract vsep() from modules to a helper module

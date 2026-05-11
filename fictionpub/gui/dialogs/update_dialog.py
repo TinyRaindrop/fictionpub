@@ -31,9 +31,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ... import app_info
-from ..i18n import t
-from ..workers.update_worker import (
+from fictionpub import app_info
+from fictionpub.gui.i18n import t
+from fictionpub.gui.workers.update_worker import (
     DownloadWorker,
     UpdateInfo,
     cli_exe_path,

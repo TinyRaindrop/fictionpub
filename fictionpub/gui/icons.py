@@ -14,14 +14,14 @@ from __future__ import annotations
 from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
 
-from ..models.conversion import ConversionStatus
+from fictionpub.models.conversion import ConversionStatus
 
 _CACHE: dict[ConversionStatus, QIcon] | None = None
 
 
 def _load_png_icon(filename: str, size: int) -> QIcon | None:
     try:
-        from ..resources.loader import get_icon_path
+        from fictionpub.resources.loader import get_icon_path
 
         path = get_icon_path(filename)
         if path and path.is_file():

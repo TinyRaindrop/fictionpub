@@ -27,12 +27,12 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ..i18n import get_language, register_listener, set_language, t
-from ..state.settings import (
+from fictionpub.gui.i18n import get_language, register_listener, set_language, t
+from fictionpub.gui.state.settings import (
     AppSettings,
     UpdateFrequency,
 )
-from ..themes import apply_theme
+from fictionpub.gui.themes import apply_theme
 
 
 class AppSettingsDialog(QDialog):

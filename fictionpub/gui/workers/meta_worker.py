@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PySide6.QtCore import QObject, QRunnable, Signal
 
-from ...core.fb2_book import FB2Book
+from fictionpub.core.fb2_book import FB2Book
 
 
 class MetaSignals(QObject):

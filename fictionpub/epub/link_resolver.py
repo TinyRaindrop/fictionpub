@@ -17,9 +17,9 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..models import namespaces as NS
-from ..models.structures import BodyType, FileInfo
-from ..utils import xml_utils as xu
+from fictionpub.models import namespaces as NS
+from fictionpub.models.structures import BodyType, FileInfo
+from fictionpub.utils import xml_utils as xu
 
 
 class LinkType(Enum):

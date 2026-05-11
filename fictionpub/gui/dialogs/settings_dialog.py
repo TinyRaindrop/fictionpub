@@ -48,9 +48,10 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ...models.conversion import ConversionConfig
-from ...resources.loader import get_css_path
-from ..i18n import register_listener, t
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.models.conversion import ConversionConfig
+from fictionpub.resources.loader import get_css_path
+
 from .css_viewer_dialog import CSSViewerDialog
 
 

@@ -67,8 +67,30 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import app_info
-from ..models.conversion import (
+from fictionpub import app_info
+from fictionpub.gui.bottom_bar import BottomBarWidget
+from fictionpub.gui.dialogs.about_dialog import AboutDialog
+from fictionpub.gui.dialogs.app_settings_dialog import AppSettingsDialog
+from fictionpub.gui.dialogs.log_folder_dialog import LogFolderDialog
+from fictionpub.gui.dialogs.log_viewer_dialog import LogViewerDialog
+from fictionpub.gui.dialogs.settings_dialog import SettingsDialog
+from fictionpub.gui.dialogs.update_dialog import UpdateDialog
+from fictionpub.gui.file_panel import FileTreeView
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.gui.models.file_node import FileNode
+from fictionpub.gui.models.file_tree_model import FileTreeModel
+from fictionpub.gui.state.settings import AppSettings, GeometryStore
+from fictionpub.gui.status_bar import AppStatusBar
+from fictionpub.gui.toolbar import ToolbarWidget
+from fictionpub.gui.workers.batch_worker import BatchWorker
+from fictionpub.gui.workers.meta_worker import MetaSignals, MetaWorker
+from fictionpub.gui.workers.scan_worker import ScanWorker
+from fictionpub.gui.workers.update_worker import (
+    UpdateCheckSignals,
+    UpdateCheckWorker,
+    UpdateInfo,
+)
+from fictionpub.models.conversion import (
     BatchAnchor,
     ConversionConfig,
     ConversionResult,
@@ -76,29 +98,7 @@ from ..models.conversion import (
     compute_batch_anchor,
     resolve_epub_path,
 )
-from ..utils.logger import LOG_DIR
-from .bottom_bar import BottomBarWidget
-from .dialogs.about_dialog import AboutDialog
-from .dialogs.app_settings_dialog import AppSettingsDialog
-from .dialogs.log_folder_dialog import LogFolderDialog
-from .dialogs.log_viewer_dialog import LogViewerDialog
-from .dialogs.settings_dialog import SettingsDialog
-from .dialogs.update_dialog import UpdateDialog
-from .file_panel import FileTreeView
-from .i18n import register_listener, t
-from .models.file_node import FileNode
-from .models.file_tree_model import FileTreeModel
-from .state.settings import AppSettings, GeometryStore
-from .status_bar import AppStatusBar
-from .toolbar import ToolbarWidget
-from .workers.batch_worker import BatchWorker
-from .workers.meta_worker import MetaSignals, MetaWorker
-from .workers.scan_worker import ScanWorker
-from .workers.update_worker import (
-    UpdateCheckSignals,
-    UpdateCheckWorker,
-    UpdateInfo,
-)
+from fictionpub.utils.logger import LOG_DIR
 
 log = logging.getLogger("fb2_converter")
 

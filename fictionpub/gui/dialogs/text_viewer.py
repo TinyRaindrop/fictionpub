@@ -44,8 +44,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..i18n import register_listener, t
-from ..state.settings import GeometryStore
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.gui.state.settings import GeometryStore
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Line-number gutter

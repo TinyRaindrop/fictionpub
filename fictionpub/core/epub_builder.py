@@ -14,19 +14,19 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from .. import app_info
-from ..epub.constants import EPUB_TYPES
-from ..epub.constants import FNames as FN
-from ..epub.link_resolver import LinkResolver
-from ..epub.opf_builder import OpfBuilder
-from ..epub.toc_utils import TOCItem, iter_toc_items
-from ..models import namespaces as NS
-from ..models.conversion import BatchAnchor, ConversionConfig, resolve_epub_path
-from ..models.metadata import BookMetadata, EpubMetadata
-from ..models.structures import BinaryInfo, BodyType, ConvertedBody, FileInfo
-from ..resources.loader import get_css_path
-from ..resources.localized_terms import LocalizedTerms
-from ..utils import xml_utils as xu
+from fictionpub import app_info
+from fictionpub.epub.constants import EPUB_TYPES
+from fictionpub.epub.constants import FNames as FN
+from fictionpub.epub.link_resolver import LinkResolver
+from fictionpub.epub.opf_builder import OpfBuilder
+from fictionpub.epub.toc_utils import TOCItem, iter_toc_items
+from fictionpub.models import namespaces as NS
+from fictionpub.models.conversion import BatchAnchor, ConversionConfig, resolve_epub_path
+from fictionpub.models.metadata import BookMetadata, EpubMetadata
+from fictionpub.models.structures import BinaryInfo, BodyType, ConvertedBody, FileInfo
+from fictionpub.resources.loader import get_css_path
+from fictionpub.resources.localized_terms import LocalizedTerms
+from fictionpub.utils import xml_utils as xu
 
 log = logging.getLogger("fb2_converter")
 

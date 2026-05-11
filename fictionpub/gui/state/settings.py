@@ -34,8 +34,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QByteArray, QSettings
 
-from ... import app_info
-from ...models.conversion import ConversionConfig
+from fictionpub import app_info
+from fictionpub.models.conversion import ConversionConfig
 
 
 class UpdateFrequency(StrEnum):

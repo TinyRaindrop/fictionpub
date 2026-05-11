@@ -7,9 +7,9 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..models.conversion import ConversionConfig
-from ..models.structures import BodyType
-from ..utils import xml_utils as xu
+from fictionpub.models.conversion import ConversionConfig
+from fictionpub.models.structures import BodyType
+from fictionpub.utils import xml_utils as xu
 
 # Post processing plugins. Must work on xhtml_body
 from . import typography

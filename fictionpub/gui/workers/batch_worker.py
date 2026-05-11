@@ -19,8 +19,8 @@ from pathlib import Path
 
 from PySide6.QtCore import QThread, Signal
 
-from ...core.batch_processor import BatchProcessor
-from ...models.conversion import ConversionConfig, ConversionResult
+from fictionpub.core.batch_processor import BatchProcessor
+from fictionpub.models.conversion import ConversionConfig, ConversionResult
 
 
 class BatchWorker(QThread):

@@ -2,7 +2,7 @@ import re
 
 from lxml import etree
 
-from ..models import namespaces as NS
+from fictionpub.models import namespaces as NS
 
 # -------------------------------
 # Element find helpers

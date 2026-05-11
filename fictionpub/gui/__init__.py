@@ -20,13 +20,13 @@ from PySide6.QtCore import QLocale
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
-from .. import app_info
-from ..resources.loader import get_icon_path
-from ..utils.logger import setup_main_logger
-from .i18n import set_language
-from .main_window import MainWindow
-from .state.settings import AppSettings
-from .themes import apply_theme
+from fictionpub import app_info
+from fictionpub.gui.i18n import set_language
+from fictionpub.gui.main_window import MainWindow
+from fictionpub.gui.state.settings import AppSettings
+from fictionpub.gui.themes import apply_theme
+from fictionpub.resources.loader import get_icon_path
+from fictionpub.utils.logger import setup_main_logger
 
 _SUPPORTED_LANGS = {"en", "uk"}
 _SETTINGS_LANG_KEY_SENTINEL = "__unset__"  # value stored when no preference exists yet

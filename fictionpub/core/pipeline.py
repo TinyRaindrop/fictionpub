@@ -9,9 +9,10 @@ from pathlib import Path
 
 from lxml.etree import _Element
 
-from ..models.conversion import BatchAnchor, ConversionConfig
-from ..models.structures import ConvertedBody
-from ..post_processing.post_processor import PostProcessor
+from fictionpub.models.conversion import BatchAnchor, ConversionConfig
+from fictionpub.models.structures import ConvertedBody
+from fictionpub.post_processing.post_processor import PostProcessor
+
 from .epub_builder import EpubBuilder
 from .fb2_book import FB2Book
 from .fb2_to_html_converter import FB2ToHTMLConverter

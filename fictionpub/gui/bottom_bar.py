@@ -30,9 +30,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ..models.conversion import ConversionStatus
-from .i18n import register_listener, t
-from .icons import get_status_icons
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.gui.icons import get_status_icons
+from fictionpub.models.conversion import ConversionStatus
 
 
 def _vsep() -> QFrame:

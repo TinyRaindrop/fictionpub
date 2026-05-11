@@ -4,13 +4,13 @@ Single source of truth for application metadata.
 
 import pathlib
 
-APP_NAME = "FictionPub"
-APP_NAME_SHORT = "fictionpub"
-APP_AUTHOR = "TinyRaindrop"
-APP_AUTHORS = [{"name": APP_AUTHOR}]
-APP_ORG = APP_AUTHOR
-APP_DESCRIPTION = "FB2 to EPUB ebook converter."
-APP_URL = "https://github.com/TinyRaindrop/fictionpub"
+APP_NAME: str = "FictionPub"
+APP_NAME_SHORT: str = "fictionpub"
+APP_AUTHOR: str = "TinyRaindrop"
+APP_AUTHORS: list[dict[str, str]] = [{"name": APP_AUTHOR}]
+APP_ORG: str = APP_AUTHOR
+APP_DESCRIPTION: str = "FB2 to EPUB ebook converter."
+APP_URL: str = "https://github.com/TinyRaindrop/fictionpub"
 
 # 1. Dev Environment: Get real-time git version dynamically on every launch
 try:

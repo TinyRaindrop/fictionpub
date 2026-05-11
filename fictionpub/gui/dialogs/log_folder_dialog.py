@@ -44,14 +44,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.gui.icons import get_status_icons
 from fictionpub.gui.state.settings import GeometryStore
+from fictionpub.gui.themes import PLAIN_BUTTON_QSS
+from fictionpub.models.conversion import ConversionStatus
+from fictionpub.utils.logger import LOG_DIR, get_current_log_path
 
-# TODO: switch to absolute imports everywhere
-from ...models.conversion import ConversionStatus
-from ...utils.logger import LOG_DIR, get_current_log_path
-from ..i18n import register_listener, t
-from ..icons import get_status_icons
-from ..themes import PLAIN_BUTTON_QSS
 from .log_viewer_dialog import LogViewerDialog
 
 # ── Column indices ────────────────────────────────────────────────────────────

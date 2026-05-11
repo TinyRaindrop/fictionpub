@@ -6,9 +6,10 @@ import logging
 
 from lxml import etree
 
-from ..models import namespaces as NS
-from ..models.metadata import BookMetadata, EpubMetadata
-from ..models.structures import BinaryInfo, BodyType, FileInfo
+from fictionpub.models import namespaces as NS
+from fictionpub.models.metadata import BookMetadata, EpubMetadata
+from fictionpub.models.structures import BinaryInfo, BodyType, FileInfo
+
 from .constants import EPUB_TYPES
 from .constants import FNames as FN
 

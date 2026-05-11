@@ -22,8 +22,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-from ... import app_info
-from ..i18n import register_listener, t, unregister_listener
+from fictionpub import app_info
+from fictionpub.gui.i18n import register_listener, t, unregister_listener
 
 
 class AboutDialog(QDialog):

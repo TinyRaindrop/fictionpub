@@ -11,8 +11,8 @@ from pathlib import Path
 from lxml import etree
 from PIL import Image
 
-from ..models import namespaces as NS
-from ..models.metadata import (
+from fictionpub.models import namespaces as NS
+from fictionpub.models.metadata import (
     BookMetadata,
     CustomInfo,
     DocumentInfo,
@@ -21,8 +21,8 @@ from ..models.metadata import (
     SourceInfo,
     TitleInfo,
 )
-from ..models.structures import BinaryInfo, BodyType, FB2Body
-from ..utils import xml_utils as xu
+from fictionpub.models.structures import BinaryInfo, BodyType, FB2Body
+from fictionpub.utils import xml_utils as xu
 
 log = logging.getLogger("fb2_converter")
 

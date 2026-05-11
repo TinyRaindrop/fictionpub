@@ -8,10 +8,10 @@ from typing import NamedTuple
 
 from lxml import etree
 
-from ..models import namespaces as NS
-from ..models.conversion import ConversionConfig
-from ..models.structures import BinaryInfo, BodyType, ConvertedBody, FB2Body
-from ..utils import xml_utils as xu
+from fictionpub.models import namespaces as NS
+from fictionpub.models.conversion import ConversionConfig
+from fictionpub.models.structures import BinaryInfo, BodyType, ConvertedBody, FB2Body
+from fictionpub.utils import xml_utils as xu
 
 log = logging.getLogger("fb2_converter")
 

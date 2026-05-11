@@ -7,10 +7,14 @@ import argparse
 import logging
 from pathlib import Path
 
-from . import app_info
-from .core.batch_processor import BatchProcessor
-from .models.conversion import ConversionConfig, ConversionResult, ConversionStatus
-from .utils.logger import setup_main_logger
+from fictionpub import app_info
+from fictionpub.core.batch_processor import BatchProcessor
+from fictionpub.models.conversion import (
+    ConversionConfig,
+    ConversionResult,
+    ConversionStatus,
+)
+from fictionpub.utils.logger import setup_main_logger
 
 # Get logger. It will be configured in run_cli()
 log = logging.getLogger("fb2_converter")

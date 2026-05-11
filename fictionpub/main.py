@@ -9,7 +9,7 @@ import logging
 import sys
 from enum import Enum
 
-from .resources.localized_terms import LocalizedTerms
+from fictionpub.resources.localized_terms import LocalizedTerms
 
 
 class AppMode(Enum):
@@ -34,7 +34,7 @@ def main(mode: AppMode = AppMode.AUTO) -> None:
 
     if mode == AppMode.CLI:
         try:
-            from .cli import run_cli
+            from fictionpub.cli import run_cli
 
             run_cli()
         except Exception:
@@ -43,7 +43,7 @@ def main(mode: AppMode = AppMode.AUTO) -> None:
 
     elif mode == AppMode.GUI:
         try:
-            from .gui import run_gui
+            from fictionpub.gui import run_gui
 
             log.info("No input file provided, launching GUI...")
             run_gui()

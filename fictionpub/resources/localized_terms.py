@@ -22,7 +22,8 @@ from __future__ import annotations
 import logging
 from typing import ClassVar
 
-from ..utils.term_lookup import TermLookup
+from fictionpub.utils.term_lookup import TermLookup
+
 from .loader import load_terms_json
 
 log = logging.getLogger("fb2_converter")

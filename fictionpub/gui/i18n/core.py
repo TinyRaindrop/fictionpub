@@ -19,8 +19,8 @@ import weakref
 from collections.abc import Callable
 from contextlib import suppress
 
-from ...resources.loader import load_json
-from ...utils.term_lookup import TermLookup
+from fictionpub.resources.loader import load_json
+from fictionpub.utils.term_lookup import TermLookup
 
 # ---------------------------------------------------------------------------
 # Load translation data once at import time.

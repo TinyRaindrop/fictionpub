@@ -14,15 +14,16 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from ..models.conversion import (
+from fictionpub.models.conversion import (
     BatchAnchor,
     ConversionConfig,
     ConversionResult,
     ConversionStatus,
     compute_batch_anchor,
 )
-from ..resources.localized_terms import LocalizedTerms
-from ..utils.logger import setup_worker_logger
+from fictionpub.resources.localized_terms import LocalizedTerms
+from fictionpub.utils.logger import setup_worker_logger
+
 from .pipeline import ConversionPipeline
 
 log = logging.getLogger("fb2_converter")

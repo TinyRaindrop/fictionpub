@@ -298,7 +298,7 @@ class DownloadWorker(QThread):
 def exe_path() -> Path:
     """
     Absolute path to the running launcher exe.
- 
+
     sys.argv[0] is set by the OS before extraction of Nuitka --onefile builds
     and always holds the real path.
     In development sys.argv[0] is a .py script, so we fall back to sys.executable.
@@ -307,8 +307,8 @@ def exe_path() -> Path:
     if candidate.suffix.lower() == ".exe":
         return candidate
     return Path(sys.executable).resolve()
- 
- 
+
+
 def _exe_dir() -> Path:
     """Directory that contains the running launcher exe (or dev interpreter)."""
     return exe_path().parent

@@ -58,11 +58,11 @@ from PySide6.QtCore import (
 from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PySide6.QtWidgets import QAbstractItemView, QHeaderView, QMenu, QTreeView
 
-from ..models.conversion import ConversionStatus
-from .i18n import register_listener, t
-from .models.collation import natural_collation_key
-from .models.file_node import FileNode, FolderNode
-from .models.file_tree_model import Col, FileTreeModel
+from fictionpub.gui.i18n import register_listener, t
+from fictionpub.gui.models.collation import natural_collation_key
+from fictionpub.gui.models.file_node import FileNode, FolderNode
+from fictionpub.gui.models.file_tree_model import Col, FileTreeModel
+from fictionpub.models.conversion import ConversionStatus
 
 _COL_NAME_MIN = 120  # px — filename col is never auto-shrunk below this
 _COL_STATUS_W = 42  # px — fixed status column width

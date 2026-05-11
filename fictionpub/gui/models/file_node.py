@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
 
-from ...models.conversion import ConversionStatus
+from fictionpub.models.conversion import ConversionStatus
 
 if TYPE_CHECKING:
     pass  # avoid circular import; typing only

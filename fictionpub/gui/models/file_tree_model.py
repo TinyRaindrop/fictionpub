@@ -48,9 +48,10 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QBrush, QColor, QFont
 
-from ...models.conversion import ConversionStatus
-from ..i18n import t
-from ..icons import get_status_icons
+from fictionpub.gui.i18n import t
+from fictionpub.gui.icons import get_status_icons
+from fictionpub.models.conversion import ConversionStatus
+
 from .file_node import FileNode, FolderNode
 
 
