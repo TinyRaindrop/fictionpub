@@ -446,7 +446,13 @@ class MainWindow(QMainWindow):
             lambda: self._start_update_check(force=True)
         )
         # Populate current update status
-        dlg.set_update_status(self._update_info.tag if self._update_info else None)
+        if self._update_info:
+            dlg.set_update_info(self._update_info)
+        else:
+            dlg.set_update_status(None)
+        dlg.view_update_requested.connect(
+            lambda info: self._show_update_popup(info, from_startup=False)
+        )
         self._about_dialog = dlg
         dlg.show()
         # If we have no cached result yet (fresh launch before the timer fired,
@@ -682,7 +688,7 @@ class MainWindow(QMainWindow):
 
         # self._about_dialog is None when closed (cleared by destroyed signal)
         if self._about_dialog is not None and not self._about_dialog.isHidden():
-            self._about_dialog.set_update_status(info.tag)
+            self._about_dialog.set_update_info(info)
 
         # Show startup popup once per newly discovered version
         if self._settings.should_notify_popup(info.tag):

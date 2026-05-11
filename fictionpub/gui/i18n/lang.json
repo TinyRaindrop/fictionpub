@@ -762,5 +762,21 @@
     "update.version_info": {
         "en": "Latest version: {new}\nCurrent version: {current}",
         "uk": "Нова версія: {new}\nПоточна версія: {current}"
+    },
+    "update.dev_notice": {
+        "en": "Files will be downloaded to: {path}",
+        "uk": "Файли будуть завантажені до: {path}"
+    },
+    "update.download_done_dev": {
+        "en": "Download complete. Files saved to:\n{path}",
+        "uk": "Завантаження завершено. Збережено до:\n{path}"
+    },
+    "update.btn_open_folder": {
+        "en": "Open Folder",
+        "uk": "Відрити папку"
+    },
+    "update.btn_do_update": {
+        "en": "Update",
+        "uk": "Оновити"
     }
 }

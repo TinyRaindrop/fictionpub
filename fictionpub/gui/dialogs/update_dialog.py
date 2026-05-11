@@ -5,7 +5,8 @@ States
 ------
 INFO        → shows version info, Install / Open GitHub / Dismiss buttons
 DOWNLOADING → progress bar, cancel button
-DONE        → "Ready to install — restart?" with Restart / Later buttons
+DONE (frozen)  → "Ready to install — restart?" with Restart / Later buttons
+DONE (dev)     → "Downloaded to <folder>" with Open Folder / Close buttons
 
 The dialog is re-used for both the startup popup and the toolbar button
 click.  Pass ``show_once=True`` from the startup popup path so it saves
@@ -17,9 +18,19 @@ Checkbox behaviour
 "Update CLI as well" is visible whenever a CLI download URL exists in
 UpdateInfo.  It is pre-checked when fictionpub_cli.exe sits beside the
 running exe.
+
+Dev-mode behaviour
+------------------
+In a dev build (is_frozen_build() == False) the downloaded files land in
+a temp folder rather than beside the exe.  After download completes the
+dialog shows an "Open Folder" button instead of "Restart & Install".
 """
 
 from __future__ import annotations
+
+import os
+import platform
+import subprocess
 
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -36,7 +47,9 @@ from fictionpub.gui.i18n import t
 from fictionpub.gui.workers.update_worker import (
     DownloadWorker,
     UpdateInfo,
+    _download_dir,
     cli_exe_path,
+    is_frozen_build,
     launch_installer_bat,
 )
 
@@ -65,6 +78,7 @@ class UpdateDialog(QDialog):
         self._info = info
         self._settings = settings
         self._worker: DownloadWorker | None = None
+        self._frozen = is_frozen_build()
 
         self.setWindowTitle(t("update.dialog_title"))
         self.setFixedWidth(420)
@@ -99,6 +113,14 @@ class UpdateDialog(QDialog):
         self._ver_label.setWordWrap(True)
         layout.addWidget(self._ver_label)
 
+        # Dev-mode notice: show where files will be downloaded
+        if not self._frozen:
+            self._dev_notice = QLabel()
+            self._dev_notice.setWordWrap(True)
+            self._dev_notice.setStyleSheet("font-size: 10px; color: palette(mid);")
+            self._update_dev_notice()
+            layout.addWidget(self._dev_notice)
+
         # CLI checkbox (only when CLI asset exists)
         self._cli_cb = QCheckBox(t("update.include_cli"))
         cli_exists = cli_exe_path().is_file()
@@ -120,7 +142,7 @@ class UpdateDialog(QDialog):
         self._status.hide()
         layout.addWidget(self._status)
 
-        # Button row
+        # ── Primary button row ────────────────────────────────────────────
         btn_row = QHBoxLayout()
         btn_row.setSpacing(6)
 
@@ -137,22 +159,31 @@ class UpdateDialog(QDialog):
 
         layout.addLayout(btn_row)
 
-        # Restart / Later row (hidden until download finishes)
-        restart_row = QHBoxLayout()
-        restart_row.addStretch()
+        # ── Post-download row (frozen: Restart; dev: Open Folder) ─────────
+        post_row = QHBoxLayout()
+        post_row.addStretch()
 
         self._later_btn = QPushButton(t("update.btn_later"))
         self._later_btn.clicked.connect(self.reject)
         self._later_btn.hide()
-        restart_row.addWidget(self._later_btn)
+        post_row.addWidget(self._later_btn)
 
-        self._restart_btn = QPushButton(t("update.btn_restart"))
-        self._restart_btn.setObjectName("restartUpdate")
-        self._restart_btn.clicked.connect(self._on_restart)
-        self._restart_btn.hide()
-        restart_row.addWidget(self._restart_btn)
+        if self._frozen:
+            # Frozen build: offer in-place restart & install
+            self._restart_btn = QPushButton(t("update.btn_restart"))
+            self._restart_btn.setObjectName("restartUpdate")
+            self._restart_btn.clicked.connect(self._on_restart)
+            self._restart_btn.hide()
+            post_row.addWidget(self._restart_btn)
+        else:
+            # Dev build: just open the download folder
+            self._open_folder_btn = QPushButton(t("update.btn_open_folder"))
+            self._open_folder_btn.setObjectName("openFolderUpdate")
+            self._open_folder_btn.clicked.connect(self._on_open_download_folder)
+            self._open_folder_btn.hide()
+            post_row.addWidget(self._open_folder_btn)
 
-        layout.addLayout(restart_row)
+        layout.addLayout(post_row)
 
     # ------------------------------------------------------------------
     # Actions
@@ -183,10 +214,10 @@ class UpdateDialog(QDialog):
         webbrowser.open(self._info.html_url)
 
     def _on_restart(self) -> None:
-        """Write the batch script and quit the application."""
+        """Write the batch script and quit the application (frozen builds only)."""
         download_cli = self._cli_cb.isChecked() and bool(self._info.cli_url)
         try:
-            launch_installer_bat(download_cli)
+            launch_installer_bat(download_cli, self._info.tag)
         except Exception as exc:
             self._status.setText(t("update.bat_error", error=str(exc)))
             self._status.show()
@@ -194,6 +225,20 @@ class UpdateDialog(QDialog):
         from PySide6.QtWidgets import QApplication
 
         QApplication.instance().quit()
+
+    def _on_open_download_folder(self) -> None:
+        """Open the temp download folder in the OS file manager (dev builds only)."""
+        folder = _download_dir()
+        try:
+            if platform.system() == "Windows":
+                os.startfile(folder)  # type: ignore[attr-defined]
+            elif platform.system() == "Darwin":
+                subprocess.Popen(["open", str(folder)])
+            else:
+                subprocess.Popen(["xdg-open", str(folder)])
+        except Exception as exc:
+            self._status.setText(str(exc))
+            self._status.show()
 
     # ------------------------------------------------------------------
     # Download callbacks
@@ -224,14 +269,22 @@ class UpdateDialog(QDialog):
     def _on_download_finished(self) -> None:
         self._set_downloading(False)
         self._progress.hide()
-        self._status.hide()
-        # Show restart row
-        self._restart_btn.show()
-        self._later_btn.show()
         self._install_btn.hide()
         self._github_btn.hide()
         self._cli_cb.setEnabled(False)
-        self._status.setText(t("update.download_done"))
+        self._later_btn.show()
+
+        if self._frozen:
+            self._status.setText(t("update.download_done"))
+            self._restart_btn.show()
+        else:
+            # Dev mode: tell the user where the files landed
+            folder = _download_dir()
+            self._status.setText(t("update.download_done_dev", path=str(folder)))
+            self._open_folder_btn.show()
+            # Refresh the dev notice in case _download_dir() was just created
+            self._update_dev_notice()
+
         self._status.show()
 
     def _on_download_error(self, message: str) -> None:
@@ -252,6 +305,13 @@ class UpdateDialog(QDialog):
         if active:
             self._status.setText(t("update.downloading"))
             self._status.show()
+
+    def _update_dev_notice(self) -> None:
+        """Refresh the dev-mode folder-path notice label."""
+        if not hasattr(self, "_dev_notice"):
+            return
+        folder = _download_dir()
+        self._dev_notice.setText(t("update.dev_notice", path=str(folder)))
 
     def closeEvent(self, event) -> None:  # noqa: N802
         if self._worker and self._worker.isRunning():
